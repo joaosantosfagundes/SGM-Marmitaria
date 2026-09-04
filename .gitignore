@@ -1,0 +1,21 @@
+# Dependências
+node_modules/
+
+# Variáveis de ambiente (segredo: senha do banco, JWT_SECRET)
+.env
+.env.local
+.env.*.local
+
+# Build de produção do front
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
