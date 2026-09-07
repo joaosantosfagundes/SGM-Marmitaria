@@ -4,6 +4,8 @@ import loginRouter from './loginRoute.js';
 import usuarioRouter from './usuarioRoute.js';
 import produtoRouter from './produtoRoute.js';
 import insumoRouter from './insumoRoute.js';
+import categoriaRouter from './categoriaRoute.js';
+import unidadeRouter from './unidadeRoute.js';
 
 // TODO (Sprint 2/3, seguindo o padrão de usuarioRoute.js):
 // import clienteRouter   from './clienteRoute.js';   // RF_B4 - Clientes
@@ -20,6 +22,8 @@ router.use('/login', loginRouter);
 router.use('/usuario', usuarioRouter);
 router.use('/produto', produtoRouter);
 router.use('/insumo', insumoRouter);
+router.use('/categoria', categoriaRouter);
+router.use('/unidade', unidadeRouter);
 
 // router.use('/cliente', clienteRouter);
 // router.use('/cardapio', cardapioRouter);

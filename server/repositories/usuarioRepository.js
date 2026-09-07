@@ -38,6 +38,27 @@ export default class UsuarioRepository extends Repository {
         return await this.banco.ExecutaComandoNonQuery(sql, [senhaHash, id]);
     }
 
+    // Esqueci minha senha
+
+    async salvarTokenReset(id, tokenHash, expiraEm) {
+        let sql = "update usuario set token_reset = ?, token_reset_expira = ? where id_usuario = ?";
+        return await this.banco.ExecutaComandoNonQuery(sql, [tokenHash, expiraEm, id]);
+    }
+
+    async obterPorTokenResetValido(tokenHash) {
+        let sql = `select * from usuario
+                    where token_reset = ? and token_reset_expira > NOW()`;
+        let rows = await this.banco.ExecutaComando(sql, [tokenHash]);
+
+        if (rows.length > 0) return UsuarioEntity.toMap(rows[0]);
+        return null;
+    }
+
+    async limparTokenReset(id) {
+        let sql = "update usuario set token_reset = null, token_reset_expira = null where id_usuario = ?";
+        return await this.banco.ExecutaComandoNonQuery(sql, [id]);
+    }
+
     async obter(id) {
         let sql = "select * from usuario where id_usuario = ?";
         let rows = await this.banco.ExecutaComando(sql, [id]);
@@ -54,7 +75,7 @@ export default class UsuarioRepository extends Repository {
         return null;
     }
 
-    // Usado só na inativação (RF_B1 não tem exclusão física de usuário, só ativo/inativo)
+    // Usado só na inativação
     async inativar(id) {
         let sql = "update usuario set ativo = false where id_usuario = ?";
         return await this.banco.ExecutaComandoNonQuery(sql, [id]);

@@ -5,78 +5,53 @@ export default class ProdutoEntity extends Entity {
     #id;
     #nome;
     #descricao;
-    #preco;
-    #quantidadeEstoque;
-    #categoria;
+    #precoPadrao;
+    #ativo;
+    #criadoEm;
 
-    get id() {
-        return this.#id;
-    }
+    get id() { return this.#id; }
+    set id(value) { this.#id = value; }
 
-    set id(value) {
-        this.#id = value;
-    }
+    get nome() { return this.#nome; }
+    set nome(value) { this.#nome = value; }
 
-    get nome() {
-        return this.#nome;
-    }
+    get descricao() { return this.#descricao; }
+    set descricao(value) { this.#descricao = value; }
 
-    set nome(value) {
-        this.#nome = value;
-    }
+    get precoPadrao() { return this.#precoPadrao; }
+    set precoPadrao(value) { this.#precoPadrao = value; }
 
-    get descricao() {
-        return this.#descricao;
-    }
+    get ativo() { return this.#ativo; }
+    set ativo(value) { this.#ativo = value; }
 
-    set descricao(value) {
-        this.#descricao = value;
-    }
+    get criadoEm() { return this.#criadoEm; }
+    set criadoEm(value) { this.#criadoEm = value; }
 
-    get preco() {
-        return this.#preco;
-    }
-
-    set preco(value) {
-        this.#preco = value;
-    }
-
-    get quantidadeEstoque() {
-        return this.#quantidadeEstoque;
-    }
-
-    set quantidadeEstoque(value) {
-        this.#quantidadeEstoque = value;
-    }
-
-    get categoria() {
-        return this.#categoria;
-    }
-
-    set categoria(value) {
-        this.#categoria = value;
-    }
-
-    constructor(id, nome, descricao, preco, quantidadeEstoque, categoria) {
+    constructor(id, nome, descricao, precoPadrao, ativo, criadoEm) {
         super();
         this.#id = id;
         this.#nome = nome;
         this.#descricao = descricao;
-        this.#preco = preco;
-        this.#quantidadeEstoque = quantidadeEstoque;
-        this.#categoria = categoria;
+        this.#precoPadrao = precoPadrao ?? 0;
+        this.#ativo = ativo;
+        this.#criadoEm = criadoEm;
     }
 
+    // Mapeia uma linha da tabela `produto` pra Entity
     static toMap(row) {
-        let produto = new ProdutoEntity(
-            row["prd_id"],
-            row["prd_nome"],
-            row["prd_descricao"],
-            row["prd_preco"],
-            row["prd_quantidade_estoque"],
-            row["prd_categoria"]
+        return new ProdutoEntity(
+            row["id_produto"],
+            row["nome"],
+            row["descricao"],
+            row["preco_padrao"],
+            row["ativo"],
+            row["criado_em"]
         );
+    }
 
-        return produto;
+    validar() {
+        if (!this.#nome || this.#nome.trim().length < 2) return false;
+        if (this.#precoPadrao < 0) return false;
+        return true;
     }
 }

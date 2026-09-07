@@ -6,6 +6,7 @@ node_modules/
 .env.local
 .env.*.local
 
+
 # Build de produção do front
 dist/
 build/
@@ -19,3 +20,6 @@ npm-debug.log*
 .idea/
 .DS_Store
 Thumbs.db
+database/schema-restaurante-escopo-atual.sql
+database
+

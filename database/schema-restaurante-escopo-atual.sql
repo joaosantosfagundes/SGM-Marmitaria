@@ -22,6 +22,12 @@ CREATE TABLE usuario (
     senha VARCHAR(255) NOT NULL,
     perfil ENUM('ADMIN', 'ATENDENTE', 'COZINHA') NOT NULL,
     ativo BOOLEAN NOT NULL DEFAULT TRUE,
+
+    -- Redefinição de senha ("esqueci minha senha"): token só existe
+    -- entre o pedido e o uso (ou expiração), depois volta pra NULL.
+    token_reset VARCHAR(255) NULL,
+    token_reset_expira DATETIME NULL,
+
     criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -284,6 +290,14 @@ INSERT INTO unidade (nome, sigla) VALUES
 ('Mililitro', 'ml'),
 ('Pacote', 'pct');
 
+INSERT INTO usuario (nome, email, senha, perfil, ativo)
+VALUES (
+    'Administrador',
+    'admin@sgm.com',
+    '$2b$10$Yo6FINUvkjUAM3dVdgCzw.TmVeikBcLCNCLYanrm75lFlB.Hievn6',
+    'ADMIN',
+    TRUE
+);
 
 -- ============================================================
 -- BLOCO FUTURO (NÃO EXECUTAR AGORA)
