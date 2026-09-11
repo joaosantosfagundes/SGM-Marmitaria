@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext.jsx';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -52,6 +52,12 @@ export default function Login() {
                 </div>
 
                 <button type="submit" className="btn btn-primary w-100">Entrar</button>
+
+                <div className="text-center mt-3">
+                    <Link to="/esqueci-senha" className="small text-secondary">
+                        Esqueci minha senha
+                    </Link>
+                </div>
             </form>
         </div>
     );
