@@ -45,7 +45,7 @@ export default class UsuarioEntity extends Entity {
         this.#criadoEm = criadoEm;
     }
 
-    // Mapeia uma linha do banco (colunas da tabela `usuario`) para a Entity
+    // Mapeia uma linha do banco
     static toMap(row) {
         return new UsuarioEntity(
             row["id_usuario"],
