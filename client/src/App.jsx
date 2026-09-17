@@ -11,6 +11,8 @@ import ProdutosPage from './pages/produtos/ProdutosPage.jsx';
 import InsumosPage from './pages/insumos/InsumosPage.jsx';
 import EsqueciSenha from './pages/login/esqueciSenha.jsx';
 import RedefinirSenha from './pages/login/redefinirSenha.jsx';
+import ClientesPage from './pages/clientes/clientes.jsx';
+import UsuariosPage from './pages/usuarios/usuarios.jsx';
 
 import { pages } from './lib/menu.js';
 
@@ -19,6 +21,9 @@ import { pages } from './lib/menu.js';
 const TELAS_PRONTAS = {
     '/produtos': ProdutosPage,
     '/insumos': InsumosPage,
+    '/clientes': ClientesPage,
+    '/usuarios': UsuariosPage,
+
 };
 
 export default function App() {
