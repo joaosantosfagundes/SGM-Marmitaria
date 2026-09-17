@@ -80,8 +80,12 @@ export default class InsumoEntity extends Entity {
         if (!this.#idCategoria) return false;
         if (!this.#idUnidade) return false;
         if (!CLASSIFICACOES_VALIDAS.includes(this.#classificacao)) return false;
-        if (this.#precoCusto < 0 || this.#precoVenda < 0) return false;
+        if (!this.#precoCusto || this.#precoCusto <= 0) return false;
+        if (this.#classificacao === "VENDA_DIRETA" && (!this.#precoVenda || this.#precoVenda <= 0)) {
+            return false;
+        }
         if (this.#estoqueMinimo < 0) return false;
+
         return true;
     }
 }

@@ -7,7 +7,6 @@ export default class InsumoRepository extends Repository {
         super();
     }
 
-    // Traz o insumo puro (sem join) — usado internamente e nas gravações/atualizações
     async listar() {
         let sql = "select * from insumo order by nome";
         let rows = await this.banco.ExecutaComando(sql);
@@ -15,8 +14,6 @@ export default class InsumoRepository extends Repository {
         return rows.map(row => InsumoEntity.toMap(row));
     }
 
-    // Versão com JOIN pra exibir na tela (nome da categoria e sigla da unidade),
-    // sem precisar o front fazer 3 requisições separadas.
     async listarComDetalhes() {
         let sql = `
             select i.*, c.nome as nome_categoria, u.nome as nome_unidade, u.sigla as sigla_unidade
@@ -36,24 +33,37 @@ export default class InsumoRepository extends Repository {
     }
 
     async gravar(entidade) {
-        let sql = `insert into insumo
-                    (nome, id_categoria, id_unidade, classificacao, preco_custo, preco_venda, estoque_minimo, ativo)
-                    values (?, ?, ?, ?, ?, ?, ?, ?)`;
-        let valores = [
-            entidade.nome,
-            entidade.idCategoria,
-            entidade.idUnidade,
-            entidade.classificacao,
-            entidade.precoCusto,
-            entidade.precoVenda,
-            entidade.estoqueMinimo,
-            entidade.ativo,
-        ];
+        
+        await this.banco.AbreTransacao();
+        try {
+            let sql = `insert into insumo
+                        (nome, id_categoria, id_unidade, classificacao, preco_custo, preco_venda, estoque_minimo, ativo)
+                        values (?, ?, ?, ?, ?, ?, ?, ?)`;
+            let valores = [
+                entidade.nome,
+                entidade.idCategoria,
+                entidade.idUnidade,
+                entidade.classificacao,
+                entidade.precoCusto,
+                entidade.precoVenda,
+                entidade.estoqueMinimo,
+                entidade.ativo,
+            ];
 
-        let id = await this.banco.ExecutaComandoLastInserted(sql, valores);
-        entidade.id = id;
+            let id = await this.banco.ExecutaComandoLastInserted(sql, valores);
+            entidade.id = id;
 
-        return true;
+            await this.banco.ExecutaComandoNonQuery(
+                "insert into estoque (id_insumo, quantidade) values (?, 0)",
+                [id]
+            );
+
+            await this.banco.Commit();
+            return true;
+        } catch (erro) {
+            await this.banco.Rollback();
+            throw erro;
+        }
     }
 
     async atualizar(entidade) {
@@ -97,7 +107,19 @@ export default class InsumoRepository extends Repository {
         return await this.banco.ExecutaComandoNonQuery(sql, [id]);
     }
 
-    // Ajudantes pra validar as FKs antes de gravar (o service que deve chamar isso)
+    async excluir(id) {
+        await this.banco.AbreTransacao();
+        try {
+            await this.banco.ExecutaComandoNonQuery("delete from estoque where id_insumo = ?", [id]);
+            let resultado = await this.banco.ExecutaComandoNonQuery("delete from insumo where id_insumo = ?", [id]);
+            await this.banco.Commit();
+            return resultado;
+        } catch (erro) {
+            await this.banco.Rollback();
+            throw erro;
+        }
+    }
+
     async categoriaExiste(idCategoria) {
         let sql = "select 1 from categoria where id_categoria = ? and ativo = true";
         let rows = await this.banco.ExecutaComando(sql, [idCategoria]);

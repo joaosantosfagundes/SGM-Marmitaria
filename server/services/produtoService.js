@@ -67,4 +67,25 @@ export default class ProdutoService {
         }
         return await this.#repo.inativar(id);
     }
+
+    async excluir(id) {
+        let atual = await this.#repo.obter(id);
+        if (!atual) {
+            throw { status: 404, msg: "Produto não encontrado" };
+        }
+
+        try {
+            return await this.#repo.excluir(id);
+        } catch (erro) {
+            // Já tem pedido/cardápio usando esse produto — o MySQL recusa a exclusão
+            // (é a própria FK protegendo o histórico). Traduz pra mensagem legível.
+            if (erro?.code === 'ER_ROW_IS_REFERENCED_2' || erro?.code === 'ER_ROW_IS_REFERENCED') {
+                throw {
+                    status: 409,
+                    msg: "Não é possível excluir: esse produto já foi usado em pedidos ou no cardápio. Use \"Desativar\" em vez disso."
+                };
+            }
+            throw erro;
+        }
+    }
 }

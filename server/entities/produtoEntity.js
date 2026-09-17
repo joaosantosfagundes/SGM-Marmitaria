@@ -51,7 +51,7 @@ export default class ProdutoEntity extends Entity {
 
     validar() {
         if (!this.#nome || this.#nome.trim().length < 2) return false;
-        if (this.#precoPadrao < 0) return false;
+        if (!this.#precoPadrao || this.#precoPadrao <= 0) return false;
         return true;
     }
 }

@@ -44,7 +44,7 @@ export default class UsuarioController {
     async atualizar(req, res) {
         try {
             let { id } = req.params;
-            let usuario = await this.#service.atualizar(id, req.body);
+            let usuario = await this.#service.atualizar(id, req.body, req.usuarioLogado.id);
             return res.status(200).json(usuario);
         } catch (error) {
             return this.#tratarErro(res, error);
@@ -54,8 +54,18 @@ export default class UsuarioController {
     async inativar(req, res) {
         try {
             let { id } = req.params;
-            await this.#service.inativar(id);
+            await this.#service.inativar(id, req.usuarioLogado.id);
             return res.status(200).json({ msg: "Usuário inativado com sucesso" });
+        } catch (error) {
+            return this.#tratarErro(res, error);
+        }
+    }
+
+    async excluir(req, res) {
+        try {
+            let { id } = req.params;
+            await this.#service.excluir(id, req.usuarioLogado.id);
+            return res.status(200).json({ msg: "Usuário excluído com sucesso" });
         } catch (error) {
             return this.#tratarErro(res, error);
         }

@@ -62,6 +62,16 @@ export default class InsumoController {
         }
     }
 
+    async excluir(req, res) {
+        try {
+            let { id } = req.params;
+            await this.#service.excluir(id);
+            return res.status(200).json({ msg: "Insumo excluído com sucesso" });
+        } catch (error) {
+            return this.#tratarErro(res, error);
+        }
+    }
+
     #tratarErro(res, error) {
         if (error?.status) {
             return res.status(error.status).json({ msg: error.msg });

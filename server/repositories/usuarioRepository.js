@@ -75,9 +75,13 @@ export default class UsuarioRepository extends Repository {
         return null;
     }
 
-    // Usado só na inativação
     async inativar(id) {
         let sql = "update usuario set ativo = false where id_usuario = ?";
+        return await this.banco.ExecutaComandoNonQuery(sql, [id]);
+    }
+
+    async excluir(id) {
+        let sql = "delete from usuario where id_usuario = ?";
         return await this.banco.ExecutaComandoNonQuery(sql, [id]);
     }
 }

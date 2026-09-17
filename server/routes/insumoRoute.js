@@ -26,4 +26,8 @@ router.delete("/:id", auth.validar.bind(auth), auth.permitir('ADMIN'), (req, res
     controller.inativar(req, res);
 });
 
+router.delete("/:id/excluir", auth.validar.bind(auth), auth.permitir('ADMIN'), (req, res) => {
+    controller.excluir(req, res);
+});
+
 export default router;

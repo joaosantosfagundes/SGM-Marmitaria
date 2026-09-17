@@ -55,4 +55,9 @@ export default class ClienteRepository extends Repository{
         return await this.banco.ExecutaComandoNonQuery(sql, [id]);
     }
 
+    async excluir(id) {
+        let sql = "delete from cliente where id_cliente = ?";
+        return await this.banco.ExecutaComandoNonQuery(sql, [id]);
+    }
+
 }

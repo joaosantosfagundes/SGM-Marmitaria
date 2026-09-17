@@ -53,4 +53,9 @@ export default class ProdutoRepository extends Repository {
         let sql = "update produto set ativo = false where id_produto = ?";
         return await this.banco.ExecutaComandoNonQuery(sql, [id]);
     }
+
+    async excluir(id) {
+        let sql = "delete from produto where id_produto = ?";
+        return await this.banco.ExecutaComandoNonQuery(sql, [id]);
+    }
 }

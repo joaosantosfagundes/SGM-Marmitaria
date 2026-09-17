@@ -42,10 +42,20 @@ export default class UsuarioService {
         return entidade;
     }
 
-    async atualizar(id, { nome, email, perfil, ativo }) {
+    async atualizar(id, { nome, email, perfil, ativo }, idLogado) {
         let atual = await this.#repo.obter(id);
         if (!atual) {
             throw { status: 404, msg: "Usuário não encontrado" };
+        }
+
+        let ehVoceMesmo = String(id) === String(idLogado);
+
+        if (ehVoceMesmo && perfil !== undefined && perfil !== atual.perfil) {
+            throw { status: 403, msg: "Você não pode alterar o seu próprio perfil" };
+        }
+
+        if (ehVoceMesmo && ativo === false) {
+            throw { status: 403, msg: "Você não pode desativar sua própria conta" };
         }
 
         atual.nome = nome ?? atual.nome;
@@ -75,12 +85,39 @@ export default class UsuarioService {
         return usuario;
     }
 
-    async inativar(id) {
+    async inativar(id, idLogado) {
+        if (String(id) === String(idLogado)) {
+            throw { status: 403, msg: "Você não pode inativar sua própria conta" };
+        }
+
         let atual = await this.#repo.obter(id);
         if (!atual) {
             throw { status: 404, msg: "Usuário não encontrado" };
         }
         return await this.#repo.inativar(id);
+    }
+
+    async excluir(id, idLogado) {
+        if (String(id) === String(idLogado)) {
+            throw { status: 403, msg: "Você não pode excluir sua própria conta" };
+        }
+
+        let atual = await this.#repo.obter(id);
+        if (!atual) {
+            throw { status: 404, msg: "Usuário não encontrado" };
+        }
+
+        try {
+            return await this.#repo.excluir(id);
+        } catch (erro) {
+            if (erro?.code === 'ER_ROW_IS_REFERENCED_2' || erro?.code === 'ER_ROW_IS_REFERENCED') {
+                throw {
+                    status: 409,
+                    msg: "Não é possível excluir: esse usuário já tem pedidos ou movimentações vinculadas. Use \"Desativar\" em vez disso."
+                };
+            }
+            throw erro;
+        }
     }
 
     // Esqueci minha senha

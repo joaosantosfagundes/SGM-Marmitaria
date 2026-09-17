@@ -59,4 +59,23 @@ export default class ClienteService{
         }
         return await this.#repo.inativar(id);
     }
+
+    async excluir(id) {
+        let atual = await this.#repo.obter(id);
+        if (!atual) {
+            throw { status: 404, msg: "Cliente não encontrado" };
+        }
+
+        try {
+            return await this.#repo.excluir(id);
+        } catch (erro) {
+            if (erro?.code === 'ER_ROW_IS_REFERENCED_2' || erro?.code === 'ER_ROW_IS_REFERENCED') {
+                throw {
+                    status: 409,
+                    msg: "Não é possível excluir: esse cliente já tem pedidos vinculados. Use \"Desativar\" em vez disso."
+                };
+            }
+            throw erro;
+        }
+    }
 }
