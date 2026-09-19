@@ -1,3 +1,5 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
 import 'dotenv/config';
 import express from 'express';
 import cookieParser from 'cookie-parser';
@@ -6,6 +8,7 @@ import cors from 'cors';
 import routes from './routes/index.js';
 
 const app = express();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 app.use(express.json());
 app.use(cookieParser());
@@ -16,8 +19,10 @@ app.use(cors({
 
 app.use('/api', routes);
 
-app.get('/', (req, res) => {
-    res.json({ msg: 'API do SGM (Sistema de Gestão para Marmitaria) no ar' });
+app.use(express.static(path.join(__dirname, '../client/dist')));
+
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
 });
 
 const PORT = process.env.PORT || 5000;
