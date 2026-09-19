@@ -80,6 +80,18 @@ export default function ClientesPage() {
         }
     }
 
+    async function handleExcluir(cliente) {
+        if (!confirm(`Excluir "${cliente.nome}" de vez? Essa ação NÃO pode ser desfeita.`)) return;
+
+        try {
+            await ApiClient.delete(`cliente/${cliente.id}/excluir`);
+            toast.success('Cliente excluído.');
+            carregar();
+        } catch {
+            // erro já mostrado via toast (ex: 409 se estiver em uso em algum lugar)
+        }
+    }
+
     return (
         <div>
             <div className="d-flex justify-content-between align-items-center mb-4">
@@ -162,10 +174,13 @@ export default function ClientesPage() {
                                     <i className="ti ti-edit me-1" /> Editar
                                 </button>
                                 {cliente.ativo && (
-                                    <button className="btn btn-sm btn-light text-danger" onClick={() => handleInativar(cliente)}>
-                                        <i className="ti ti-trash" />
+                                    <button className="btn btn-sm btn-light text-warning" title="Desativar" onClick={() => handleInativar(cliente)}>
+                                        <i className="ti ti-ban" />
                                     </button>
                                 )}
+                                <button className="btn btn-sm btn-light text-danger" title="Excluir definitivamente" onClick={() => handleExcluir(cliente)}>
+                                    <i className="ti ti-trash" />
+                                </button>
                             </div>
                         </div>
                     </div>

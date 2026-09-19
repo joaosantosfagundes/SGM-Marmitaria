@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import ApiClient from '../../services/apiClient.js';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 const PERFIS = ['ADMIN', 'ATENDENTE', 'COZINHA'];
 const FORM_VAZIO = { nome: '', email: '', senha: '', perfil: 'ATENDENTE' };
 
 export default function UsuariosPage() {
+    const { usuario: usuarioLogado } = useAuth();
     const [usuarios, setUsuarios] = useState([]);
     const [carregando, setCarregando] = useState(true);
     const [mostrarForm, setMostrarForm] = useState(false);
@@ -79,6 +81,18 @@ export default function UsuariosPage() {
             carregar();
         } catch {
             // erro já mostrado via toast
+        }
+    }
+
+    async function handleExcluir(usuario) {
+        if (!confirm(`Excluir "${usuario.nome}" de vez? Essa ação NÃO pode ser desfeita.`)) return;
+
+        try {
+            await ApiClient.delete(`usuario/${usuario.id}/excluir`);
+            toast.success('Usuário excluído.');
+            carregar();
+        } catch {
+            // erro já mostrado via toast (ex: 409 se estiver em uso em algum lugar)
         }
     }
 
@@ -175,6 +189,7 @@ export default function UsuariosPage() {
                 {usuarios.map((usuario) => {
                     const corPerfil = usuario.perfil === 'ADMIN' ? 'bg-primary'
                         : usuario.perfil === 'ATENDENTE' ? 'bg-info' : 'bg-warning';
+                    const souEuMesmo = usuario.id === usuarioLogado?.id;
 
                     return (
                         <div key={usuario.id} className="col-md-6 col-lg-4">
@@ -194,16 +209,29 @@ export default function UsuariosPage() {
                                     <span className={`badge ${usuario.ativo ? 'text-bg-success' : 'text-bg-secondary'}`}>
                                         {usuario.ativo ? 'Ativo' : 'Inativo'}
                                     </span>
+                                    {souEuMesmo && <span className="badge text-bg-primary">Você</span>}
                                 </div>
 
                                 <div className="d-flex gap-2 mt-3 pt-3 border-top">
-                                    <button className="btn btn-sm btn-light flex-grow-1" onClick={() => abrirEdicao(usuario)}>
-                                        <i className="ti ti-edit me-1" /> Editar
-                                    </button>
-                                    {usuario.ativo && (
-                                        <button className="btn btn-sm btn-light text-danger" onClick={() => handleInativar(usuario)}>
-                                            <i className="ti ti-trash" />
-                                        </button>
+                                    {souEuMesmo ? (
+                                        <p className="text-secondary small mb-0">
+                                            Edição de perfil, desativação e exclusão da própria conta
+                                            não são permitidas por aqui.
+                                        </p>
+                                    ) : (
+                                        <>
+                                            <button className="btn btn-sm btn-light flex-grow-1" onClick={() => abrirEdicao(usuario)}>
+                                                <i className="ti ti-edit me-1" /> Editar
+                                            </button>
+                                            {usuario.ativo && (
+                                                <button className="btn btn-sm btn-light text-warning" title="Desativar" onClick={() => handleInativar(usuario)}>
+                                                    <i className="ti ti-ban" />
+                                                </button>
+                                            )}
+                                            <button className="btn btn-sm btn-light text-danger" title="Excluir definitivamente" onClick={() => handleExcluir(usuario)}>
+                                                <i className="ti ti-trash" />
+                                            </button>
+                                        </>
                                     )}
                                 </div>
                             </div>

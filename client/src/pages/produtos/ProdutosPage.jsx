@@ -91,6 +91,19 @@ export default function ProdutosPage() {
         }
     }
 
+    async function handleExcluir(produto) {
+        if (!confirm(`Excluir "${produto.nome}" de vez? Essa ação NÃO pode ser desfeita.`)) return;
+
+        try {
+            await ApiClient.delete(`produto/${produto.id}/excluir`);
+            toast.success('Produto excluído.');
+            carregar();
+        } catch {
+            // erro já mostrado via toast (ex: 409 se estiver em uso em algum lugar)
+        }
+    }
+
+
     return (
         <div>
             <div className="d-flex justify-content-between align-items-center mb-4">
@@ -188,11 +201,14 @@ export default function ProdutosPage() {
                                         <button className="btn btn-sm btn-light me-2" onClick={() => abrirEdicao(produto)}>
                                             <i className="ti ti-edit" />
                                         </button>
-                                        {produto.ativo && (
-                                            <button className="btn btn-sm btn-light text-danger" onClick={() => handleInativar(produto)}>
-                                                <i className="ti ti-trash" />
-                                            </button>
-                                        )}
+                                       {produto.ativo && (
+                                        <button className="btn btn-sm btn-light text-warning me-2" title="Desativar" onClick={() => handleInativar(produto)}>
+                                            <i className="ti ti-ban" />
+                                        </button>
+                                    )}
+                                        <button className="btn btn-sm btn-light text-danger" title="Excluir definitivamente" onClick={() => handleExcluir(produto)}>
+                                            <i className="ti ti-trash" />
+                                        </button>
                                     </td>
                                 </tr>
                             ))}

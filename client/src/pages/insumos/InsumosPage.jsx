@@ -115,6 +115,18 @@ export default function InsumosPage() {
         }
     }
 
+    async function handleExcluir(insumo) {
+        if (!confirm(`Excluir "${insumo.nome}" de vez? Essa ação NÃO pode ser desfeita.`)) return;
+
+        try {
+            await ApiClient.delete(`insumo/${insumo.id}/excluir`);
+            toast.success('Insumo excluído.');
+            carregar();
+        } catch {
+            // erro já mostrado via toast
+        }
+    }
+
     return (
         <div>
             <div className="d-flex justify-content-between align-items-center mb-4">
@@ -281,10 +293,13 @@ export default function InsumosPage() {
                                             <i className="ti ti-edit" />
                                         </button>
                                         {insumo.ativo && (
-                                            <button className="btn btn-sm btn-light text-danger" onClick={() => handleInativar(insumo)}>
-                                                <i className="ti ti-trash" />
-                                            </button>
-                                        )}
+                                        <button className="btn btn-sm btn-light text-warning me-2" title="Desativar" onClick={() => handleInativar(insumo)}>
+                                            <i className="ti ti-ban" />
+                                        </button>
+                                    )}
+                                        <button className="btn btn-sm btn-light text-danger" title="Excluir definitivamente" onClick={() => handleExcluir(insumo)}>
+                                            <i className="ti ti-trash" />
+                                        </button>
                                     </td>
                                 </tr>
                             ))}
