@@ -21,7 +21,6 @@ export default function UsuariosPage() {
             let dados = await ApiClient.get('usuario');
             setUsuarios(dados);
         } catch {
-            // erro já mostrado via toast
         } finally {
             setCarregando(false);
         }
@@ -66,7 +65,6 @@ export default function UsuariosPage() {
             fecharForm();
             carregar();
         } catch {
-            // erro já mostrado via toast
         } finally {
             setSalvando(false);
         }
@@ -80,7 +78,6 @@ export default function UsuariosPage() {
             toast.success('Usuário inativado.');
             carregar();
         } catch {
-            // erro já mostrado via toast
         }
     }
 
@@ -92,9 +89,18 @@ export default function UsuariosPage() {
             toast.success('Usuário excluído.');
             carregar();
         } catch {
-            // erro já mostrado via toast (ex: 409 se estiver em uso em algum lugar)
         }
     }
+
+    async function handleReativar(usuario) {
+        try {
+            await ApiClient.put(`usuario/${usuario.id}`, { ativo: true });
+            toast.success('Usuario reativado.');
+            carregar();
+        } catch {
+        }
+    }
+
 
     return (
         <div>
@@ -223,10 +229,14 @@ export default function UsuariosPage() {
                                             <button className="btn btn-sm btn-light flex-grow-1" onClick={() => abrirEdicao(usuario)}>
                                                 <i className="ti ti-edit me-1" /> Editar
                                             </button>
-                                            {usuario.ativo && (
-                                                <button className="btn btn-sm btn-light text-warning" title="Desativar" onClick={() => handleInativar(usuario)}>
-                                                    <i className="ti ti-ban" />
-                                                </button>
+                                            {usuario.ativo ? (
+                                            <button className="btn btn-sm btn-light text-warning" title="Desativar" onClick={() => handleInativar(usuario)}>
+                                                <i className="ti ti-ban" />
+                                            </button>
+                                            ) : (
+                                            <button className="btn btn-sm btn-light text-success" title="Reativar" onClick={() => handleReativar(usuario)}>
+                                                <i className="ti ti-rotate-clockwise" />
+                                            </button>
                                             )}
                                             <button className="btn btn-sm btn-light text-danger" title="Excluir definitivamente" onClick={() => handleExcluir(usuario)}>
                                                 <i className="ti ti-trash" />

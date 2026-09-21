@@ -22,7 +22,6 @@ export default function ProdutosPage() {
             let dados = await ApiClient.get('produto');
             setProdutos(dados);
         } catch {
-            // erro já mostrado via toast pelo ApiClient
         } finally {
             setCarregando(false);
         }
@@ -73,7 +72,6 @@ export default function ProdutosPage() {
             fecharForm();
             carregar();
         } catch {
-            // erro já mostrado via toast
         } finally {
             setSalvando(false);
         }
@@ -87,7 +85,6 @@ export default function ProdutosPage() {
             toast.success('Produto inativado.');
             carregar();
         } catch {
-            // erro já mostrado via toast
         }
     }
 
@@ -99,8 +96,17 @@ export default function ProdutosPage() {
             toast.success('Produto excluído.');
             carregar();
         } catch {
-            // erro já mostrado via toast (ex: 409 se estiver em uso em algum lugar)
         }
+    }
+
+    async function handleReativar(produto) {
+    try {
+        await ApiClient.put(`produto/${produto.id}`, { ativo: true });
+        toast.success('Produto reativado.');
+        carregar();
+    } catch {
+     
+    }
     }
 
 
@@ -201,11 +207,15 @@ export default function ProdutosPage() {
                                         <button className="btn btn-sm btn-light me-2" onClick={() => abrirEdicao(produto)}>
                                             <i className="ti ti-edit" />
                                         </button>
-                                       {produto.ativo && (
+                                       {produto.ativo ? (
                                         <button className="btn btn-sm btn-light text-warning me-2" title="Desativar" onClick={() => handleInativar(produto)}>
                                             <i className="ti ti-ban" />
                                         </button>
-                                    )}
+                                        ) : (
+                                        <button className="btn btn-sm btn-light text-success me-2" title="Reativar" onClick={() => handleReativar(produto)}>
+                                            <i className="ti ti-rotate-clockwise" />
+                                        </button>
+                                         )}
                                         <button className="btn btn-sm btn-light text-danger" title="Excluir definitivamente" onClick={() => handleExcluir(produto)}>
                                             <i className="ti ti-trash" />
                                         </button>

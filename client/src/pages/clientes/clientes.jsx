@@ -18,7 +18,6 @@ export default function ClientesPage() {
             let dados = await ApiClient.get('cliente');
             setClientes(dados);
         } catch {
-            // erro já mostrado via toast
         } finally {
             setCarregando(false);
         }
@@ -48,7 +47,6 @@ export default function ClientesPage() {
         e.preventDefault();
         setSalvando(true);
 
-        // telefone vazio vira null (o campo é opcional no banco)
         let corpo = { nome: form.nome, telefone: form.telefone || null };
 
         try {
@@ -62,7 +60,6 @@ export default function ClientesPage() {
             fecharForm();
             carregar();
         } catch {
-            // erro já mostrado via toast
         } finally {
             setSalvando(false);
         }
@@ -76,7 +73,6 @@ export default function ClientesPage() {
             toast.success('Cliente inativado.');
             carregar();
         } catch {
-            // erro já mostrado via toast
         }
     }
 
@@ -88,7 +84,15 @@ export default function ClientesPage() {
             toast.success('Cliente excluído.');
             carregar();
         } catch {
-            // erro já mostrado via toast (ex: 409 se estiver em uso em algum lugar)
+        }
+    }
+
+    async function handleReativar(cliente) {
+        try {
+            await ApiClient.put(`cliente/${cliente.id}`, { ativo: true });
+            toast.success('Cliente reativado.');
+            carregar();
+        } catch {
         }
     }
 
@@ -173,10 +177,14 @@ export default function ClientesPage() {
                                 <button className="btn btn-sm btn-light flex-grow-1" onClick={() => abrirEdicao(cliente)}>
                                     <i className="ti ti-edit me-1" /> Editar
                                 </button>
-                                {cliente.ativo && (
-                                    <button className="btn btn-sm btn-light text-warning" title="Desativar" onClick={() => handleInativar(cliente)}>
-                                        <i className="ti ti-ban" />
-                                    </button>
+                               {cliente.ativo ? (
+                                <button className="btn btn-sm btn-light text-warning" title="Desativar" onClick={() => handleInativar(cliente)}>
+                                    <i className="ti ti-ban" />
+                                </button>
+                                ) : (
+                                <button className="btn btn-sm btn-light text-success" title="Reativar" onClick={() => handleReativar(cliente)}>
+                                    <i className="ti ti-rotate-clockwise" />
+                                </button>
                                 )}
                                 <button className="btn btn-sm btn-light text-danger" title="Excluir definitivamente" onClick={() => handleExcluir(cliente)}>
                                     <i className="ti ti-trash" />

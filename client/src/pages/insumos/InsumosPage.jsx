@@ -38,7 +38,6 @@ export default function InsumosPage() {
             setCategorias(listaCategorias);
             setUnidades(listaUnidades);
         } catch {
-            // erro já mostrado via toast
         } finally {
             setCarregando(false);
         }
@@ -97,7 +96,6 @@ export default function InsumosPage() {
             fecharForm();
             carregar();
         } catch {
-            // erro já mostrado via toast
         } finally {
             setSalvando(false);
         }
@@ -111,7 +109,6 @@ export default function InsumosPage() {
             toast.success('Insumo inativado.');
             carregar();
         } catch {
-            // erro já mostrado via toast
         }
     }
 
@@ -123,7 +120,15 @@ export default function InsumosPage() {
             toast.success('Insumo excluído.');
             carregar();
         } catch {
-            // erro já mostrado via toast
+        }
+    }
+
+    async function handleReativar(insumo) {
+        try {
+            await ApiClient.put(`insumo/${insumo.id}`, { ativo: true });
+            toast.success('Insumo reativado.');
+            carregar();
+        } catch {
         }
     }
 
@@ -292,11 +297,15 @@ export default function InsumosPage() {
                                         <button className="btn btn-sm btn-light me-2" onClick={() => abrirEdicao(insumo)}>
                                             <i className="ti ti-edit" />
                                         </button>
-                                        {insumo.ativo && (
+                                        {insumo.ativo ? (
                                         <button className="btn btn-sm btn-light text-warning me-2" title="Desativar" onClick={() => handleInativar(insumo)}>
                                             <i className="ti ti-ban" />
                                         </button>
-                                    )}
+                                        ) : (
+                                        <button className="btn btn-sm btn-light text-success me-2" title="Reativar" onClick={() => handleReativar(insumo)}>
+                                            <i className="ti ti-rotate-clockwise" />
+                                        </button>
+                                        )}
                                         <button className="btn btn-sm btn-light text-danger" title="Excluir definitivamente" onClick={() => handleExcluir(insumo)}>
                                             <i className="ti ti-trash" />
                                         </button>
