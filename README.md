@@ -37,11 +37,6 @@ npm install
 npm run dev             # http://localhost:5000
 ```
 
-### Banco
-Rode o `database/schema-restaurante-escopo-atual.sql` no MySQL antes de subir o backend.
-⚠️ Esse arquivo ainda está com os nomes antigos (`produto`/`item_venda`/`cardapio_item`).
-Atualizar para `insumo`/`produto`/`cardapio_composicao` antes de programar RF_B2 em diante.
-
 ### Frontend
 ```bash
 cd client
@@ -54,12 +49,12 @@ npm run dev             # http://localhost:5173
 
 ### Sprint 2 (24/08–12/09) — RF_B1–B3
 - [x] RF_B1 — Usuários (feito: entity, repository, service, controller, route, login/JWT)
-- [ ] RF_B2 — Produtos (copiar o padrão de `usuario*`)
-- [ ] RF_B3 — Insumos (copiar o padrão de `usuario*`)
+- [x] RF_B2 — Produtos (copiar o padrão de `usuario*`)
+- [x] RF_B3 — Insumos (copiar o padrão de `usuario*`)
 
 ### Sprint 3 (14–26/09) — RF_B4 + RF_F1 + abertura RF_F9
-- [ ] RF_B4 — Clientes
-- [ ] RF_F1 — Cardápio do Dia
+- [x] RF_B4 — Clientes
+- [x] RF_F1 — Cardápio do Dia (preparações em texto livre e reutilização entre datas)
 - [ ] RF_F9 — (abre, conclui depois)
 
 ### Sprint 4 (28/09–17/10) — RF_F2–F4

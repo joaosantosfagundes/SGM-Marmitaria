@@ -13,6 +13,7 @@ import EsqueciSenha from './pages/login/esqueciSenha.jsx';
 import RedefinirSenha from './pages/login/redefinirSenha.jsx';
 import ClientesPage from './pages/clientes/clientes.jsx';
 import UsuariosPage from './pages/usuarios/usuarios.jsx';
+import CardapioPage from './pages/cardapio/CardapioPage.jsx';
 
 import { pages } from './lib/menu.js';
 
@@ -23,6 +24,7 @@ const TELAS_PRONTAS = {
     '/insumos': InsumosPage,
     '/clientes': ClientesPage,
     '/usuarios': UsuariosPage,
+    '/cardapio': CardapioPage,
 
 };
 

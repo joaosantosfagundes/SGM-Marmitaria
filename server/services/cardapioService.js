@@ -1,36 +1,51 @@
-import CardapioEntity from "../entities/cardapioEntity.js";
 import CardapioRepository from "../repositories/cardapioRepository.js";
 
-export default class CardapioService{
+function validarData(data) {
+    if (typeof data !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(data)) return false;
+    let [ano, mes, dia] = data.split("-").map(Number);
+    let dataVerificada = new Date(Date.UTC(ano, mes - 1, dia));
+    return dataVerificada.getUTCFullYear() === ano && dataVerificada.getUTCMonth() === mes - 1 && dataVerificada.getUTCDate() === dia;
+}
+
+export default class CardapioService {
     #repo;
 
-    constructor(){
+    constructor() {
         this.#repo = new CardapioRepository();
     }
 
-    async listar(){
-        return await this.#repo.listar();
+    async obterPorData(data) {
+        if (!validarData(data)) throw { status: 400, msg: "Informe uma data válida." };
+        return this.#repo.obterPorData(data);
     }
 
-    async criar({ nome }) {
-      
-        let entidade = new CardapioEntity(0,0, nome, true);
-
-        await this.#repo.gravar(entidade);
-        return entidade;
+    async salvar({ data, preparacoes }) {
+        if (!validarData(data)) throw { status: 400, msg: "Informe uma data válida." };
+        if (!Array.isArray(preparacoes) || preparacoes.some(nome => typeof nome !== "string" || nome.trim().length > 150)) {
+            throw { status: 400, msg: "Informe preparações válidas, com até 150 caracteres cada." };
+        }
+        let nomesVistos = new Set();
+        let nomes = preparacoes.map(nome => nome.trim()).filter(nome => {
+            if (!nome) return false;
+            let chave = nome.toLocaleLowerCase("pt-BR");
+            if (nomesVistos.has(chave)) return false;
+            nomesVistos.add(chave);
+            return true;
+        });
+        await this.#repo.salvar(data, nomes);
+        return this.#repo.obterPorData(data);
     }
 
-
-    async excluir(id) {
-        let atual = await this.#repo.obter(id);
-        if (!atual) {
-            throw { status: 404, msg: "Cardapio não encontrado" };
+    async copiar({ dataOrigem, dataDestino }) {
+        if (!validarData(dataOrigem) || !validarData(dataDestino)) {
+            throw { status: 400, msg: "Informe datas válidas." };
         }
-
-        try {
-            return await this.#repo.excluir(id);
-        } catch (erro) {
-            throw erro;
+        if (dataOrigem === dataDestino) {
+            throw { status: 400, msg: "Escolha uma data de destino diferente da origem." };
         }
+        if (!(await this.#repo.copiar(dataOrigem, dataDestino))) {
+            throw { status: 404, msg: "Não existe cardápio cadastrado para a data de origem." };
+        }
+        return this.#repo.obterPorData(dataDestino);
     }
 }

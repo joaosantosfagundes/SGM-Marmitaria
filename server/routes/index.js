@@ -8,8 +8,8 @@ import categoriaRouter from './categoriaRoute.js';
 import unidadeRouter from './unidadeRoute.js';
 import redefinicaoSenhaRouter from './redefinicaosenhaRoute.js';
 import clienteRouter   from './clienteRoute.js';
+import cardapioRouter from './cardapioRoute.js';
 // TODO (Sprint 2/3, seguindo o padrão de usuarioRoute.js):
-// import cardapioRouter  from './cardapioRoute.js';  // RF_F1 - Cardápio do Dia
 // import pedidoRouter    from './pedidoRoute.js';    // RF_F2/F3 - Pedido / Status
 // import estoqueRouter   from './estoqueRoute.js';   // RF_F4 - Mov. Estoque
 // import pagamentoRouter from './pagamentoRoute.js'; // RF_F5/F6 - Pagamento / Quitação
@@ -26,8 +26,7 @@ router.use('/categoria', categoriaRouter);
 router.use('/unidade', unidadeRouter);
 router.use('/senha', redefinicaoSenhaRouter);
 router.use('/cliente', clienteRouter);
-
-// router.use('/cardapio', cardapioRouter);
+router.use('/cardapio', cardapioRouter);
 // router.use('/pedido', pedidoRouter);
 // router.use('/estoque', estoqueRouter);
 // router.use('/pagamento', pagamentoRouter);

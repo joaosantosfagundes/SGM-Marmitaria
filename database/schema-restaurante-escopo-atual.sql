@@ -70,11 +70,11 @@ CREATE TABLE insumo (
 
 
 -- ============================================================
--- 2. CARDÁPIO (PREÇO FIXO)
+-- 2. CARDÁPIO DO DIA
 -- ============================================================
--- produto     -> catálogo de tudo que é vendido, CADA ITEM COM SEU PRÓPRIO PREÇO
--- cardapio_item  -> apenas controla o que está DISPONÍVEL no dia (sem preço, herda de produto)
--- Sem ligação com ficha técnica por enquanto — baixa de estoque é manual (ver seção 8).
+-- produto     -> catálogo de itens vendidos, cada um com seu próprio preço
+-- cardapio_preparacao -> nomes livres das preparações previstas em cada data
+-- Não representa receita nem lote; composição de insumos pode ser adicionada futuramente.
 
 CREATE TABLE produto (
     id_produto INT AUTO_INCREMENT PRIMARY KEY,
@@ -92,15 +92,13 @@ CREATE TABLE cardapio (
     criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE cardapio_item (
-    id_cardapio_item INT AUTO_INCREMENT PRIMARY KEY,
+CREATE TABLE cardapio_preparacao (
+    id_cardapio_preparacao INT AUTO_INCREMENT PRIMARY KEY,
     id_cardapio INT NOT NULL,
-    id_produto INT NOT NULL,
-    disponivel BOOLEAN NOT NULL DEFAULT TRUE,
+    nome VARCHAR(150) NOT NULL,
+    ordem INT NOT NULL DEFAULT 0,
 
-    CONSTRAINT uq_cardapio_item UNIQUE (id_cardapio, id_produto),
-    CONSTRAINT fk_cardapio_item_cardapio FOREIGN KEY (id_cardapio) REFERENCES cardapio(id_cardapio),
-    CONSTRAINT fk_cardapio_item_item FOREIGN KEY (id_produto) REFERENCES produto(id_produto)
+    CONSTRAINT fk_cardapio_preparacao_cardapio FOREIGN KEY (id_cardapio) REFERENCES cardapio(id_cardapio)
 );
 
 

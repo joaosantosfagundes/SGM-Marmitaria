@@ -1,36 +1,23 @@
 import Entity from "./entity.js";
 
-export default class CardapioEntity extends Entity{
+export default class CardapioEntity extends Entity {
+    #id;
+    #data;
+    #preparacoes;
 
-    #idcardapioitem;
-    #idcardapio;
-    #nome;
-    #disponivel;
+    get id() { return this.#id; }
+    get data() { return this.#data; }
+    get preparacoes() { return this.#preparacoes; }
+    get existe() { return Boolean(this.#id); }
 
-    get idcardapioitem() {return this.#idcardapioitem;}
-    set idcardapioitem(value) { this.#idcardapioitem = value;}
-
-    get idcardapio() {return this.#idcardapio;}
-    set idcardapio(value) { this.#idcardapio = value;}
-
-    get nome() {return this.#nome;}
-    set nome(value) { this.#nome = value;}
-
-    get disponivel() {return this.#disponivel;}
-    set disponivel(value) { this.#disponivel = value;}
-
-    constructor(idcardapioitem, idcardapio, nome, disponivel){
+    constructor(id, data, preparacoes) {
         super();
-        this.#idcardapioitem = idcardapioitem;
-        this.#idcardapio = idcardapio;
-        this.#nome = nome;
-        this.#disponivel = disponivel;
-    }
-    
-    static toMap(row){
-        return new CardapioEntity(row["id_cardapio_item"],row["id_cardapio"],row["nome"],row["disponivel"]);
+        this.#id = id ?? null;
+        this.#data = data;
+        this.#preparacoes = preparacoes ?? [];
     }
 
-
-
+    static toMap(row, preparacoes = []) {
+        return new CardapioEntity(row?.id_cardapio, row?.data_cardapio, preparacoes);
+    }
 }

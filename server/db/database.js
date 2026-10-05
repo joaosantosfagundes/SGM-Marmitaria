@@ -72,4 +72,25 @@ export default class Database {
             });
         });
     }
+
+    async ExecutaTransacao(callback) {
+        let conexao = await new Promise((res, rej) => {
+            pool.getConnection((error, connection) => error ? rej(error) : res(connection));
+        });
+
+        try {
+            await new Promise((res, rej) => conexao.beginTransaction(error => error ? rej(error) : res()));
+            let consultar = (sql, valores = []) => new Promise((res, rej) => {
+                conexao.query(sql, valores, (error, results) => error ? rej(error) : res(results));
+            });
+            let resultado = await callback(consultar);
+            await new Promise((res, rej) => conexao.commit(error => error ? rej(error) : res()));
+            return resultado;
+        } catch (error) {
+            await new Promise(res => conexao.rollback(() => res()));
+            throw error;
+        } finally {
+            conexao.release();
+        }
+    }
 }

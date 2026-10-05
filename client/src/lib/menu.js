@@ -48,7 +48,7 @@ export const menu = [
 
 export const pages = {
   "/pedidos": { title: "Pedidos", description: "Gerenciamento e acompanhamento dos pedidos." },
-  "/cardapio": { title: "Cardápio do Dia", description: "Defina a composição de insumos da marmita para a data selecionada." },
+  "/cardapio": { title: "Cardápio do Dia", description: "Registre as preparações do dia e reutilize um cardápio já montado." },
   "/clientes": { title: "Clientes", description: "Cadastro e consulta de clientes." },
   "/produtos": { title: "Produtos", description: "Itens vendáveis com preço fixo (cardápio fixo, bebidas, etc)." },
   "/insumos": { title: "Insumos", description: "Cadastro de matérias-primas usadas na produção." },
