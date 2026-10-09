@@ -1,5 +1,6 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { readFileSync } from 'fs';
 import 'dotenv/config';
 import express from 'express';
 import cookieParser from 'cookie-parser';
@@ -18,6 +19,26 @@ app.use(cors({
 }));
 
 app.use('/api', routes);
+
+if (process.env.SWAGGER_ATIVO === 'true') {
+    const { default: swaggerUi } = await import('swagger-ui-express');
+    const { parse } = await import('yaml');
+    const documento = parse(readFileSync(path.join(__dirname, 'docs/openapi.yaml'), 'utf8'));
+
+    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(documento, {
+        customSiteTitle: 'SGM — Documentação da API',
+        swaggerOptions: {
+            withCredentials: true,
+            persistAuthorization: false,
+            validatorUrl: null,
+        },
+    }));
+}
+
+// Impede que a rota da SPA devolva HTML quando a documentação está desativada.
+app.use('/api-docs', (req, res) => {
+    res.status(404).json({ msg: 'Documentação da API indisponível.' });
+});
 
 app.use(express.static(path.join(__dirname, '../client/dist')));
 
