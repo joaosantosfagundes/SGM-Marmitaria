@@ -8,6 +8,7 @@ import AppShell from './components/AppShell.jsx';
 import Dashboard from './components/Dashboard.jsx';
 import PlaceholderPage from './components/PlaceholderPage.jsx';
 import ProdutosPage from './pages/produtos/ProdutosPage.jsx';
+import AdicionaisPage from './pages/adicionais/AdicionaisPage.jsx';
 import InsumosPage from './pages/insumos/InsumosPage.jsx';
 import EsqueciSenha from './pages/login/esqueciSenha.jsx';
 import RedefinirSenha from './pages/login/redefinirSenha.jsx';
@@ -21,6 +22,7 @@ import { pages } from './lib/menu.js';
 // Conforme cada RF for ficando pronto, só adiciona uma entrada aqui.
 const TELAS_PRONTAS = {
     '/produtos': ProdutosPage,
+    '/adicionais': AdicionaisPage,
     '/insumos': InsumosPage,
     '/clientes': ClientesPage,
     '/usuarios': UsuariosPage,

@@ -96,6 +96,7 @@ CREATE TABLE cardapio_preparacao (
     id_cardapio_preparacao INT AUTO_INCREMENT PRIMARY KEY,
     id_cardapio INT NOT NULL,
     nome VARCHAR(150) NOT NULL,
+    grupo VARCHAR(50) NULL, -- NULL = item fixo; Mistura = alternativa do dia
     ordem INT NOT NULL DEFAULT 0,
 
     CONSTRAINT fk_cardapio_preparacao_cardapio FOREIGN KEY (id_cardapio) REFERENCES cardapio(id_cardapio)
@@ -109,14 +110,23 @@ CREATE TABLE cardapio_preparacao (
 CREATE TABLE adicional (
     id_adicional INT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
-    id_insumo INT NOT NULL,
-    quantidade_consumida DECIMAL(10,3) NOT NULL,
+    id_insumo INT NULL,
+    quantidade_consumida DECIMAL(10,3) NULL,
     preco DECIMAL(10,2) NOT NULL,
     ativo BOOLEAN NOT NULL DEFAULT TRUE,
 
     CONSTRAINT fk_adicional_insumo FOREIGN KEY (id_insumo) REFERENCES insumo(id_insumo),
     CONSTRAINT chk_adicional_quantidade CHECK (quantidade_consumida > 0),
     CONSTRAINT chk_adicional_preco CHECK (preco >= 0)
+);
+
+CREATE TABLE cardapio_adicional (
+    id_cardapio_adicional INT AUTO_INCREMENT PRIMARY KEY,
+    id_cardapio INT NOT NULL,
+    id_adicional INT NOT NULL,
+    CONSTRAINT uq_cardapio_adicional UNIQUE (id_cardapio, id_adicional),
+    CONSTRAINT fk_cardapio_adicional_cardapio FOREIGN KEY (id_cardapio) REFERENCES cardapio(id_cardapio),
+    CONSTRAINT fk_cardapio_adicional_adicional FOREIGN KEY (id_adicional) REFERENCES adicional(id_adicional)
 );
 
 
