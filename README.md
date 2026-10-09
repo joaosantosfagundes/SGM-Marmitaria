@@ -54,7 +54,8 @@ npm run dev             # http://localhost:5173
 
 ### Sprint 3 (14–26/09) — RF_B4 + RF_F1 + abertura RF_F9
 - [x] RF_B4 — Clientes
-- [x] RF_F1 — Cardápio do Dia (preparações em texto livre e reutilização entre datas)
+- [x] RF_F1 — Cardápio do Dia (itens fixos em texto livre, opções de mistura ordenadas, adicionais e reutilização entre datas)
+- [x] Cadastro de adicionais (nome, preço, vínculo opcional com insumo, edição, inativação/reativação e exclusão)
 - [ ] RF_F9 — (abre, conclui depois)
 
 ### Sprint 4 (28/09–17/10) — RF_F2–F4
@@ -69,6 +70,18 @@ npm run dev             # http://localhost:5173
 - [ ] RF_F8 — Abrir/Fechar Caixa
 - [ ] RF_S1–S5 — Relatórios
 - [ ] Deploy
+
+## Atualização do banco para opções de mistura e adicionais
+
+Para um banco existente que já contém `cardapio_preparacao` e `adicional`, aplique uma única vez
+[`server/db/migrations/002-cardapio-opcoes-adicionais.sql`](server/db/migrations/002-cardapio-opcoes-adicionais.sql).
+As preparações já salvas ficam no grupo de itens fixos (`grupo NULL`). Para um banco novo,
+use o schema completo atualizado em `database/schema-restaurante-escopo-atual.sql`.
+
+O cardápio recebe `preparacoes: [{ nome, grupo }]` (`grupo` é `null` ou `"Mistura"`) e
+`adicionais: [id]`. A consulta devolve nome e preço atual dos adicionais, inclusive os que
+foram inativados depois, preservando o vínculo no histórico. Salvar e reutilizar exigem
+que os adicionais selecionados estejam ativos; a tela permite remover os inativos.
 
 ## Padrão pra criar uma nova entidade (ex: RF_B2 Produtos)
 

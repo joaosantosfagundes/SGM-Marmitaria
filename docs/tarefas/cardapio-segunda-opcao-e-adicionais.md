@@ -1,5 +1,26 @@
 # Tarefa: Cardápio do Dia — segunda opção (grupo "Mistura") e adicionais
 
+<!--
+SQL para banco existente (aplicar uma única vez; também disponível em
+server/db/migrations/002-cardapio-opcoes-adicionais.sql):
+
+ALTER TABLE cardapio_preparacao
+    ADD COLUMN grupo VARCHAR(50) NULL AFTER nome;
+
+ALTER TABLE adicional
+    MODIFY COLUMN id_insumo INT NULL,
+    MODIFY COLUMN quantidade_consumida DECIMAL(10,3) NULL;
+
+CREATE TABLE cardapio_adicional (
+    id_cardapio_adicional INT AUTO_INCREMENT PRIMARY KEY,
+    id_cardapio INT NOT NULL,
+    id_adicional INT NOT NULL,
+    CONSTRAINT uq_cardapio_adicional UNIQUE (id_cardapio, id_adicional),
+    CONSTRAINT fk_cardapio_adicional_cardapio FOREIGN KEY (id_cardapio) REFERENCES cardapio(id_cardapio),
+    CONSTRAINT fk_cardapio_adicional_adicional FOREIGN KEY (id_adicional) REFERENCES adicional(id_adicional)
+);
+-->
+
 Leia o AGENTS.md antes. Siga as 5 camadas e o padrão de `produto*` e `cliente*`.
 
 ## Contexto
@@ -73,4 +94,4 @@ Corpo do PUT:
 - [ ] Salvar um cardápio com itens fixos, 3 opções de mistura em ordem e 2 adicionais; recarregar a página e tudo voltar igual.
 - [ ] Copiar um cardápio leva grupo, ordem e adicionais.
 - [ ] Adicional inativo ou inexistente é rejeitado no cardápio com mensagem clara.
-- [ ] Schema atualizado e o checklist do README marcado.
+- [x] Schema atualizado e o checklist do README marcado.

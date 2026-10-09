@@ -16,6 +16,7 @@ export const menu = [
     items: [
       { href: "/clientes", label: "Clientes", icon: "ti-users" },      // RF_B4
       { href: "/produtos", label: "Produtos", icon: "ti-shopping-cart" }, // RF_B2
+      { href: "/adicionais", label: "Adicionais", icon: "ti-circle-plus" },
       { href: "/insumos", label: "Insumos", icon: "ti-package" },      // RF_B3
       { href: "/estoque", label: "Estoque", icon: "ti-box" },          // RF_F4
     ],
@@ -51,6 +52,7 @@ export const pages = {
   "/cardapio": { title: "Cardápio do Dia", description: "Registre as preparações do dia e reutilize um cardápio já montado." },
   "/clientes": { title: "Clientes", description: "Cadastro e consulta de clientes." },
   "/produtos": { title: "Produtos", description: "Itens vendáveis com preço fixo (cardápio fixo, bebidas, etc)." },
+  "/adicionais": { title: "Adicionais", description: "Cadastro de adicionais com preço fixo para o cardápio do dia." },
   "/insumos": { title: "Insumos", description: "Cadastro de matérias-primas usadas na produção." },
   "/estoque": { title: "Estoque", description: "Controle manual de entradas e saídas de insumos." },
   "/caixa/abrir": { title: "Abrir Caixa", description: "Abertura do caixa diário." },
