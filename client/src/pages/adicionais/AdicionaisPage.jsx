@@ -93,10 +93,15 @@ export default function AdicionaisPage() {
 
     async function handleSubmit(event) {
         event.preventDefault();
+        let preco = Number(form.preco);
+        if (String(form.preco).trim() === '' || !Number.isFinite(preco) || preco < 0.01) {
+            toast.error('O preço do adicional deve ser maior que zero (mínimo R$ 0,01).');
+            return;
+        }
         setSalvando(true);
         let corpo = {
             nome: form.nome,
-            preco: Number(form.preco),
+            preco,
             id_insumo: form.id_insumo === '' ? null : Number(form.id_insumo),
             quantidade_consumida: form.quantidade_consumida === '' ? null : Number(form.quantidade_consumida),
         };
@@ -198,7 +203,12 @@ export default function AdicionaisPage() {
                                 <label htmlFor="nome-adicional" className="form-label small">Nome</label>
                                 <input id="nome-adicional" className="form-control mb-3" maxLength={100} required value={form.nome} onChange={event => setForm({ ...form, nome: event.target.value })} />
                                 <label htmlFor="preco-adicional" className="form-label small">Preço (R$)</label>
-                                <input id="preco-adicional" type="number" min="0" max="99999999.99" step="0.01" className="form-control mb-3" required value={form.preco} onChange={event => setForm({ ...form, preco: event.target.value })} />
+                                <input id="preco-adicional" type="number" min="0.01" max="99999999.99" step="0.01" className="form-control mb-3" required value={form.preco} onChange={event => setForm({ ...form, preco: event.target.value })}
+                                    onInvalid={event => {
+                                        if (event.target.validity.valueMissing || event.target.validity.rangeUnderflow) {
+                                            toast.error('O preço do adicional deve ser maior que zero (mínimo R$ 0,01).');
+                                        }
+                                    }} />
                                 <label htmlFor="insumo-adicional" className="form-label small">Insumo (opcional)</label>
                                 <select id="insumo-adicional" className="form-select mb-3" value={form.id_insumo} onChange={event => setForm({ ...form, id_insumo: event.target.value })}>
                                     <option value="">Sem vínculo com insumo</option>

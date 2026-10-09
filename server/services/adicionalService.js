@@ -41,9 +41,12 @@ export default class AdicionalService {
     }
 
     async #validar(entidade) {
+        if (!AdicionalEntity.validarPreco(entidade.preco)) {
+            throw { status: 400, msg: "O preço do adicional deve ser maior que zero (mínimo R$ 0,01), com até duas casas decimais e no máximo R$ 99.999.999,99." };
+        }
         if (typeof entidade.nome === "string") entidade.nome = entidade.nome.trim().replace(/\s+/g, " ");
         if (!entidade.validar()) {
-            throw { status: 400, msg: "Informe nome com até 100 caracteres, preço maior ou igual a zero (até duas casas decimais) e, se preenchidos, insumo e quantidade válidos (até três casas decimais)." };
+            throw { status: 400, msg: "Informe nome com até 100 caracteres, preço maior que zero (até duas casas decimais) e, se preenchidos, insumo e quantidade válidos (até três casas decimais)." };
         }
         if (entidade.ativo && await this.#repo.obterAtivoPorNome(entidade.nome, entidade.id)) {
             throw { status: 409, msg: "Já existe um adicional ativo com esse nome." };

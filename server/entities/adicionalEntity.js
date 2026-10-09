@@ -36,10 +36,14 @@ export default class AdicionalEntity extends Entity {
             row.id_insumo, row.quantidade_consumida == null ? null : Number(row.quantidade_consumida));
     }
 
+    static validarPreco(preco) {
+        return Number.isFinite(preco) && preco >= 0.01 && preco <= 99999999.99
+            && Math.round(preco * 100) / 100 === preco;
+    }
+
     validar() {
         if (typeof this.#nome !== "string" || !this.#nome.trim() || this.#nome.length > 100) return false;
-        if (!Number.isFinite(this.#preco) || this.#preco < 0 || this.#preco > 99999999.99) return false;
-        if (Math.abs(this.#preco * 100 - Math.round(this.#preco * 100)) > 0.00001) return false;
+        if (!AdicionalEntity.validarPreco(this.#preco)) return false;
         if (typeof this.#ativo !== "boolean") return false;
         if (this.#idInsumo !== null && (!Number.isSafeInteger(this.#idInsumo) || this.#idInsumo <= 0)) return false;
         if (this.#quantidadeConsumida !== null) {

@@ -1,0 +1,1639 @@
+openapi: 3.0.3
+info:
+  title: SGM — API da Marmitaria
+  version: 1.0.0
+  description: |
+    Documentação das rotas existentes do SGM. Os nomes de entrada e saída seguem o código atual;
+    alguns cadastros recebem campos em snake_case e devolvem campos em camelCase.
+
+    Para testar: abra POST /login, clique em Try it out, preencha email e senha de uma conta
+    existente e execute. O navegador armazena o cookie httpOnly chamado token e o envia
+    automaticamente nas próximas chamadas deste servidor. Não cole JWT no botão Authorize:
+    o JavaScript não pode definir esse cookie manualmente. GET /login/usuario confirma a sessão;
+    POST /login/logout encerra a sessão. Em produção, o cookie Secure exige HTTPS.
+
+    As permissões estão descritas em cada operação. Ativar a documentação não libera acesso às
+    rotas protegidas. Campos de senha e tokens de redefinição são apenas de entrada e não têm
+    valores de exemplo. Datas do cardápio usam YYYY-MM-DD e não incluem horário.
+servers:
+  - url: /api
+    description: API no mesmo servidor da documentação
+security:
+  - cookieAuth: []
+tags:
+  - name: Login
+    description: Acesso e sessão por cookie httpOnly
+  - name: Redefinição de senha
+    description: Solicitação e confirmação de nova senha
+  - name: Usuários
+    description: Cadastro administrado somente pelo perfil ADMIN
+  - name: Categorias
+    description: Consulta de categorias ativas de insumos
+  - name: Unidades
+    description: Consulta de unidades de medida
+  - name: Insumos
+    description: Matérias-primas e materiais da cozinha
+  - name: Produtos
+    description: Itens vendáveis com preço fixo
+  - name: Clientes
+    description: Cadastro de clientes
+  - name: Adicionais
+    description: Adicionais com preço fixo e vínculo opcional com insumo
+  - name: Cardápio
+    description: Itens fixos, alternativas de mistura e adicionais de cada data
+paths:
+  /login:
+    post:
+      tags: [Login]
+      operationId: fazerLogin
+      summary: Entrar no sistema
+      description: |
+        Acesso público, sem cookie anterior. Informe email e senha de uma conta ativa.
+        Retorna o usuário sem senha e define o cookie token, httpOnly, SameSite=Lax, com
+        validade de oito horas. Em produção o cookie também é Secure.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginEntrada'
+      responses:
+        '200':
+          description: Sessão criada; o navegador recebe o cookie automaticamente.
+          headers:
+            Set-Cookie:
+              description: Cookie token com HttpOnly, SameSite=Lax e validade de oito horas; Secure em produção. O valor não é documentado.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [usuario]
+                properties:
+                  usuario:
+                    $ref: '#/components/schemas/Usuario'
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          description: E-mail ou senha inválidos, ou usuário inativo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+              example:
+                msg: E-mail ou senha inválidos
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /login/usuario:
+    get:
+      tags: [Login]
+      operationId: consultarSessao
+      summary: Consultar o usuário da sessão
+      description: 'Perfis: ADMIN, ATENDENTE e COZINHA. Consulta o usuário atual no banco e devolve seus dados sem senha.'
+      responses:
+        '200':
+          description: Dados do usuário autenticado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+  /login/logout:
+    post:
+      tags: [Login]
+      operationId: encerrarSessao
+      summary: Sair do sistema
+      description: Acesso público. Remove o cookie token, inclusive quando não há sessão. Não exige corpo.
+      security: []
+      responses:
+        '200':
+          description: Cookie removido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mensagem'
+              example:
+                msg: Logout realizado
+  /senha/esqueci-senha:
+    post:
+      tags: [Redefinição de senha]
+      operationId: solicitarRedefinicao
+      summary: Solicitar link de redefinição
+      description: |
+        Acesso público. A resposta é igual para e-mails cadastrados e não cadastrados.
+        O link expira em uma hora. Sem serviço de e-mail configurado, o backend apresenta
+        o link no console local, conforme o comportamento atual do serviço.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+            example:
+              email: pessoa@example.com
+      responses:
+        '200':
+          description: Solicitação processada sem revelar se o e-mail existe.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mensagem'
+              example:
+                msg: Se esse e-mail estiver cadastrado, enviamos um link de redefinição.
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /senha/redefinir-senha:
+    post:
+      tags: [Redefinição de senha]
+      operationId: redefinirSenha
+      summary: Definir uma nova senha
+      description: Acesso público. Recebe o token do link e novaSenha com pelo menos seis caracteres. O token é invalidado após o uso.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, novaSenha]
+              properties:
+                token:
+                  type: string
+                  writeOnly: true
+                  description: Token recebido no link de redefinição; preencha somente ao executar.
+                novaSenha:
+                  type: string
+                  format: password
+                  minLength: 6
+                  writeOnly: true
+                  description: Nova senha escolhida; preencha somente ao executar.
+      responses:
+        '200':
+          description: Senha alterada; faça login com a nova senha.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mensagem'
+              example:
+                msg: Senha redefinida com sucesso. Faça login com a nova senha.
+        '400':
+          description: Senha inválida ou link inválido, expirado ou já utilizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /usuario:
+    get:
+      tags: [Usuários]
+      operationId: listarUsuarios
+      summary: Listar usuários
+      description: 'Perfil: ADMIN. Inclui usuários ativos e inativos, sempre sem senha.'
+      responses:
+        '200':
+          description: Lista de usuários.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Usuario'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+    post:
+      tags: [Usuários]
+      operationId: criarUsuario
+      summary: Cadastrar usuário
+      description: 'Perfil: ADMIN. O usuário nasce ativo. O campo senha é somente de entrada; não há valor de exemplo.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioCriacao'
+      responses:
+        '201':
+          description: Usuário cadastrado, sem senha na resposta.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflito'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /usuario/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Usuários]
+      operationId: obterUsuario
+      summary: Buscar usuário por ID
+      description: 'Perfil: ADMIN. Devolve o usuário sem senha.'
+      responses:
+        '200':
+          description: Usuário encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+    put:
+      tags: [Usuários]
+      operationId: atualizarUsuario
+      summary: Atualizar usuário ou reativar cadastro
+      description: 'Perfil: ADMIN. Atualização parcial. Não altera senha. O usuário logado não pode alterar seu próprio perfil nem desativar sua própria conta.'
+      requestBody:
+        $ref: '#/components/requestBodies/UsuarioAtualizacao'
+      responses:
+        '200':
+          description: Usuário atualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+    delete:
+      tags: [Usuários]
+      operationId: inativarUsuario
+      summary: Inativar usuário
+      description: 'Perfil: ADMIN. Preserva o cadastro. Não permite inativar sua própria conta. Não exige corpo.'
+      responses:
+        '200':
+          $ref: '#/components/responses/Inativado'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /usuario/{id}/excluir:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      tags: [Usuários]
+      operationId: excluirUsuario
+      summary: Excluir usuário definitivamente
+      description: 'Perfil: ADMIN. Não permite excluir sua própria conta nem um usuário com registros vinculados. Não exige corpo.'
+      responses:
+        '200':
+          $ref: '#/components/responses/Excluido'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflito'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /categoria:
+    get:
+      tags: [Categorias]
+      operationId: listarCategorias
+      summary: Listar categorias ativas
+      description: 'Perfis: ADMIN, ATENDENTE e COZINHA. Esta rota é somente de consulta.'
+      responses:
+        '200':
+          description: Lista de categorias ativas.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Categoria'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /unidade:
+    get:
+      tags: [Unidades]
+      operationId: listarUnidades
+      summary: Listar unidades de medida
+      description: 'Perfis: ADMIN, ATENDENTE e COZINHA. Esta rota é somente de consulta.'
+      responses:
+        '200':
+          description: Lista de unidades.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Unidade'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /insumo:
+    get:
+      tags: [Insumos]
+      operationId: listarInsumos
+      summary: Listar insumos com categoria e unidade
+      description: 'Perfis: ADMIN, ATENDENTE e COZINHA. Inclui ativos e inativos. A listagem acrescenta nomeCategoria, nomeUnidade e siglaUnidade.'
+      responses:
+        '200':
+          description: Lista de insumos com detalhes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InsumoDetalhado'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+    post:
+      tags: [Insumos]
+      operationId: criarInsumo
+      summary: Cadastrar insumo
+      description: 'Perfil: ADMIN. Nasce ativo, exige categoria ativa, unidade existente e preço de custo positivo. VENDA_DIRETA exige preço de venda positivo.'
+      requestBody:
+        $ref: '#/components/requestBodies/InsumoCriacao'
+      responses:
+        '201':
+          description: Insumo cadastrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Insumo'
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflito'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /insumo/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Insumos]
+      operationId: obterInsumo
+      summary: Buscar insumo por ID
+      description: 'Perfis: ADMIN, ATENDENTE e COZINHA. A resposta individual não inclui os nomes da categoria e da unidade.'
+      responses:
+        '200':
+          description: Insumo encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Insumo'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+    put:
+      tags: [Insumos]
+      operationId: atualizarInsumo
+      summary: Atualizar insumo ou reativar cadastro
+      description: 'Perfil: ADMIN. Atualização parcial. Para reativar, envie ativo=true.'
+      requestBody:
+        $ref: '#/components/requestBodies/InsumoAtualizacao'
+      responses:
+        '200':
+          description: Insumo atualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Insumo'
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflito'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+    delete:
+      tags: [Insumos]
+      operationId: inativarInsumo
+      summary: Inativar insumo
+      description: 'Perfil: ADMIN. Preserva o cadastro e seu histórico. Não exige corpo.'
+      responses:
+        '200':
+          $ref: '#/components/responses/Inativado'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /insumo/{id}/excluir:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      tags: [Insumos]
+      operationId: excluirInsumo
+      summary: Excluir insumo definitivamente
+      description: 'Perfil: ADMIN. Vínculos existentes podem impedir a exclusão; nesse caso use inativação. Não exige corpo.'
+      responses:
+        '200':
+          $ref: '#/components/responses/Excluido'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflito'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /produto:
+    get:
+      tags: [Produtos]
+      operationId: listarProdutos
+      summary: Listar produtos
+      description: 'Perfis: ADMIN, ATENDENTE e COZINHA. Inclui produtos ativos e inativos.'
+      responses:
+        '200':
+          description: Lista de produtos.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Produto'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+    post:
+      tags: [Produtos]
+      operationId: criarProduto
+      summary: Cadastrar produto
+      description: 'Perfil: ADMIN. Nasce ativo. Exige nome com pelo menos dois caracteres e preço positivo. Nome já cadastrado gera conflito.'
+      requestBody:
+        $ref: '#/components/requestBodies/ProdutoCriacao'
+      responses:
+        '201':
+          description: Produto cadastrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Produto'
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflito'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /produto/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Produtos]
+      operationId: obterProduto
+      summary: Buscar produto por ID
+      description: 'Perfis: ADMIN, ATENDENTE e COZINHA.'
+      responses:
+        '200':
+          description: Produto encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Produto'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+    put:
+      tags: [Produtos]
+      operationId: atualizarProduto
+      summary: Atualizar produto ou reativar cadastro
+      description: 'Perfil: ADMIN. Atualização parcial. Recebe preco_padrao e devolve precoPadrao. Para reativar, envie ativo=true.'
+      requestBody:
+        $ref: '#/components/requestBodies/ProdutoAtualizacao'
+      responses:
+        '200':
+          description: Produto atualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Produto'
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflito'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+    delete:
+      tags: [Produtos]
+      operationId: inativarProduto
+      summary: Inativar produto
+      description: 'Perfil: ADMIN. Preserva o cadastro e seu histórico. Não exige corpo.'
+      responses:
+        '200':
+          $ref: '#/components/responses/Inativado'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /produto/{id}/excluir:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      tags: [Produtos]
+      operationId: excluirProduto
+      summary: Excluir produto definitivamente
+      description: 'Perfil: ADMIN. Vínculos existentes podem impedir a exclusão; nesse caso use inativação. Não exige corpo.'
+      responses:
+        '200':
+          $ref: '#/components/responses/Excluido'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflito'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /cliente:
+    get:
+      tags: [Clientes]
+      operationId: listarClientes
+      summary: Listar clientes
+      description: 'Perfis: ADMIN e ATENDENTE. Inclui clientes ativos e inativos.'
+      responses:
+        '200':
+          description: Lista de clientes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Cliente'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+    post:
+      tags: [Clientes]
+      operationId: criarCliente
+      summary: Cadastrar cliente
+      description: 'Perfis: ADMIN e ATENDENTE. Nasce ativo. Nome é obrigatório; telefone é opcional. Telefone já cadastrado gera conflito na criação.'
+      requestBody:
+        $ref: '#/components/requestBodies/ClienteCriacao'
+      responses:
+        '201':
+          description: Cliente cadastrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cliente'
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflito'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /cliente/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Clientes]
+      operationId: obterCliente
+      summary: Buscar cliente por ID
+      description: 'Perfis: ADMIN e ATENDENTE.'
+      responses:
+        '200':
+          description: Cliente encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cliente'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+    put:
+      tags: [Clientes]
+      operationId: atualizarCliente
+      summary: Atualizar cliente ou reativar cadastro
+      description: 'Perfis: ADMIN e ATENDENTE. Atualização parcial. Para reativar, envie ativo=true.'
+      requestBody:
+        $ref: '#/components/requestBodies/ClienteAtualizacao'
+      responses:
+        '200':
+          description: Cliente atualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cliente'
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+    delete:
+      tags: [Clientes]
+      operationId: inativarCliente
+      summary: Inativar cliente
+      description: 'Perfis: ADMIN e ATENDENTE. Preserva o cadastro e seu histórico. Não exige corpo.'
+      responses:
+        '200':
+          $ref: '#/components/responses/Inativado'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /cliente/{id}/excluir:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      tags: [Clientes]
+      operationId: excluirCliente
+      summary: Excluir cliente definitivamente
+      description: 'Perfis: ADMIN e ATENDENTE. Pedidos vinculados impedem a exclusão; nesse caso use inativação. Não exige corpo.'
+      responses:
+        '200':
+          $ref: '#/components/responses/Excluido'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflito'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /adicional:
+    get:
+      tags: [Adicionais]
+      operationId: listarAdicionais
+      summary: Listar adicionais
+      description: 'Perfis: ADMIN, ATENDENTE e COZINHA. Inclui adicionais ativos e inativos.'
+      responses:
+        '200':
+          description: Lista de adicionais.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Adicional'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+        '503':
+          $ref: '#/components/responses/EstruturaPendente'
+    post:
+      tags: [Adicionais]
+      operationId: criarAdicional
+      summary: Cadastrar adicional
+      description: 'Perfil: ADMIN. Nasce ativo. Nome tem até 100 caracteres e não pode repetir outro adicional ativo. Preço deve ser maior que zero (mínimo 0,01), com até duas casas decimais e no máximo 99999999.99. O vínculo com insumo e a quantidade são opcionais e não baixam estoque.'
+      requestBody:
+        $ref: '#/components/requestBodies/AdicionalCriacao'
+      responses:
+        '201':
+          description: Adicional cadastrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Adicional'
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflito'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+        '503':
+          $ref: '#/components/responses/EstruturaPendente'
+  /adicional/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Adicionais]
+      operationId: obterAdicional
+      summary: Buscar adicional por ID
+      description: 'Perfis: ADMIN, ATENDENTE e COZINHA.'
+      responses:
+        '200':
+          description: Adicional encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Adicional'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+        '503':
+          $ref: '#/components/responses/EstruturaPendente'
+    put:
+      tags: [Adicionais]
+      operationId: atualizarAdicional
+      summary: Atualizar adicional ou reativar cadastro
+      description: 'Perfil: ADMIN. Atualização parcial. Para reativar, envie ativo=true; a reativação também verifica nome duplicado entre ativos. Os campos opcionais id_insumo e quantidade_consumida aceitam null para remover seus valores.'
+      requestBody:
+        $ref: '#/components/requestBodies/AdicionalAtualizacao'
+      responses:
+        '200':
+          description: Adicional atualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Adicional'
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflito'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+        '503':
+          $ref: '#/components/responses/EstruturaPendente'
+    delete:
+      tags: [Adicionais]
+      operationId: inativarAdicional
+      summary: Inativar adicional
+      description: 'Perfil: ADMIN. Preserva os vínculos no histórico do cardápio. Novos salvamentos e cópias não aceitam este adicional enquanto estiver inativo. Não exige corpo.'
+      responses:
+        '200':
+          $ref: '#/components/responses/Inativado'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+        '503':
+          $ref: '#/components/responses/EstruturaPendente'
+  /adicional/{id}/excluir:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      tags: [Adicionais]
+      operationId: excluirAdicional
+      summary: Excluir adicional definitivamente
+      description: 'Perfil: ADMIN. Pedidos ou cardápios vinculados impedem a exclusão; nesse caso use inativação. Não exige corpo.'
+      responses:
+        '200':
+          $ref: '#/components/responses/Excluido'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflito'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+        '503':
+          $ref: '#/components/responses/EstruturaPendente'
+  /cardapio:
+    get:
+      tags: [Cardápio]
+      operationId: obterCardapio
+      summary: Consultar cardápio de uma data
+      description: |
+        Perfis: ADMIN e ATENDENTE. Retorna preparações na ordem salva e adicionais com nome e
+        preço atual do cadastro. Adicionais inativados após o salvamento continuam na consulta.
+        Se a data não tiver cadastro, devolve 200 com id=null, existe=false e listas vazias.
+      parameters:
+        - name: data
+          in: query
+          required: true
+          description: Data válida do cardápio no formato YYYY-MM-DD.
+          schema:
+            type: string
+            format: date
+          example: '2026-10-08'
+      responses:
+        '200':
+          description: Cardápio cadastrado ou vazio para a data consultada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cardapio'
+              examples:
+                cadastrado:
+                  summary: Cardápio com itens fixos, três alternativas e dois adicionais
+                  value:
+                    id: 1
+                    data: '2026-10-08'
+                    existe: true
+                    preparacoes:
+                      - {nome: Arroz, grupo: null}
+                      - {nome: Feijão, grupo: null}
+                      - {nome: Carne, grupo: Mistura}
+                      - {nome: Frango, grupo: Mistura}
+                      - {nome: Ovo, grupo: Mistura}
+                    adicionais:
+                      - {id: 3, nome: Ovo extra, preco: 2.5}
+                      - {id: 5, nome: Farofa, preco: 1.5}
+                vazio:
+                  summary: Data sem cadastro
+                  value:
+                    id: null
+                    data: '2026-10-09'
+                    existe: false
+                    preparacoes: []
+                    adicionais: []
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          description: Usuário da sessão não encontrado. A ausência de cardápio nessa data retorna 200, não 404.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+        '503':
+          $ref: '#/components/responses/EstruturaPendente'
+    put:
+      tags: [Cardápio]
+      operationId: salvarCardapio
+      summary: Criar ou substituir cardápio de uma data
+      description: |
+        Perfis: ADMIN e ATENDENTE. Substitui as preparações e adicionais numa transação.
+        A ordem do array define a ordem das preparações. grupo=null é item fixo e grupo=Mistura
+        é alternativa. Nomes são obrigatórios, até 150 caracteres, sem repetição dentro do
+        mesmo grupo (ignora espaços e maiúsculas/minúsculas). adicionais é um array de IDs
+        positivos, sem repetição, que devem existir e estar ativos. Arrays vazios são aceitos.
+      requestBody:
+        $ref: '#/components/requestBodies/CardapioGravacao'
+      responses:
+        '200':
+          $ref: '#/components/responses/CardapioSalvo'
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+        '503':
+          $ref: '#/components/responses/EstruturaPendente'
+  /cardapio/copiar:
+    post:
+      tags: [Cardápio]
+      operationId: copiarCardapio
+      summary: Reutilizar cardápio em outra data
+      description: |
+        Perfis: ADMIN e ATENDENTE. As datas devem ser válidas e diferentes, e a origem deve
+        ter cadastro. Substitui o destino copiando nomes, grupos, ordem e adicionais. Usa as
+        mesmas validações do salvamento; se um adicional da origem estiver inativo, rejeita
+        a cópia antes de substituir o destino. A resposta é o cardápio da data de destino.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dataOrigem, dataDestino]
+              properties:
+                dataOrigem:
+                  type: string
+                  format: date
+                dataDestino:
+                  type: string
+                  format: date
+            example:
+              dataOrigem: '2026-10-08'
+              dataDestino: '2026-10-14'
+      responses:
+        '200':
+          $ref: '#/components/responses/CardapioSalvo'
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          description: Cardápio da data de origem não cadastrado, ou usuário da sessão não encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+              example:
+                msg: Não existe cardápio cadastrado para a data de origem.
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+        '503':
+          $ref: '#/components/responses/EstruturaPendente'
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: token
+      description: Cookie JWT httpOnly criado por POST /login. Faça login pela operação; o navegador envia o cookie automaticamente. Não é preenchido manualmente no botão Authorize.
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      description: ID do cadastro.
+      schema:
+        type: integer
+        minimum: 1
+      example: 1
+  responses:
+    DadosInvalidos:
+      description: Dados ausentes ou inválidos; a mensagem informa a validação que falhou.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+    NaoAutenticado:
+      description: Cookie ausente ou inválido, sessão expirada ou usuário inativo. Faça login novamente.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+          example:
+            msg: Necessário login!
+    SemPermissao:
+      description: O perfil não pode executar esta operação ou a alteração da própria conta é proibida.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+          example:
+            msg: Sem permissão para esta ação
+    NaoEncontrado:
+      description: Cadastro solicitado não encontrado, ou usuário da sessão removido do banco.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+    Conflito:
+      description: Cadastro duplicado ou exclusão bloqueada por vínculos existentes. Confira a mensagem retornada.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+    ErroInterno:
+      description: Erro ao processar a requisição no servidor.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+    EstruturaPendente:
+      description: A estrutura de adicionais ou cardápio no banco está desatualizada; aplique a migração informada na mensagem.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+    Inativado:
+      description: Cadastro inativado com sucesso.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Mensagem'
+    Excluido:
+      description: Cadastro excluído definitivamente.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Mensagem'
+    CardapioSalvo:
+      description: Cardápio da data de destino, após o salvamento ou reutilização.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Cardapio'
+  requestBodies:
+    UsuarioAtualizacao:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UsuarioAtualizacao'
+          example:
+            nome: Maria Silva
+            email: maria@example.com
+            perfil: ATENDENTE
+            ativo: true
+    ProdutoCriacao:
+      required: true
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ProdutoEntrada'
+              - required: [nome, preco_padrao]
+          example:
+            nome: Marmita G
+            descricao: Marmita grande
+            preco_padrao: 25
+    ProdutoAtualizacao:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProdutoEntrada'
+          examples:
+            editar:
+              value: {nome: Marmita G, descricao: Marmita grande, preco_padrao: 27}
+            reativar:
+              value: {ativo: true}
+    InsumoCriacao:
+      required: true
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/InsumoEntrada'
+              - required: [nome, id_categoria, id_unidade, classificacao, preco_custo]
+          example:
+            nome: Arroz cru
+            id_categoria: 1
+            id_unidade: 1
+            classificacao: INSUMO
+            preco_custo: 5.5
+            preco_venda: 0
+            estoque_minimo: 10
+    InsumoAtualizacao:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/InsumoEntrada'
+          examples:
+            editar:
+              value: {preco_custo: 6, estoque_minimo: 12}
+            reativar:
+              value: {ativo: true}
+    ClienteCriacao:
+      required: true
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ClienteEntrada'
+              - required: [nome]
+          example:
+            nome: Maria Silva
+            telefone: '18999990000'
+    ClienteAtualizacao:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ClienteEntrada'
+          examples:
+            editar:
+              value: {nome: Maria Silva, telefone: '18999990000'}
+            reativar:
+              value: {ativo: true}
+    AdicionalCriacao:
+      required: true
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/AdicionalEntrada'
+              - required: [nome, preco]
+          example:
+            nome: Ovo extra
+            preco: 2.5
+            id_insumo: null
+            quantidade_consumida: null
+    AdicionalAtualizacao:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AdicionalEntrada'
+          examples:
+            editar:
+              value: {nome: Ovo extra, preco: 3, id_insumo: null, quantidade_consumida: null}
+            reativar:
+              value: {ativo: true}
+    CardapioGravacao:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CardapioEntrada'
+          example:
+            data: '2026-10-08'
+            preparacoes:
+              - {nome: Arroz, grupo: null}
+              - {nome: Feijão, grupo: null}
+              - {nome: Carne, grupo: Mistura}
+              - {nome: Frango, grupo: Mistura}
+              - {nome: Ovo, grupo: Mistura}
+            adicionais: [3, 5]
+  schemas:
+    Erro:
+      type: object
+      required: [msg]
+      properties:
+        msg:
+          type: string
+          description: Mensagem de erro em português.
+    Mensagem:
+      type: object
+      required: [msg]
+      properties:
+        msg:
+          type: string
+          description: Mensagem de confirmação em português.
+    Ativo:
+      description: O mysql2 devolve BOOLEAN como 0 ou 1; entidades criadas ou atualizadas também podem devolver booleanos JSON.
+      oneOf:
+        - type: boolean
+        - type: integer
+          enum: [0, 1]
+    DecimalSaida:
+      description: DECIMAL é devolvido como string pelo mysql2; respostas de criação ou atualização também podem conter número.
+      oneOf:
+        - type: number
+        - type: string
+          pattern: '^-?\d+(\.\d+)?$'
+    CriadoEm:
+      type: string
+      description: Data e hora do banco com dateStrings, quando disponíveis; pode ser omitido na resposta de criação.
+      example: '2026-10-08 08:30:00'
+    Perfil:
+      type: string
+      enum: [ADMIN, ATENDENTE, COZINHA]
+    LoginEntrada:
+      type: object
+      required: [email, senha]
+      properties:
+        email:
+          type: string
+          example: pessoa@example.com
+        senha:
+          type: string
+          format: password
+          writeOnly: true
+          description: Senha da conta existente; preencha somente ao executar. Sem valor de exemplo.
+    Usuario:
+      type: object
+      description: Dados públicos do usuário; senha e seu hash não são serializados.
+      required: [id, nome, email, perfil, ativo]
+      properties:
+        id:
+          type: integer
+          example: 1
+        nome:
+          type: string
+          example: Maria Silva
+        email:
+          type: string
+          example: maria@example.com
+        perfil:
+          $ref: '#/components/schemas/Perfil'
+        ativo:
+          $ref: '#/components/schemas/Ativo'
+        criadoEm:
+          $ref: '#/components/schemas/CriadoEm'
+    UsuarioCriacao:
+      type: object
+      required: [nome, email, senha, perfil]
+      properties:
+        nome:
+          type: string
+          minLength: 2
+          example: Maria Silva
+        email:
+          type: string
+          description: Deve conter arroba.
+          example: maria@example.com
+        senha:
+          type: string
+          format: password
+          writeOnly: true
+          description: Senha de entrada, sem exemplo. Não é devolvida pela API.
+        perfil:
+          $ref: '#/components/schemas/Perfil'
+    UsuarioAtualizacao:
+      type: object
+      properties:
+        nome:
+          type: string
+          minLength: 2
+        email:
+          type: string
+        perfil:
+          $ref: '#/components/schemas/Perfil'
+        ativo:
+          type: boolean
+    Categoria:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        nome:
+          type: string
+          example: Grãos
+        descricao:
+          type: string
+          nullable: true
+          example: Grãos e cereais
+        ativo:
+          $ref: '#/components/schemas/Ativo'
+    Unidade:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        nome:
+          type: string
+          example: Quilograma
+        sigla:
+          type: string
+          example: kg
+    ProdutoEntrada:
+      type: object
+      description: Na criação, ativo é ignorado e o produto nasce ativo. Na edição todos os campos são opcionais.
+      properties:
+        nome:
+          type: string
+          minLength: 2
+        descricao:
+          type: string
+          nullable: true
+        preco_padrao:
+          type: number
+          minimum: 0
+          exclusiveMinimum: true
+        ativo:
+          type: boolean
+    Produto:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        nome:
+          type: string
+          example: Marmita G
+        descricao:
+          type: string
+          nullable: true
+          example: Marmita grande
+        precoPadrao:
+          $ref: '#/components/schemas/DecimalSaida'
+        ativo:
+          $ref: '#/components/schemas/Ativo'
+        criadoEm:
+          $ref: '#/components/schemas/CriadoEm'
+    InsumoEntrada:
+      type: object
+      description: Na criação, ativo é ignorado e o insumo nasce ativo. Na edição todos os campos são opcionais.
+      properties:
+        nome:
+          type: string
+          minLength: 2
+        id_categoria:
+          type: integer
+          minimum: 1
+        id_unidade:
+          type: integer
+          minimum: 1
+        classificacao:
+          type: string
+          enum: [INSUMO, VENDA_DIRETA]
+        preco_custo:
+          type: number
+          minimum: 0
+          exclusiveMinimum: true
+        preco_venda:
+          type: number
+          description: Obrigatoriamente positivo quando classificacao é VENDA_DIRETA.
+        estoque_minimo:
+          type: number
+          minimum: 0
+        ativo:
+          type: boolean
+    Insumo:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        nome:
+          type: string
+          example: Arroz cru
+        idCategoria:
+          type: integer
+          example: 1
+        idUnidade:
+          type: integer
+          example: 1
+        classificacao:
+          type: string
+          enum: [INSUMO, VENDA_DIRETA]
+        precoCusto:
+          $ref: '#/components/schemas/DecimalSaida'
+        precoVenda:
+          $ref: '#/components/schemas/DecimalSaida'
+        estoqueMinimo:
+          $ref: '#/components/schemas/DecimalSaida'
+        ativo:
+          $ref: '#/components/schemas/Ativo'
+        criadoEm:
+          $ref: '#/components/schemas/CriadoEm'
+    InsumoDetalhado:
+      allOf:
+        - $ref: '#/components/schemas/Insumo'
+        - type: object
+          properties:
+            nomeCategoria:
+              type: string
+              example: Grãos
+            nomeUnidade:
+              type: string
+              example: Quilograma
+            siglaUnidade:
+              type: string
+              example: kg
+    ClienteEntrada:
+      type: object
+      description: Na criação, ativo é ignorado e o cliente nasce ativo. Na edição todos os campos são opcionais.
+      properties:
+        nome:
+          type: string
+          minLength: 1
+        telefone:
+          type: string
+          nullable: true
+        ativo:
+          type: boolean
+    Cliente:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        nome:
+          type: string
+          example: Maria Silva
+        telefone:
+          type: string
+          nullable: true
+          example: '18999990000'
+        ativo:
+          $ref: '#/components/schemas/Ativo'
+        criadoEm:
+          $ref: '#/components/schemas/CriadoEm'
+    AdicionalEntrada:
+      type: object
+      description: Na criação, ativo é ignorado e o adicional nasce ativo. Na edição todos os campos são opcionais; null remove os vínculos opcionais.
+      properties:
+        nome:
+          type: string
+          minLength: 1
+          maxLength: 100
+        preco:
+          type: number
+          minimum: 0.01
+          maximum: 99999999.99
+          multipleOf: 0.01
+          description: Preço numérico obrigatório na criação, maior que zero, com até duas casas decimais.
+        ativo:
+          type: boolean
+        id_insumo:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: Deve existir, se preenchido. Vínculo informativo, sem baixa automática de estoque.
+        quantidade_consumida:
+          type: number
+          minimum: 0
+          exclusiveMinimum: true
+          maximum: 9999999.999
+          multipleOf: 0.001
+          nullable: true
+    Adicional:
+      type: object
+      required: [id, nome, preco, ativo, idInsumo, quantidadeConsumida]
+      properties:
+        id:
+          type: integer
+          example: 3
+        nome:
+          type: string
+          example: Ovo extra
+        preco:
+          type: number
+          minimum: 0.01
+          maximum: 99999999.99
+          multipleOf: 0.01
+          example: 2.5
+        ativo:
+          type: boolean
+        idInsumo:
+          type: integer
+          nullable: true
+          example: null
+        quantidadeConsumida:
+          type: number
+          nullable: true
+          example: null
+    Preparacao:
+      type: object
+      required: [nome, grupo]
+      properties:
+        nome:
+          type: string
+          minLength: 1
+          maxLength: 150
+          example: Carne
+        grupo:
+          type: string
+          nullable: true
+          enum: [null, Mistura]
+          description: null para item fixo, Mistura para uma alternativa. É obrigatório informar o campo, mesmo quando null.
+    AdicionalDoDia:
+      type: object
+      required: [id, nome, preco]
+      properties:
+        id:
+          type: integer
+          example: 3
+        nome:
+          type: string
+          example: Ovo extra
+        preco:
+          type: number
+          example: 2.5
+    CardapioEntrada:
+      type: object
+      required: [data, preparacoes, adicionais]
+      properties:
+        data:
+          type: string
+          format: date
+        preparacoes:
+          type: array
+          description: Sem limite de opções; a posição no array define a ordem.
+          items:
+            $ref: '#/components/schemas/Preparacao'
+        adicionais:
+          type: array
+          uniqueItems: true
+          description: IDs de adicionais existentes e ativos, sem repetição.
+          items:
+            type: integer
+            minimum: 1
+    Cardapio:
+      type: object
+      required: [id, data, existe, preparacoes, adicionais]
+      properties:
+        id:
+          type: integer
+          nullable: true
+        data:
+          type: string
+          format: date
+        existe:
+          type: boolean
+          description: false para uma data sem cadastro.
+        preparacoes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Preparacao'
+        adicionais:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdicionalDoDia'

@@ -117,7 +117,7 @@ CREATE TABLE adicional (
 
     CONSTRAINT fk_adicional_insumo FOREIGN KEY (id_insumo) REFERENCES insumo(id_insumo),
     CONSTRAINT chk_adicional_quantidade CHECK (quantidade_consumida > 0),
-    CONSTRAINT chk_adicional_preco CHECK (preco >= 0)
+    CONSTRAINT chk_adicional_preco CHECK (preco > 0)
 );
 
 CREATE TABLE cardapio_adicional (
