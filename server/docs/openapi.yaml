@@ -41,6 +41,8 @@ tags:
     description: Adicionais com preço fixo e vínculo opcional com insumo
   - name: Cardápio
     description: Itens fixos, alternativas de mistura e adicionais de cada data
+  - name: Caixa
+    description: Abertura e consulta dos turnos de caixa
 paths:
   /login:
     post:
@@ -1053,6 +1055,132 @@ paths:
           $ref: '#/components/responses/ErroInterno'
         '503':
           $ref: '#/components/responses/EstruturaPendente'
+  /caixa:
+    get:
+      tags: [Caixa]
+      operationId: listarCaixas
+      summary: Listar os últimos dez caixas
+      description: |
+        Perfis: ADMIN e ATENDENTE. Retorna os últimos dez caixas, abertos ou fechados,
+        com nome de quem abriu, em ordem decrescente de data de abertura e ID.
+        Não filtra pelo dia atual; permite consultar várias aberturas de uma mesma data.
+      responses:
+        '200':
+          description: Últimos caixas, ou lista vazia quando ainda não há registros.
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 10
+                items:
+                  $ref: '#/components/schemas/Caixa'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+        '503':
+          $ref: '#/components/responses/EstruturaCaixaPendente'
+  /caixa/atual:
+    get:
+      tags: [Caixa]
+      operationId: obterCaixaAtual
+      summary: Consultar o caixa aberto
+      description: 'Perfis: ADMIN e ATENDENTE. Retorna o único caixa ABERTO com nome de quem abriu, ou null com status 200 quando não há caixa aberto.'
+      responses:
+        '200':
+          description: Caixa aberto ou null.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/Caixa'
+                  - type: object
+                    nullable: true
+                    enum: [null]
+              examples:
+                aberto:
+                  value:
+                    id: 1
+                    idUsuarioAbertura: 2
+                    nomeUsuarioAbertura: Maria Silva
+                    idUsuarioFechamento: null
+                    dataAbertura: '2026-10-11 11:00:00'
+                    dataFechamento: null
+                    valorAbertura: 100
+                    valorFechamento: null
+                    status: ABERTO
+                semCaixa:
+                  summary: Nenhum caixa aberto
+                  value: null
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          description: Usuário da sessão não encontrado; a ausência de caixa aberto retorna 200 com null.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+        '503':
+          $ref: '#/components/responses/EstruturaCaixaPendente'
+  /caixa/abrir:
+    post:
+      tags: [Caixa]
+      operationId: abrirCaixa
+      summary: Abrir caixa com o troco inicial
+      description: |
+        Perfis: ADMIN e ATENDENTE. Quem abriu é definido pelo usuário autenticado;
+        id_usuario e outros campos de responsável no corpo são ignorados.
+        valorAbertura deve ser número entre 0 e 99999999.99, com até duas casas decimais.
+        Zero é permitido. O corpo JSON usa ponto decimal, não vírgula ou string.
+        É possível abrir vários caixas na mesma data, desde que o anterior esteja FECHADO.
+        Só um caixa pode permanecer ABERTO; duas tentativas simultâneas também são protegidas
+        pela UNIQUE do banco. Fechamento não está implementado nesta tarefa.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaixaAbertura'
+            examples:
+              comTroco:
+                value: {valorAbertura: 100}
+              semTroco:
+                value: {valorAbertura: 0}
+      responses:
+        '201':
+          description: Caixa criado, incluindo nome do responsável e data de abertura registrada pelo banco.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Caixa'
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          description: Já existe caixa aberto, inclusive em uma tentativa de abertura simultânea.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+              example:
+                msg: Já existe um caixa aberto. Feche-o antes de abrir outro.
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+        '503':
+          $ref: '#/components/responses/EstruturaCaixaPendente'
 components:
   securitySchemes:
     cookieAuth:
@@ -1071,6 +1199,12 @@ components:
         minimum: 1
       example: 1
   responses:
+    EstruturaCaixaPendente:
+      description: A estrutura do caixa no banco está desatualizada; aplique server/db/migrations/004-caixa.sql no banco configurado.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
     DadosInvalidos:
       description: Dados ausentes ou inválidos; a mensagem informa a validação que falhou.
       content:
@@ -1259,6 +1393,54 @@ components:
               - {nome: Ovo, grupo: Mistura}
             adicionais: [3, 5]
   schemas:
+    CaixaAbertura:
+      type: object
+      required: [valorAbertura]
+      properties:
+        valorAbertura:
+          type: number
+          minimum: 0
+          maximum: 99999999.99
+          multipleOf: 0.01
+          description: Troco inicial; zero é permitido. Não aceita string nem valor ausente.
+    Caixa:
+      type: object
+      required: [id, idUsuarioAbertura, nomeUsuarioAbertura, idUsuarioFechamento, dataAbertura, dataFechamento, valorAbertura, valorFechamento, status]
+      properties:
+        id:
+          type: integer
+          example: 1
+        idUsuarioAbertura:
+          type: integer
+          example: 2
+        nomeUsuarioAbertura:
+          type: string
+          example: Maria Silva
+        idUsuarioFechamento:
+          type: integer
+          nullable: true
+          example: null
+        dataAbertura:
+          type: string
+          description: DATETIME como texto, conforme dateStrings do mysql2; sem conversão de fuso horário.
+          example: '2026-10-11 11:00:00'
+        dataFechamento:
+          type: string
+          nullable: true
+          example: null
+        valorAbertura:
+          type: number
+          minimum: 0
+          maximum: 99999999.99
+          example: 100
+        valorFechamento:
+          type: number
+          nullable: true
+          example: null
+        status:
+          type: string
+          enum: [ABERTO, FECHADO]
+          example: ABERTO
     Erro:
       type: object
       required: [msg]

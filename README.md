@@ -92,7 +92,7 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 - [x] RF_B4 — Clientes
 - [x] RF_F1 — Cardápio do Dia (itens fixos em texto livre, opções de mistura ordenadas, adicionais e reutilização entre datas)
 - [x] Cadastro de adicionais (nome, preço, vínculo opcional com insumo, edição, inativação/reativação e exclusão)
-- [ ] RF_F9 — (abre, conclui depois)
+- [x] RF_F9 — Abrir Caixa (troco inicial, responsável autenticado, caixa único aberto e últimas dez aberturas)
 
 ### Sprint 4 (28/09–17/10) — RF_F2–F4
 - [ ] RF_F2 — Lançar Pedido

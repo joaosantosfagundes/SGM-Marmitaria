@@ -10,12 +10,12 @@ import unidadeRouter from './unidadeRoute.js';
 import redefinicaoSenhaRouter from './redefinicaosenhaRoute.js';
 import clienteRouter   from './clienteRoute.js';
 import cardapioRouter from './cardapioRoute.js';
+import caixaRouter from './caixaRoute.js';
 // TODO (Sprint 2/3, seguindo o padrão de usuarioRoute.js):
 // import pedidoRouter    from './pedidoRoute.js';    // RF_F2/F3 - Pedido / Status
 // import estoqueRouter   from './estoqueRoute.js';   // RF_F4 - Mov. Estoque
 // import pagamentoRouter from './pagamentoRoute.js'; // RF_F5/F6 - Pagamento / Quitação
 // import financeiroRouter from './financeiroRoute.js'; // RF_F7 - Mov. Financeira
-// import caixaRouter     from './caixaRoute.js';     // RF_F8 - Abrir/Fechar Caixa
 
 const router = express.Router();
 
@@ -29,10 +29,10 @@ router.use('/unidade', unidadeRouter);
 router.use('/senha', redefinicaoSenhaRouter);
 router.use('/cliente', clienteRouter);
 router.use('/cardapio', cardapioRouter);
+router.use('/caixa', caixaRouter);
 // router.use('/pedido', pedidoRouter);
 // router.use('/estoque', estoqueRouter);
 // router.use('/pagamento', pagamentoRouter);
 // router.use('/financeiro', financeiroRouter);
-// router.use('/caixa', caixaRouter);
 
 export default router;
