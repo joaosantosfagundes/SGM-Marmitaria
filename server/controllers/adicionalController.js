@@ -74,9 +74,6 @@ export default class AdicionalController {
             return res.status(error.status).json({ msg: error.msg });
         }
         console.error(error);
-        if (error?.code === 'ER_NO_SUCH_TABLE' || error?.code === 'ER_BAD_FIELD_ERROR') {
-            return res.status(503).json({ msg: "O banco ainda não tem a estrutura atual de adicionais. Confira o schema e aplique server/db/migrations/002-cardapio-opcoes-adicionais.sql no MySQL." });
-        }
         return res.status(500).json({ msg: "Erro ao processar requisição" });
     }
 }
