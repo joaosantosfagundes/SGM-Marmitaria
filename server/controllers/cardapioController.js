@@ -34,11 +34,6 @@ export default class CardapioController {
     #tratarErro(res, error) {
         if (error?.status) return res.status(error.status).json({ msg: error.msg });
         console.error(error);
-        if (error?.code === 'ER_NO_SUCH_TABLE' || error?.code === 'ER_BAD_FIELD_ERROR') {
-            return res.status(503).json({
-                msg: "O banco ainda não tem a estrutura atual do cardápio. Aplique server/db/migrations/002-cardapio-opcoes-adicionais.sql no MySQL e tente novamente."
-            });
-        }
         return res.status(500).json({ msg: "Erro ao processar requisição" });
     }
 }

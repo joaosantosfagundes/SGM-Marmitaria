@@ -35,9 +35,6 @@ export default class CaixaController {
     #tratarErro(res, error) {
         if (error?.status) return res.status(error.status).json({ msg: error.msg });
         console.error(error);
-        if (error?.code === 'ER_NO_SUCH_TABLE' || error?.code === 'ER_BAD_FIELD_ERROR') {
-            return res.status(503).json({ msg: "O banco ainda não tem a estrutura atual do caixa. Aplique server/db/migrations/004-caixa.sql no banco configurado e tente novamente." });
-        }
         return res.status(500).json({ msg: "Erro ao processar requisição" });
     }
 }
