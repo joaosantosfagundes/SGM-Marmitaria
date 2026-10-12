@@ -104,7 +104,7 @@ export default function UsuariosPage() {
 
     return (
         <div>
-            <div className="d-flex justify-content-between align-items-center mb-4">
+            <div className="page-header d-flex justify-content-between align-items-center mb-4">
                 <div>
                     <h1 className="fs-3 mb-1">Usuários</h1>
                     <p className="text-secondary mb-0">Contas de acesso ao sistema (ADMIN, ATENDENTE, COZINHA).</p>
@@ -210,7 +210,7 @@ export default function UsuariosPage() {
                                     </div>
                                 </div>
 
-                                <div className="d-flex gap-2 mt-3">
+                                <div className="d-flex flex-wrap gap-2 mt-3">
                                     <span className="badge text-bg-light border">{usuario.perfil}</span>
                                     <span className={`badge ${usuario.ativo ? 'text-bg-success' : 'text-bg-secondary'}`}>
                                         {usuario.ativo ? 'Ativo' : 'Inativo'}
@@ -218,7 +218,7 @@ export default function UsuariosPage() {
                                     {souEuMesmo && <span className="badge text-bg-primary">Você</span>}
                                 </div>
 
-                                <div className="d-flex gap-2 mt-3 pt-3 border-top">
+                                <div className="d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
                                     {souEuMesmo ? (
                                         <p className="text-secondary small mb-0">
                                             Edição de perfil, desativação e exclusão da própria conta

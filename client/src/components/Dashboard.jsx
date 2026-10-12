@@ -13,16 +13,16 @@ export default function Dashboard() {
       </div>
 
       <div className="row g-3 mb-3">
-        <div className="col-lg-3 col-md-6">
+        <div className="col-12 col-md-6 col-xl-3">
           <StatCard icon="ti-shopping-cart" title="Pedidos hoje" value="75" helper="+5% no período" />
         </div>
-        <div className="col-lg-3 col-md-6">
+        <div className="col-12 col-md-6 col-xl-3">
           <StatCard icon="ti-cash" title="Vendas hoje" value="R$ 357" helper="+8% no período" tone="success" />
         </div>
-        <div className="col-lg-3 col-md-6">
+        <div className="col-12 col-md-6 col-xl-3">
           <StatCard icon="ti-chef-hat" title="Em preparo" value="6" helper="Pedidos ativos" tone="warning" />
         </div>
-        <div className="col-lg-3 col-md-6">
+        <div className="col-12 col-md-6 col-xl-3">
           <StatCard icon="ti-wallet" title="Caixa" value="R$ 1.280" helper="Aberto" tone="info" />
         </div>
       </div>
@@ -30,7 +30,7 @@ export default function Dashboard() {
       <div className="row g-3">
         <div className="col-lg-8">
           <section className="page-card">
-            <div className="px-4 py-3 border-bottom d-flex justify-content-between align-items-center">
+            <div className="px-4 py-3 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
               <h2 className="h5 mb-0">Movimentação</h2>
               <select className="form-select form-select-sm w-auto">
                 <option>Esta semana</option>

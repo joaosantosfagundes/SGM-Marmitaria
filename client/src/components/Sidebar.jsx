@@ -1,14 +1,20 @@
 import { Link, useLocation } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { menu } from "../lib/menu.js";
 
 export default function Sidebar() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const activePath = location.pathname;
+  const navRef = useRef(null);
+
+  useEffect(() => {
+    navRef.current?.querySelector(".nav-link.active")?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [activePath]);
 
   function closeMobile() {
     setOpen(false);
+    document.getElementById("sidebar")?.classList.remove("mobile-show");
     document.getElementById("mobile-overlay")?.classList.remove("show");
   }
 
@@ -21,7 +27,7 @@ export default function Sidebar() {
         </Link>
       </div>
 
-      <nav className="pt-3">
+      <nav className="pt-3" ref={navRef}>
         {menu.map((group) => (
           <div key={group.label} className="mb-3">
             <div className="px-4 py-2 text-secondary small">{group.label}</div>

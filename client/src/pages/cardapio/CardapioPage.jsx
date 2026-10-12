@@ -155,9 +155,9 @@ export default function CardapioPage() {
                         {itens.map((item, posicao) => (
                             <div key={item.indice}>
                                 <label htmlFor={`preparacao-${item.indice}`} className="form-label small text-secondary">{grupo ? `${posicao + 1}ª opção` : `${posicao + 1}. Item fixo`}</label>
-                                <div className="d-flex gap-2 flex-wrap">
+                                <div className="preparacao-linha d-flex gap-2 flex-wrap">
                                     <input id={`preparacao-${item.indice}`} className="form-control flex-grow-1 w-auto" maxLength={150} value={item.nome} disabled={bloqueado} placeholder="Nome da preparação" onChange={event => editarPreparacao(item.indice, event.target.value)} />
-                                    <div className="d-flex gap-1">
+                                    <div className="d-flex gap-1 flex-shrink-0">
                                         <button className="btn btn-light" disabled={bloqueado || posicao === 0} title="Mover para cima" aria-label={`Mover ${item.nome || 'preparação'} para cima`} onClick={() => moverPreparacao(item.indice, itens[posicao - 1].indice)}><i className="ti ti-arrow-up" /></button>
                                         <button className="btn btn-light" disabled={bloqueado || posicao === itens.length - 1} title="Mover para baixo" aria-label={`Mover ${item.nome || 'preparação'} para baixo`} onClick={() => moverPreparacao(item.indice, itens[posicao + 1].indice)}><i className="ti ti-arrow-down" /></button>
                                         <button className="btn btn-light text-danger" disabled={bloqueado} title="Remover preparação" aria-label={`Remover ${item.nome || 'preparação'}`} onClick={() => removerPreparacao(item.indice)}><i className="ti ti-trash" /></button>
@@ -175,7 +175,7 @@ export default function CardapioPage() {
 
     return (
         <div>
-            <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+            <div className="page-header d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
                 <div>
                     <h1 className="fs-3 mb-1">Cardápio do Dia</h1>
                     <p className="text-secondary mb-0">Monte os itens fixos, as opções de mistura e os adicionais para a data escolhida.</p>
@@ -219,7 +219,7 @@ export default function CardapioPage() {
                     </div>
                     {indisponiveis.length > 0 && <div className="alert alert-warning mt-3 mb-0">
                         <p>Há adicionais deste cardápio que estão inativos ou indisponíveis. Remova-os da seleção ou reative seus cadastros antes de salvar.</p>
-                        {indisponiveis.map(item => <div key={item.id} className="d-flex gap-3 align-items-center mt-2">
+                        {indisponiveis.map(item => <div key={item.id} className="d-flex flex-wrap gap-3 align-items-center mt-2">
                             <span>{item.nome} — {formatarPreco(item.preco)}</span>
                             <button className="btn btn-sm btn-outline-danger" disabled={bloqueado} onClick={() => selecionarAdicional(item, false)}>Remover da seleção</button>
                         </div>)}

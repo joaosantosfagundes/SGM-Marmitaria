@@ -98,7 +98,7 @@ export default function ClientesPage() {
 
     return (
         <div>
-            <div className="d-flex justify-content-between align-items-center mb-4">
+            <div className="page-header d-flex justify-content-between align-items-center mb-4">
                 <div>
                     <h1 className="fs-3 mb-1">Clientes</h1>
                     <p className="text-secondary mb-0">Cadastro de clientes (usado no fiado).</p>
@@ -173,7 +173,7 @@ export default function ClientesPage() {
                                 </span>
                             </div>
 
-                            <div className="d-flex gap-2 mt-3 pt-3 border-top">
+                            <div className="d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
                                 <button className="btn btn-sm btn-light flex-grow-1" onClick={() => abrirEdicao(cliente)}>
                                     <i className="ti ti-edit me-1" /> Editar
                                 </button>

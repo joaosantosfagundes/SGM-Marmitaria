@@ -134,7 +134,7 @@ export default function InsumosPage() {
 
     return (
         <div>
-            <div className="d-flex justify-content-between align-items-center mb-4">
+            <div className="page-header d-flex justify-content-between align-items-center mb-4">
                 <div>
                     <h1 className="fs-3 mb-1">Insumos</h1>
                     <p className="text-secondary mb-0">Matérias-primas usadas na produção.</p>

@@ -47,12 +47,32 @@ a { text-decoration: none; }
   background: #fff;
   border-right: 1px solid #e5e5e5;
   height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
   position: fixed;
   top: 0;
   left: 0;
   padding-top: var(--marmitex-topbar);
   z-index: 1030;
   transition: width .25s ease, left .25s ease;
+
+  nav {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-bottom: 24px;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #e5e5e5 transparent;
+
+    &::-webkit-scrollbar { width: 6px; }
+    &::-webkit-scrollbar-thumb {
+      background: #e5e5e5;
+      border-radius: 6px;
+    }
+  }
 
   .logo-area {
     position: absolute;
@@ -108,9 +128,18 @@ a { text-decoration: none; }
 }
 
 .content {
+  min-width: 0;
+  overflow-wrap: anywhere;
   margin-left: var(--marmitex-sidebar);
   min-height: 100vh;
   padding-top: calc(var(--marmitex-topbar) + 24px) !important;
+
+  .row > *,
+  .page-card,
+  .stat-card,
+  .flex-grow-1 { min-width: 0; }
+
+  .table-responsive { max-width: 100%; }
 }
 
 .page-card {
@@ -161,13 +190,33 @@ a { text-decoration: none; }
 
 .login-form {
   width: 340px;
+  max-width: 100%;
 
   h1 {
     color: var(--marmitex-primary);
   }
 }
 
+// O formulário mantém o rodapé visível enquanto o corpo do modal rola.
+.modal-dialog-scrollable .modal-content > form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
 @media (max-width: 992px) {
+  .page-header {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .preparacao-linha .form-control {
+    flex-basis: 100%;
+    width: 100% !important;
+    min-width: 0;
+  }
+
   .sidebar {
     left: calc(var(--marmitex-sidebar) * -1);
   }
@@ -188,6 +237,25 @@ a { text-decoration: none; }
     background: rgba(0,0,0,.45);
     z-index: 1025;
   }
+}
+
+@media (max-width: 576px) {
+  .page-header {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+
+  .page-header > .btn { align-self: flex-start; }
+
+  .btn-icon,
+  .content .btn,
+  .modal .btn,
+  .modal .btn-close {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .login-container { padding: 1rem; }
 }
 
 .sidebar.collapsed ~ .topbar { margin-left: 60px; }
