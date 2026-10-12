@@ -83,7 +83,7 @@ export default function AbrirCaixaPage() {
 
     return (
         <div>
-            <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+            <div className="page-header d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
                 <div>
                     <h1 className="fs-3 mb-1">Abrir Caixa</h1>
                     <p className="text-secondary mb-0">Informe o troco inicial e consulte as últimas aberturas de caixa.</p>

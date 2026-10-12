@@ -156,7 +156,7 @@ export default function AdicionaisPage() {
 
     return (
         <div>
-            <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+            <div className="page-header d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
                 <div>
                     <h1 className="fs-3 mb-1">Adicionais</h1>
                     <p className="text-secondary mb-0">Cadastre os adicionais e seus preços para usar no cardápio do dia.</p>
@@ -193,7 +193,7 @@ export default function AdicionaisPage() {
             {mostrarForm && <>
                 <div className="modal-backdrop show" />
                 <div className="modal d-block" role="dialog" aria-modal="true" aria-labelledby="titulo-adicional" ref={modalRef}>
-                    <div className="modal-dialog modal-dialog-centered"><div className="modal-content">
+                    <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div className="modal-content">
                         <div className="modal-header">
                             <h2 className="modal-title h5" id="titulo-adicional">{editandoId ? 'Editar adicional' : 'Novo adicional'}</h2>
                             <button className="btn-close" aria-label="Fechar" disabled={salvando} onClick={() => setMostrarForm(false)} />
