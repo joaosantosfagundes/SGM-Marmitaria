@@ -107,6 +107,11 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 - [ ] RF_S1–S5 — Relatórios
 - [ ] Deploy
 
+### Ajustes de interface
+
+- [x] Confirmações em diálogo próprio com suporte a teclado, foco controlado e notificações no padrão visual do sistema
+- [x] Formulário de adicionais em card acima da lista, no padrão dos demais cadastros
+
 ## Atualização do banco para opções de mistura e adicionais
 
 Para um banco existente que já contém `cardapio_preparacao` e `adicional`, aplique uma única vez

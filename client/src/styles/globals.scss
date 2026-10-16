@@ -197,12 +197,29 @@ a { text-decoration: none; }
   }
 }
 
-// O formulário mantém o rodapé visível enquanto o corpo do modal rola.
-.modal-dialog-scrollable .modal-content > form {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
+.confirm-dialog {
+  overscroll-behavior: contain;
+  .modal-dialog {
+    width: calc(100% - var(--bs-modal-margin) * 2);
+    max-width: 440px;
+    margin-inline: auto;
+  }
+  .modal-dialog-scrollable { height: calc(100dvh - var(--bs-modal-margin) * 2); }
+  .modal-content { box-shadow: 0 1rem 3rem rgba(38, 38, 38, .15); }
+  .modal-body { overscroll-behavior: contain; }
+}
+
+.confirm-dialog-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+}
+
+.confirm-dialog-message {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 992px) {

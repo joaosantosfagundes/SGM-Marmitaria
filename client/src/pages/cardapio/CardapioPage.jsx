@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import ApiClient from '../../services/apiClient.js';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useConfirm } from '../../context/ConfirmContext.jsx';
 
 function dataLocal(date = new Date()) {
     let ano = date.getFullYear();
@@ -20,6 +21,7 @@ function tratarErro(error) {
 }
 
 export default function CardapioPage() {
+    const confirmar = useConfirm();
     const { usuario } = useAuth();
     const podeEditar = ['ADMIN', 'ATENDENTE'].includes(usuario?.perfil);
     const [data, setData] = useState(dataLocal);
@@ -124,7 +126,11 @@ export default function CardapioPage() {
             toast.error('Escolha uma data de origem diferente da data de destino.');
             return;
         }
-        if ((existe || preparacoes.length || selecionados.length) && !window.confirm(`Substituir o cardápio de ${data} pelo da data ${dataOrigem}? As alterações ainda não salvas também serão substituídas.`)) return;
+        if ((existe || preparacoes.length || selecionados.length) && !(await confirmar({
+            titulo: 'Reutilizar cardápio',
+            mensagem: `Substituir o cardápio de ${data} pelo da data ${dataOrigem}? As alterações ainda não salvas também serão substituídas. Essa substituição não pode ser desfeita.`,
+            textoConfirmar: 'Substituir cardápio', tipo: 'perigo',
+        }))) return;
         setCopiando(true);
         try {
             let menu = await ApiClient.post('cardapio/copiar', { dataOrigem, dataDestino: data });
