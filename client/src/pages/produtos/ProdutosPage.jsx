@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import ApiClient from '../../services/apiClient.js';
+import { useConfirm } from '../../context/ConfirmContext.jsx';
 
 const FORM_VAZIO = { nome: '', descricao: '', preco_padrao: '' };
 
@@ -9,6 +10,7 @@ function formatarPreco(valor) {
 }
 
 export default function ProdutosPage() {
+    const confirmar = useConfirm();
     const [produtos, setProdutos] = useState([]);
     const [carregando, setCarregando] = useState(true);
     const [mostrarForm, setMostrarForm] = useState(false);
@@ -78,7 +80,10 @@ export default function ProdutosPage() {
     }
 
     async function handleInativar(produto) {
-        if (!confirm(`Inativar o produto "${produto.nome}"?`)) return;
+        if (!(await confirmar({
+            titulo: 'Inativar produto', mensagem: `Inativar o produto "${produto.nome}"?`,
+            textoConfirmar: 'Inativar', tipo: 'padrao',
+        }))) return;
 
         try {
             await ApiClient.delete(`produto/${produto.id}`);
@@ -89,7 +94,11 @@ export default function ProdutosPage() {
     }
 
     async function handleExcluir(produto) {
-        if (!confirm(`Excluir "${produto.nome}" de vez? Essa ação NÃO pode ser desfeita.`)) return;
+        if (!(await confirmar({
+            titulo: 'Excluir produto definitivamente',
+            mensagem: `Excluir o produto "${produto.nome}" definitivamente? Essa ação não pode ser desfeita.`,
+            textoConfirmar: 'Excluir definitivamente', tipo: 'perigo',
+        }))) return;
 
         try {
             await ApiClient.delete(`produto/${produto.id}/excluir`);

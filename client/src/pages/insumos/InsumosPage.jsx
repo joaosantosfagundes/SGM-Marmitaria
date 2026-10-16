@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import ApiClient from '../../services/apiClient.js';
+import { useConfirm } from '../../context/ConfirmContext.jsx';
 
 const FORM_VAZIO = {
     nome: '',
@@ -17,6 +18,7 @@ function formatarPreco(valor) {
 }
 
 export default function InsumosPage() {
+    const confirmar = useConfirm();
     const [insumos, setInsumos] = useState([]);
     const [categorias, setCategorias] = useState([]);
     const [unidades, setUnidades] = useState([]);
@@ -102,7 +104,10 @@ export default function InsumosPage() {
     }
 
     async function handleInativar(insumo) {
-        if (!confirm(`Inativar o insumo "${insumo.nome}"?`)) return;
+        if (!(await confirmar({
+            titulo: 'Inativar insumo', mensagem: `Inativar o insumo "${insumo.nome}"?`,
+            textoConfirmar: 'Inativar', tipo: 'padrao',
+        }))) return;
 
         try {
             await ApiClient.delete(`insumo/${insumo.id}`);
@@ -113,7 +118,11 @@ export default function InsumosPage() {
     }
 
     async function handleExcluir(insumo) {
-        if (!confirm(`Excluir "${insumo.nome}" de vez? Essa ação NÃO pode ser desfeita.`)) return;
+        if (!(await confirmar({
+            titulo: 'Excluir insumo definitivamente',
+            mensagem: `Excluir o insumo "${insumo.nome}" definitivamente? Essa ação não pode ser desfeita.`,
+            textoConfirmar: 'Excluir definitivamente', tipo: 'perigo',
+        }))) return;
 
         try {
             await ApiClient.delete(`insumo/${insumo.id}/excluir`);

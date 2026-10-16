@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import ApiClient from '../../services/apiClient.js';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useConfirm } from '../../context/ConfirmContext.jsx';
 import { converterValor, formatarDataHora, formatarValor } from './caixaUtils.js';
 
 function tratarErro(error) {
@@ -10,6 +11,7 @@ function tratarErro(error) {
 }
 
 export default function CaixaPage() {
+    const confirmar = useConfirm();
     const { usuario } = useAuth();
     const podeAcessar = ['ADMIN', 'ATENDENTE'].includes(usuario?.perfil);
     const [caixaAtual, setCaixaAtual] = useState(null);
@@ -73,7 +75,11 @@ export default function CaixaPage() {
             toast.error('Informe um valor entre R$ 0,00 e R$ 99.999.999,99, com até duas casas decimais.');
             return;
         }
-        if (!window.confirm(`Confirma o fechamento do caixa com ${formatarValor(valor)} contados na gaveta?`)) return;
+        if (!(await confirmar({
+            titulo: 'Fechar caixa',
+            mensagem: `Confirma o fechamento do caixa com ${formatarValor(valor)} contados na gaveta? O fechamento deste caixa não pode ser desfeito.`,
+            textoConfirmar: 'Fechar caixa', tipo: 'perigo',
+        }))) return;
 
         setSalvando(true);
         try {

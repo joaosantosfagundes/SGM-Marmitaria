@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import ApiClient from '../../services/apiClient.js';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useConfirm } from '../../context/ConfirmContext.jsx';
 
 const PERFIS = ['ADMIN', 'ATENDENTE', 'COZINHA'];
 const FORM_VAZIO = { nome: '', email: '', senha: '', perfil: 'ATENDENTE' };
 
 export default function UsuariosPage() {
+    const confirmar = useConfirm();
     const { usuario: usuarioLogado } = useAuth();
     const [usuarios, setUsuarios] = useState([]);
     const [carregando, setCarregando] = useState(true);
@@ -71,7 +73,10 @@ export default function UsuariosPage() {
     }
 
     async function handleInativar(usuario) {
-        if (!confirm(`Inativar o usuário "${usuario.nome}"?`)) return;
+        if (!(await confirmar({
+            titulo: 'Inativar usuário', mensagem: `Inativar o usuário "${usuario.nome}"?`,
+            textoConfirmar: 'Inativar', tipo: 'padrao',
+        }))) return;
 
         try {
             await ApiClient.delete(`usuario/${usuario.id}`);
@@ -82,7 +87,11 @@ export default function UsuariosPage() {
     }
 
     async function handleExcluir(usuario) {
-        if (!confirm(`Excluir "${usuario.nome}" de vez? Essa ação NÃO pode ser desfeita.`)) return;
+        if (!(await confirmar({
+            titulo: 'Excluir usuário definitivamente',
+            mensagem: `Excluir o usuário "${usuario.nome}" definitivamente? Essa ação não pode ser desfeita.`,
+            textoConfirmar: 'Excluir definitivamente', tipo: 'perigo',
+        }))) return;
 
         try {
             await ApiClient.delete(`usuario/${usuario.id}/excluir`);

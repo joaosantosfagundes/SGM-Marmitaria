@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import ApiClient from '../../services/apiClient.js';
+import { useConfirm } from '../../context/ConfirmContext.jsx';
 
 const FORM_VAZIO = { nome: '', telefone: '' };
 
 export default function ClientesPage() {
+    const confirmar = useConfirm();
     const [clientes, setClientes] = useState([]);
     const [carregando, setCarregando] = useState(true);
     const [mostrarForm, setMostrarForm] = useState(false);
@@ -66,7 +68,10 @@ export default function ClientesPage() {
     }
 
     async function handleInativar(cliente) {
-        if (!confirm(`Inativar o cliente "${cliente.nome}"?`)) return;
+        if (!(await confirmar({
+            titulo: 'Inativar cliente', mensagem: `Inativar o cliente "${cliente.nome}"?`,
+            textoConfirmar: 'Inativar', tipo: 'padrao',
+        }))) return;
 
         try {
             await ApiClient.delete(`cliente/${cliente.id}`);
@@ -77,7 +82,11 @@ export default function ClientesPage() {
     }
 
     async function handleExcluir(cliente) {
-        if (!confirm(`Excluir "${cliente.nome}" de vez? Essa ação NÃO pode ser desfeita.`)) return;
+        if (!(await confirmar({
+            titulo: 'Excluir cliente definitivamente',
+            mensagem: `Excluir o cliente "${cliente.nome}" definitivamente? Essa ação não pode ser desfeita.`,
+            textoConfirmar: 'Excluir definitivamente', tipo: 'perigo',
+        }))) return;
 
         try {
             await ApiClient.delete(`cliente/${cliente.id}/excluir`);
