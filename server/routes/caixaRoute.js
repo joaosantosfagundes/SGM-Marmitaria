@@ -18,4 +18,8 @@ router.post('/abrir', auth.validar.bind(auth), auth.permitir('ADMIN', 'ATENDENTE
     controller.abrir(req, res);
 });
 
+router.post('/fechar', auth.validar.bind(auth), auth.permitir('ADMIN', 'ATENDENTE'), (req, res) => {
+    controller.fechar(req, res);
+});
+
 export default router;
