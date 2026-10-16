@@ -24,8 +24,7 @@ export const menu = [
   {
     label: "Financeiro",
     items: [
-      { href: "/caixa/abrir", label: "Abrir Caixa", icon: "ti-lock-open" },   // RF_F8
-      { href: "/caixa/fechar", label: "Fechar Caixa", icon: "ti-lock" },      // RF_F9
+      { href: "/caixa", label: "Caixa", icon: "ti-cash-register" },          // RF_F9
       { href: "/financeiro", label: "Financeiro", icon: "ti-wallet" },       // RF_F7
       { href: "/fiado", label: "Fiado", icon: "ti-credit-card-pay" },        // RF_F6
       { href: "/pagamento", label: "Pagamento", icon: "ti-cash" },           // RF_F5
@@ -55,8 +54,7 @@ export const pages = {
   "/adicionais": { title: "Adicionais", description: "Cadastro de adicionais com preço fixo para o cardápio do dia." },
   "/insumos": { title: "Insumos", description: "Cadastro de matérias-primas usadas na produção." },
   "/estoque": { title: "Estoque", description: "Controle manual de entradas e saídas de insumos." },
-  "/caixa/abrir": { title: "Abrir Caixa", description: "Abertura do caixa diário." },
-  "/caixa/fechar": { title: "Fechar Caixa", description: "Conferência e fechamento do caixa diário." },
+  "/caixa": { title: "Caixa", description: "Abertura, fechamento e histórico do caixa." },
   "/financeiro": { title: "Financeiro", description: "Entradas, despesas e movimentações financeiras." },
   "/fiado": { title: "Fiado", description: "Consulta e quitação de valores em aberto." },
   "/pagamento": { title: "Pagamento", description: "Registro de pagamentos dos pedidos." },

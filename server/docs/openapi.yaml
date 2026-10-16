@@ -42,7 +42,7 @@ tags:
   - name: Cardápio
     description: Itens fixos, alternativas de mistura e adicionais de cada data
   - name: Caixa
-    description: Abertura e consulta dos turnos de caixa
+    description: Abertura, fechamento e consulta dos turnos de caixa
 paths:
   /login:
     post:
@@ -1062,7 +1062,8 @@ paths:
       summary: Listar os últimos dez caixas
       description: |
         Perfis: ADMIN e ATENDENTE. Retorna os últimos dez caixas, abertos ou fechados,
-        com nome de quem abriu, em ordem decrescente de data de abertura e ID.
+        com nomes de quem abriu e de quem fechou, em ordem decrescente de data de abertura e ID.
+        Dados de fechamento são null enquanto o caixa estiver aberto.
         Não filtra pelo dia atual; permite consultar várias aberturas de uma mesma data.
       responses:
         '200':
@@ -1082,14 +1083,12 @@ paths:
           $ref: '#/components/responses/NaoEncontrado'
         '500':
           $ref: '#/components/responses/ErroInterno'
-        '503':
-          $ref: '#/components/responses/EstruturaCaixaPendente'
   /caixa/atual:
     get:
       tags: [Caixa]
       operationId: obterCaixaAtual
       summary: Consultar o caixa aberto
-      description: 'Perfis: ADMIN e ATENDENTE. Retorna o único caixa ABERTO com nome de quem abriu, ou null com status 200 quando não há caixa aberto.'
+      description: 'Perfis: ADMIN e ATENDENTE. Retorna o único caixa ABERTO com nome de quem abriu e campos de fechamento (incluindo nomeUsuarioFechamento) null, ou null com status 200 quando não há caixa aberto.'
       responses:
         '200':
           description: Caixa aberto ou null.
@@ -1108,6 +1107,7 @@ paths:
                     idUsuarioAbertura: 2
                     nomeUsuarioAbertura: Maria Silva
                     idUsuarioFechamento: null
+                    nomeUsuarioFechamento: null
                     dataAbertura: '2026-10-11 11:00:00'
                     dataFechamento: null
                     valorAbertura: 100
@@ -1128,8 +1128,6 @@ paths:
                 $ref: '#/components/schemas/Erro'
         '500':
           $ref: '#/components/responses/ErroInterno'
-        '503':
-          $ref: '#/components/responses/EstruturaCaixaPendente'
   /caixa/abrir:
     post:
       tags: [Caixa]
@@ -1142,7 +1140,7 @@ paths:
         Zero é permitido. O corpo JSON usa ponto decimal, não vírgula ou string.
         É possível abrir vários caixas na mesma data, desde que o anterior esteja FECHADO.
         Só um caixa pode permanecer ABERTO; duas tentativas simultâneas também são protegidas
-        pela UNIQUE do banco. Fechamento não está implementado nesta tarefa.
+        pela UNIQUE do banco. Após o fechamento, é possível abrir um novo caixa.
       requestBody:
         required: true
         content:
@@ -1179,8 +1177,66 @@ paths:
                 msg: Já existe um caixa aberto. Feche-o antes de abrir outro.
         '500':
           $ref: '#/components/responses/ErroInterno'
-        '503':
-          $ref: '#/components/responses/EstruturaCaixaPendente'
+  /caixa/fechar:
+    post:
+      tags: [Caixa]
+      operationId: fecharCaixa
+      summary: Fechar caixa com o valor contado na gaveta
+      description: |
+        Perfis: ADMIN e ATENDENTE. Qualquer um desses perfis pode fechar o caixa ABERTO,
+        mesmo que outra pessoa o tenha aberto. O responsável pelo fechamento é definido
+        pelo usuário autenticado; campos de responsável enviados no corpo são ignorados.
+        valorFechamento é o dinheiro contado na gaveta, sem totais de venda ou pagamentos.
+        Deve ser número entre 0 e 99999999.99, com até duas casas decimais; zero é permitido.
+        O corpo JSON usa ponto decimal, não vírgula ou string. O banco registra data/hora.
+        O UPDATE é condicional ao status ABERTO: apenas uma tentativa simultânea pode fechar.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaixaFechamento'
+            examples:
+              comDinheiro:
+                value: {valorFechamento: 150}
+              gavetaVazia:
+                value: {valorFechamento: 0}
+      responses:
+        '200':
+          description: Caixa fechado, incluindo nomes de quem abriu e de quem fechou, valor contado e data/hora do fechamento.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Caixa'
+              example:
+                id: 1
+                idUsuarioAbertura: 2
+                nomeUsuarioAbertura: Maria Silva
+                idUsuarioFechamento: 3
+                nomeUsuarioFechamento: João Souza
+                dataAbertura: '2026-10-16 08:00:00'
+                dataFechamento: '2026-10-16 15:00:00'
+                valorAbertura: 100
+                valorFechamento: 150
+                status: FECHADO
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          description: Não existe caixa aberto ou outra tentativa já fechou o mesmo caixa.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+              example:
+                msg: Não há caixa aberto para fechar.
+        '500':
+          $ref: '#/components/responses/ErroInterno'
 components:
   securitySchemes:
     cookieAuth:
@@ -1199,12 +1255,6 @@ components:
         minimum: 1
       example: 1
   responses:
-    EstruturaCaixaPendente:
-      description: A estrutura do caixa no banco está desatualizada; aplique server/db/migrations/004-caixa.sql no banco configurado.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Erro'
     DadosInvalidos:
       description: Dados ausentes ou inválidos; a mensagem informa a validação que falhou.
       content:
@@ -1403,9 +1453,19 @@ components:
           maximum: 99999999.99
           multipleOf: 0.01
           description: Troco inicial; zero é permitido. Não aceita string nem valor ausente.
+    CaixaFechamento:
+      type: object
+      required: [valorFechamento]
+      properties:
+        valorFechamento:
+          type: number
+          minimum: 0
+          maximum: 99999999.99
+          multipleOf: 0.01
+          description: Dinheiro contado na gaveta; zero é permitido. Não aceita string nem valor ausente. Sem totais de venda.
     Caixa:
       type: object
-      required: [id, idUsuarioAbertura, nomeUsuarioAbertura, idUsuarioFechamento, dataAbertura, dataFechamento, valorAbertura, valorFechamento, status]
+      required: [id, idUsuarioAbertura, nomeUsuarioAbertura, idUsuarioFechamento, nomeUsuarioFechamento, dataAbertura, dataFechamento, valorAbertura, valorFechamento, status]
       properties:
         id:
           type: integer
@@ -1419,6 +1479,11 @@ components:
         idUsuarioFechamento:
           type: integer
           nullable: true
+          example: null
+        nomeUsuarioFechamento:
+          type: string
+          nullable: true
+          description: Nome do usuário que fechou; null enquanto o caixa estiver aberto.
           example: null
         dataAbertura:
           type: string
@@ -1436,6 +1501,9 @@ components:
         valorFechamento:
           type: number
           nullable: true
+          minimum: 0
+          maximum: 99999999.99
+          description: Dinheiro contado na gaveta, sem totais de venda; null enquanto o caixa estiver aberto.
           example: null
         status:
           type: string

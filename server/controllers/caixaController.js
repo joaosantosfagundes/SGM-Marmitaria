@@ -32,6 +32,15 @@ export default class CaixaController {
         }
     }
 
+    async fechar(req, res) {
+        try {
+            let caixa = await this.#service.fechar(req.body, req.usuarioLogado.id);
+            return res.status(200).json(caixa);
+        } catch (error) {
+            return this.#tratarErro(res, error);
+        }
+    }
+
     #tratarErro(res, error) {
         if (error?.status) return res.status(error.status).json({ msg: error.msg });
         console.error(error);

@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 
 import Login from './pages/login/Login.jsx';
 import NotFound from './pages/NotFound.jsx';
@@ -15,7 +15,7 @@ import RedefinirSenha from './pages/login/redefinirSenha.jsx';
 import ClientesPage from './pages/clientes/clientes.jsx';
 import UsuariosPage from './pages/usuarios/usuarios.jsx';
 import CardapioPage from './pages/cardapio/CardapioPage.jsx';
-import AbrirCaixaPage from './pages/caixa/AbrirCaixaPage.jsx';
+import CaixaPage from './pages/caixa/CaixaPage.jsx';
 
 import { pages } from './lib/menu.js';
 
@@ -28,7 +28,7 @@ const TELAS_PRONTAS = {
     '/clientes': ClientesPage,
     '/usuarios': UsuariosPage,
     '/cardapio': CardapioPage,
-    '/caixa/abrir': AbrirCaixaPage,
+    '/caixa': CaixaPage,
 
 };
 
@@ -47,6 +47,9 @@ export default function App() {
                     </ProtectedRoute>
                 }
             />
+
+            <Route path="/caixa/abrir" element={<Navigate to="/caixa" replace />} />
+            <Route path="/caixa/fechar" element={<Navigate to="/caixa" replace />} />
 
             {Object.entries(pages).map(([path, { title, description }]) => {
                 const TelaPronta = TELAS_PRONTAS[path];
