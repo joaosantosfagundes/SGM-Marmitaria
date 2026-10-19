@@ -108,16 +108,13 @@ export default class InsumoRepository extends Repository {
     }
 
     async excluir(id) {
-        await this.banco.AbreTransacao();
-        try {
-            await this.banco.ExecutaComandoNonQuery("delete from estoque where id_insumo = ?", [id]);
-            let resultado = await this.banco.ExecutaComandoNonQuery("delete from insumo where id_insumo = ?", [id]);
-            await this.banco.Commit();
-            return resultado;
-        } catch (erro) {
-            await this.banco.Rollback();
-            throw erro;
-        }
+        return this.banco.ExecutaTransacao(async consultar => {
+            // Segue a mesma ordem de bloqueio da movimentação e preserva o saldo se a exclusão falhar.
+            await consultar("select id_insumo from insumo where id_insumo = ? for update", [id]);
+            await consultar("delete from estoque where id_insumo = ?", [id]);
+            let resultado = await consultar("delete from insumo where id_insumo = ?", [id]);
+            return resultado.affectedRows > 0;
+        });
     }
 
     async categoriaExiste(idCategoria) {

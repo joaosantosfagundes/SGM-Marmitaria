@@ -43,6 +43,8 @@ tags:
     description: Itens fixos, alternativas de mistura e adicionais de cada data
   - name: Caixa
     description: Abertura, fechamento e consulta dos turnos de caixa
+  - name: Estoque
+    description: Consulta de saldos e movimentações manuais de insumos
 paths:
   /login:
     post:
@@ -1237,6 +1239,161 @@ paths:
                 msg: Não há caixa aberto para fechar.
         '500':
           $ref: '#/components/responses/ErroInterno'
+  /estoque:
+    get:
+      tags: [Estoque]
+      operationId: listarSaldosEstoque
+      summary: Consultar o saldo de todos os insumos
+      description: |
+        Perfis: ADMIN, ATENDENTE e COZINHA. Inclui insumos ativos e inativos,
+        em ordem de nome e ID. O ID retornado é o do insumo. Insumos sem linha
+        em estoque aparecem com quantidade zero. abaixoDoMinimo é true somente
+        quando quantidade < estoqueMinimo. Quantidades DECIMAL são devolvidas como números.
+      responses:
+        '200':
+          description: Saldos dos insumos, ou lista vazia.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Estoque'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /estoque/movimentacoes:
+    get:
+      tags: [Estoque]
+      operationId: listarMovimentacoesEstoque
+      summary: Consultar o histórico de movimentações de estoque
+      description: |
+        Perfis: ADMIN, ATENDENTE e COZINHA. Retorna movimentações em ordem
+        decrescente de data/hora e ID, sem restringir ao dia atual. Inclui o
+        nome do insumo, a sigla da unidade e o usuário que registrou.
+        IDs de insumos sem movimentações retornam lista vazia.
+      parameters:
+        - name: idInsumo
+          in: query
+          required: false
+          description: Filtra pelo ID do insumo, incluindo insumos inativos.
+          schema:
+            type: integer
+            minimum: 1
+        - name: limite
+          in: query
+          required: false
+          description: Número máximo de registros. Valores fora de 1 a 200 são recusados com 400.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: Histórico, limitado conforme a consulta, ou lista vazia.
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 200
+                items:
+                  $ref: '#/components/schemas/MovimentacaoEstoque'
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+    post:
+      tags: [Estoque]
+      operationId: registrarMovimentacaoEstoque
+      summary: Registrar uma entrada, perda ou ajuste manual
+      description: |
+        Perfis: ADMIN e COZINHA. ATENDENTE não pode registrar. O insumo deve existir
+        e estar ativo. O usuário é obtido da sessão JWT; campos de responsável no
+        corpo são ignorados. Não há vínculo com pedidos, adicionais ou cardápio.
+
+        A quantidade é sempre positiva: ENTRADA_COMPRA e AJUSTE_ENTRADA somam;
+        PERDA e AJUSTE_SAIDA subtraem. Aceita até três casas decimais e no máximo
+        9999999.999. O JSON recebe número, sem vírgula decimal ou string.
+        Motivo é obrigatório, com 3 a 255 caracteres após remover espaços nas
+        extremidades, para perdas e ajustes; é opcional para entrada de compra.
+        Em todos os tipos, o texto enviado não pode ultrapassar 255 caracteres.
+
+        Saldo e histórico são gravados na mesma transação com conexão dedicada,
+        bloqueio do insumo e SELECT FOR UPDATE do estoque. Se não houver linha de
+        estoque, ela é criada com zero nessa transação. Saldo insuficiente ou acima
+        de 9999999.999 retorna 409 e desfaz toda a operação, inclusive a criação da linha.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MovimentacaoEstoqueEntrada'
+            examples:
+              compra:
+                value: {idInsumo: 1, tipo: ENTRADA_COMPRA, quantidade: 10, motivo: null}
+              perda:
+                value: {idInsumo: 1, tipo: PERDA, quantidade: 3, motivo: Produto vencido}
+              ajusteEntrada:
+                value: {idInsumo: 1, tipo: AJUSTE_ENTRADA, quantidade: 0.5, motivo: Conferência física do estoque}
+              ajusteSaida:
+                value: {idInsumo: 1, tipo: AJUSTE_SAIDA, quantidade: 0.5, motivo: Correção após contagem}
+      responses:
+        '201':
+          description: Movimentação registrada e novo saldo confirmado pela transação.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovimentacaoEstoqueResultado'
+              example:
+                movimentacao:
+                  id: 2
+                  idInsumo: 1
+                  nomeInsumo: Arroz
+                  siglaUnidade: kg
+                  idUsuario: 3
+                  nomeUsuario: Maria Silva
+                  tipo: PERDA
+                  quantidade: 3
+                  motivo: Produto vencido
+                  dataHora: '2026-10-19 14:30:00'
+                novoSaldo: 7
+        '400':
+          description: Dados inválidos ou insumo inativo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          description: Insumo ou usuário da sessão não encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+        '409':
+          description: A saída excede o saldo disponível ou a entrada ultrapassa a capacidade do estoque. Nada é gravado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+              example:
+                msg: 'Saldo insuficiente: disponível 7.'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
 components:
   securitySchemes:
     cookieAuth:
@@ -1443,6 +1600,120 @@ components:
               - {nome: Ovo, grupo: Mistura}
             adicionais: [3, 5]
   schemas:
+    Estoque:
+      type: object
+      required: [id, nome, categoria, siglaUnidade, quantidade, estoqueMinimo, abaixoDoMinimo, ativo]
+      properties:
+        id:
+          type: integer
+          description: ID do insumo, mesmo quando ele ainda não tem uma linha em estoque.
+          example: 1
+        nome:
+          type: string
+          example: Arroz
+        categoria:
+          type: string
+          example: Grãos
+        siglaUnidade:
+          type: string
+          example: kg
+        quantidade:
+          type: number
+          minimum: 0
+          maximum: 9999999.999
+          multipleOf: 0.001
+          example: 7
+        estoqueMinimo:
+          type: number
+          minimum: 0
+          maximum: 9999999.999
+          multipleOf: 0.001
+          example: 10
+        abaixoDoMinimo:
+          type: boolean
+          description: Comparação estrita entre quantidade e estoqueMinimo.
+          example: true
+        ativo:
+          type: boolean
+          example: true
+    TipoMovimentacaoEstoque:
+      type: string
+      enum: [ENTRADA_COMPRA, PERDA, AJUSTE_ENTRADA, AJUSTE_SAIDA]
+    MovimentacaoEstoqueEntrada:
+      type: object
+      required: [idInsumo, tipo, quantidade]
+      properties:
+        idInsumo:
+          type: integer
+          minimum: 1
+          description: Deve existir e estar ativo.
+        tipo:
+          $ref: '#/components/schemas/TipoMovimentacaoEstoque'
+        quantidade:
+          type: number
+          minimum: 0
+          exclusiveMinimum: true
+          maximum: 9999999.999
+          multipleOf: 0.001
+        motivo:
+          type: string
+          nullable: true
+          maxLength: 255
+          description: Obrigatório com pelo menos 3 caracteres para PERDA, AJUSTE_ENTRADA e AJUSTE_SAIDA. Opcional para ENTRADA_COMPRA.
+    MovimentacaoEstoque:
+      type: object
+      required: [id, idInsumo, nomeInsumo, siglaUnidade, idUsuario, nomeUsuario, tipo, quantidade, motivo, dataHora]
+      properties:
+        id:
+          type: integer
+          example: 2
+        idInsumo:
+          type: integer
+          example: 1
+        nomeInsumo:
+          type: string
+          example: Arroz
+        siglaUnidade:
+          type: string
+          example: kg
+        idUsuario:
+          type: integer
+          description: Usuário autenticado que registrou a movimentação.
+          example: 3
+        nomeUsuario:
+          type: string
+          example: Maria Silva
+        tipo:
+          $ref: '#/components/schemas/TipoMovimentacaoEstoque'
+        quantidade:
+          type: number
+          minimum: 0
+          exclusiveMinimum: true
+          maximum: 9999999.999
+          multipleOf: 0.001
+          description: Sempre positiva; o tipo determina o efeito sobre o saldo.
+          example: 3
+        motivo:
+          type: string
+          nullable: true
+          maxLength: 255
+          example: Produto vencido
+        dataHora:
+          type: string
+          description: DATETIME como texto, preservando o horário registrado pelo banco, sem conversão de fuso horário.
+          example: '2026-10-19 14:30:00'
+    MovimentacaoEstoqueResultado:
+      type: object
+      required: [movimentacao, novoSaldo]
+      properties:
+        movimentacao:
+          $ref: '#/components/schemas/MovimentacaoEstoque'
+        novoSaldo:
+          type: number
+          minimum: 0
+          maximum: 9999999.999
+          multipleOf: 0.001
+          example: 7
     CaixaAbertura:
       type: object
       required: [valorAbertura]

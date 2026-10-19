@@ -97,7 +97,7 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 ### Sprint 4 (28/09–17/10) — RF_F2–F4
 - [ ] RF_F2 — Lançar Pedido
 - [ ] RF_F3 — Status do Pedido
-- [ ] RF_F4 — Movimentação de Estoque (transação sync com `estoque`)
+- [x] RF_F4 — Movimentação de Estoque (entradas, perdas e ajustes manuais, saldo não negativo, transação com bloqueio por insumo, saldos e histórico)
 
 ### Sprint 5 (19/10–14/11) — restante + deploy
 - [ ] RF_F5 — Pagamento
