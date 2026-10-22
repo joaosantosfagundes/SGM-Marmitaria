@@ -12,8 +12,8 @@ import clienteRouter   from './clienteRoute.js';
 import cardapioRouter from './cardapioRoute.js';
 import caixaRouter from './caixaRoute.js';
 import estoqueRouter from './estoqueRoute.js';
+import pedidoRouter from './pedidoRoute.js';
 // TODO (Sprint 2/3, seguindo o padrão de usuarioRoute.js):
-// import pedidoRouter    from './pedidoRoute.js';    // RF_F2/F3 - Pedido / Status
 // import pagamentoRouter from './pagamentoRoute.js'; // RF_F5/F6 - Pagamento / Quitação
 // import financeiroRouter from './financeiroRoute.js'; // RF_F7 - Mov. Financeira
 
@@ -31,7 +31,7 @@ router.use('/cliente', clienteRouter);
 router.use('/cardapio', cardapioRouter);
 router.use('/caixa', caixaRouter);
 router.use('/estoque', estoqueRouter);
-// router.use('/pedido', pedidoRouter);
+router.use('/pedido', pedidoRouter);
 // router.use('/pagamento', pagamentoRouter);
 // router.use('/financeiro', financeiroRouter);
 

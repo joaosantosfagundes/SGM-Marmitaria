@@ -34,9 +34,10 @@ export default class ClienteRepository extends Repository{
         return await this.banco.ExecutaComandoNonQuery(sql, valores);
     }
 
-    async obter(id) {
-        let sql = "select * from cliente where id_cliente = ?";
-        let rows = await this.banco.ExecutaComando(sql, [id]);
+    async obter(id, consultar) {
+        let sql = "select * from cliente where id_cliente = ?" + (consultar ? " for share" : "");
+        let executar = consultar ?? this.banco.ExecutaComando.bind(this.banco);
+        let rows = await executar(sql, [id]);
     
         if (rows.length > 0) return ClienteEntity.toMap(rows[0]);
         return null;

@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import ApiClient from '../../services/apiClient.js';
 import { useConfirm } from '../../context/ConfirmContext.jsx';
 
-const FORM_VAZIO = { nome: '', descricao: '', preco_padrao: '' };
+const FORM_VAZIO = { nome: '', descricao: '', preco_padrao: '', usaCardapio: true };
 
 function formatarPreco(valor) {
     return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -43,6 +43,7 @@ export default function ProdutosPage() {
             nome: produto.nome,
             descricao: produto.descricao ?? '',
             preco_padrao: produto.precoPadrao,
+            usaCardapio: produto.usaCardapio,
         });
         setMostrarForm(true);
     }
@@ -61,6 +62,7 @@ export default function ProdutosPage() {
             nome: form.nome,
             descricao: form.descricao,
             preco_padrao: Number(form.preco_padrao),
+            usaCardapio: form.usaCardapio,
         };
 
         try {
@@ -169,6 +171,10 @@ export default function ProdutosPage() {
                             </div>
                         </div>
 
+                        <div className="form-check mt-3">
+                            <input id="produto-usa-cardapio" type="checkbox" className="form-check-input" checked={form.usaCardapio} onChange={event => setForm({ ...form, usaCardapio: event.target.checked })} />
+                            <label htmlFor="produto-usa-cardapio" className="form-check-label">Escolhe mistura e adicionais do dia</label>
+                        </div>
                         <div className="d-flex gap-2 mt-3">
                             <button type="submit" className="btn btn-primary" disabled={salvando}>
                                 {salvando ? 'Salvando...' : 'Salvar'}
@@ -204,7 +210,7 @@ export default function ProdutosPage() {
 
                             {produtos.map((produto) => (
                                 <tr key={produto.id}>
-                                    <td className="ps-4">{produto.nome}</td>
+                                    <td className="ps-4">{produto.nome}{produto.usaCardapio && <span className="badge text-bg-light border ms-2">Cardápio do dia</span>}</td>
                                     <td className="text-secondary">{produto.descricao || '—'}</td>
                                     <td>{formatarPreco(produto.precoPadrao)}</td>
                                     <td>

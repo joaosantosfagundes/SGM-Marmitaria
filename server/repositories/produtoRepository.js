@@ -15,9 +15,9 @@ export default class ProdutoRepository extends Repository {
     }
 
     async gravar(entidade) {
-        let sql = `insert into produto (nome, descricao, preco_padrao, ativo)
-                    values (?, ?, ?, ?)`;
-        let valores = [entidade.nome, entidade.descricao, entidade.precoPadrao, entidade.ativo];
+        let sql = `insert into produto (nome, descricao, preco_padrao, ativo, usa_cardapio)
+                    values (?, ?, ?, ?, ?)`;
+        let valores = [entidade.nome, entidade.descricao, entidade.precoPadrao, entidade.ativo, entidade.usaCardapio];
 
         let id = await this.banco.ExecutaComandoLastInserted(sql, valores);
         entidade.id = id;
@@ -26,16 +26,17 @@ export default class ProdutoRepository extends Repository {
     }
 
     async atualizar(entidade) {
-        let sql = `update produto set nome = ?, descricao = ?, preco_padrao = ?, ativo = ?
+        let sql = `update produto set nome = ?, descricao = ?, preco_padrao = ?, ativo = ?, usa_cardapio = ?
                     where id_produto = ?`;
-        let valores = [entidade.nome, entidade.descricao, entidade.precoPadrao, entidade.ativo, entidade.id];
+        let valores = [entidade.nome, entidade.descricao, entidade.precoPadrao, entidade.ativo, entidade.usaCardapio, entidade.id];
 
         return await this.banco.ExecutaComandoNonQuery(sql, valores);
     }
 
-    async obter(id) {
-        let sql = "select * from produto where id_produto = ?";
-        let rows = await this.banco.ExecutaComando(sql, [id]);
+    async obter(id, consultar) {
+        let sql = "select * from produto where id_produto = ?" + (consultar ? " for share" : "");
+        let executar = consultar ?? this.banco.ExecutaComando.bind(this.banco);
+        let rows = await executar(sql, [id]);
 
         if (rows.length > 0) return ProdutoEntity.toMap(rows[0]);
         return null;

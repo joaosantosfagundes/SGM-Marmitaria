@@ -12,12 +12,13 @@ export default class CaixaRepository extends Repository {
         return rows.map(row => CaixaEntity.toMap(row));
     }
 
-    async obterAtual() {
-        let rows = await this.banco.ExecutaComando(
+    async obterAtual(consultar) {
+        let executar = consultar ?? this.banco.ExecutaComando.bind(this.banco);
+        let rows = await executar(
             `select c.*, u.nome as nome_usuario_abertura, uf.nome as nome_usuario_fechamento from caixa c
              inner join usuario u on u.id_usuario = c.id_usuario_abertura
              left join usuario uf on uf.id_usuario = c.id_usuario_fechamento
-             where c.status = 'ABERTO' limit 1`
+             where c.status = 'ABERTO' limit 1` + (consultar ? " for share" : "")
         );
         return rows.length ? CaixaEntity.toMap(rows[0]) : null;
     }

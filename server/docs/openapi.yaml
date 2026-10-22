@@ -45,6 +45,8 @@ tags:
     description: Abertura, fechamento e consulta dos turnos de caixa
   - name: Estoque
     description: Consulta de saldos e movimentações manuais de insumos
+  - name: Pedidos
+    description: Criação de pedido com pagamento e consulta; sem baixa de estoque
 paths:
   /login:
     post:
@@ -1394,6 +1396,155 @@ paths:
                 msg: 'Saldo insuficiente: disponível 7.'
         '500':
           $ref: '#/components/responses/ErroInterno'
+  /pedido:
+    post:
+      tags: [Pedidos]
+      operationId: criarPedido
+      summary: Lançar pedido e registrar o pagamento
+      description: |
+        Perfis ADMIN e ATENDENTE. COZINHA não pode criar. Exige caixa ABERTO;
+        o caixa e o usuário são definidos pelo servidor, ignorando campos de responsável
+        ou preço no corpo. Status inicial RECEBIDO. Não há baixa de estoque.
+        Tudo é consultado e gravado em uma transação com conexão dedicada e caixa FOR SHARE.
+        Qualquer erro desfaz pedido, itens, adicionais e pagamento.
+
+        data é a data local do cardápio informada pelo cliente (AAAA-MM-DD), sem calcular hoje.
+        Produtos ativos usam seus preços atuais. Se usaCardapio for true, mistura deve
+        corresponder às opções do grupo Mistura dessa data, ignorando caixa e espaços;
+        grava-se o nome original. Sem opções, mistura deve ser null. Adicionais devem
+        estar ativos e marcados no cardápio. Produto sem cardápio não aceita mistura nem adicionais.
+        A quantidade de adicional é o total da linha, sem multiplicar pela quantidade do produto.
+        Os preços são preservados no histórico. Subtotais e total têm limite de 99999999.99.
+
+        DELIVERY exige endereço com 5 a 255 caracteres. MESA e BALCAO exigem endereço null.
+        Cliente informado deve estar ativo. FIADO exige cliente e gera pagamento PENDENTE;
+        demais formas geram PAGO. DINHEIRO exige valorRecebido numérico, até duas casas,
+        entre o total e 99999999.99. Outras formas não aceitam o campo valorRecebido,
+        nem mesmo null. Troco é calculado e retornado, nunca gravado.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PedidoEntrada'
+            example:
+              data: '2026-10-22'
+              tipoAtendimento: BALCAO
+              idCliente: null
+              enderecoEntrega: null
+              observacao: sem cebola
+              itens:
+                - idProduto: 1
+                  quantidade: 2
+                  opcaoMistura: Frango
+                  adicionais: [{idAdicional: 3, quantidade: 1}]
+              pagamento: {forma: DINHEIRO, valorRecebido: 50}
+      responses:
+        '201':
+          description: Pedido completo com preços do servidor e pagamento registrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pedido'
+              example:
+                id: 1
+                idCaixa: 2
+                idUsuario: 4
+                nomeUsuario: Maria Silva
+                idCliente: null
+                nomeCliente: null
+                dataHora: '2026-10-22 12:30:00'
+                status: RECEBIDO
+                tipoAtendimento: BALCAO
+                enderecoEntrega: null
+                observacao: sem cebola
+                valorTotal: 42.5
+                itens:
+                  - id: 1
+                    idProduto: 1
+                    nomeProduto: Marmita G
+                    quantidade: 2
+                    precoUnitario: 20
+                    subtotal: 40
+                    opcaoMistura: Frango
+                    observacao: null
+                    adicionais: [{id: 1, idAdicional: 3, nomeAdicional: Ovo extra, quantidade: 1, precoUnitario: 2.5, subtotal: 2.5}]
+                pagamento: {id: 1, forma: DINHEIRO, status: PAGO, valor: 42.5, valorRecebido: 50, troco: 7.5, dataHora: '2026-10-22 12:30:00'}
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          description: Sem caixa aberto ou catálogo com preço inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+              example: {msg: Abra o caixa antes de lançar pedidos.}
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+    get:
+      tags: [Pedidos]
+      operationId: listarPedidos
+      summary: Consultar pedidos resumidos
+      description: Perfis ADMIN, ATENDENTE e COZINHA. Ordem decrescente de data/hora e ID, sem filtro por hoje.
+      parameters:
+        - name: status
+          in: query
+          schema: {$ref: '#/components/schemas/StatusPedido'}
+        - name: idCaixa
+          in: query
+          schema: {type: integer, minimum: 1}
+        - name: limite
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 200, default: 50}
+      responses:
+        '200':
+          description: Lista resumida, possivelmente vazia.
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 200
+                items: {$ref: '#/components/schemas/PedidoResumo'}
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /pedido/{id}:
+    get:
+      tags: [Pedidos]
+      operationId: obterPedido
+      summary: Consultar pedido completo
+      description: Perfis ADMIN, ATENDENTE e COZINHA. Retorna preços da venda e troco calculado; não há alteração de status nesta tarefa.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Pedido completo.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Pedido'}
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
 components:
   securitySchemes:
     cookieAuth:
@@ -1600,6 +1751,133 @@ components:
               - {nome: Ovo, grupo: Mistura}
             adicionais: [3, 5]
   schemas:
+    DinheiroPedido:
+      type: number
+      minimum: 0
+      maximum: 99999999.99
+      multipleOf: 0.01
+    StatusPedido:
+      type: string
+      enum: [RECEBIDO, EM_PREPARO, PRONTO, SAIU_ENTREGA, CANCELADO]
+    TipoAtendimento:
+      type: string
+      enum: [BALCAO, MESA, DELIVERY]
+    FormaPagamentoPedido:
+      type: string
+      enum: [DINHEIRO, PIX, DEBITO, CREDITO, FIADO]
+    PedidoAdicionalEntrada:
+      type: object
+      required: [idAdicional, quantidade]
+      properties:
+        idAdicional: {type: integer, minimum: 1}
+        quantidade:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+          description: Total do adicional na linha; o subtotal e o total também devem caber em DECIMAL(10,2).
+    PedidoItemEntrada:
+      type: object
+      required: [idProduto, quantidade]
+      properties:
+        idProduto: {type: integer, minimum: 1}
+        quantidade: {type: integer, minimum: 1, maximum: 99}
+        opcaoMistura: {type: string, nullable: true, maxLength: 150}
+        observacao: {type: string, nullable: true, maxLength: 255}
+        adicionais:
+          type: array
+          items: {$ref: '#/components/schemas/PedidoAdicionalEntrada'}
+    PedidoPagamentoEntrada:
+      type: object
+      required: [forma]
+      properties:
+        forma: {$ref: '#/components/schemas/FormaPagamentoPedido'}
+        valorRecebido:
+          allOf: [{$ref: '#/components/schemas/DinheiroPedido'}]
+          description: Obrigatório para DINHEIRO, maior ou igual ao total. Não enviar em outras formas.
+    PedidoEntrada:
+      type: object
+      required: [data, tipoAtendimento, itens, pagamento]
+      properties:
+        data: {type: string, format: date, example: '2026-10-22'}
+        tipoAtendimento: {$ref: '#/components/schemas/TipoAtendimento'}
+        idCliente: {type: integer, minimum: 1, nullable: true}
+        enderecoEntrega: {type: string, nullable: true, maxLength: 255, description: Obrigatório com 5 a 255 caracteres para DELIVERY; null nos outros tipos.}
+        observacao: {type: string, nullable: true, maxLength: 255}
+        itens:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/PedidoItemEntrada'}
+        pagamento: {$ref: '#/components/schemas/PedidoPagamentoEntrada'}
+    PedidoAdicional:
+      type: object
+      required: [id, idAdicional, nomeAdicional, quantidade, precoUnitario, subtotal]
+      properties:
+        id: {type: integer}
+        idAdicional: {type: integer}
+        nomeAdicional: {type: string}
+        quantidade: {type: integer}
+        precoUnitario: {$ref: '#/components/schemas/DinheiroPedido'}
+        subtotal: {$ref: '#/components/schemas/DinheiroPedido'}
+    PedidoItem:
+      type: object
+      required: [id, idProduto, nomeProduto, quantidade, precoUnitario, subtotal, opcaoMistura, observacao, adicionais]
+      properties:
+        id: {type: integer}
+        idProduto: {type: integer}
+        nomeProduto: {type: string}
+        quantidade: {type: integer}
+        precoUnitario: {$ref: '#/components/schemas/DinheiroPedido'}
+        subtotal: {$ref: '#/components/schemas/DinheiroPedido'}
+        opcaoMistura: {type: string, nullable: true}
+        observacao: {type: string, nullable: true}
+        adicionais:
+          type: array
+          items: {$ref: '#/components/schemas/PedidoAdicional'}
+    PedidoPagamento:
+      type: object
+      required: [id, forma, status, valor, valorRecebido, troco, dataHora]
+      properties:
+        id: {type: integer}
+        forma: {$ref: '#/components/schemas/FormaPagamentoPedido'}
+        status: {type: string, enum: [PAGO, PENDENTE, CANCELADO]}
+        valor: {$ref: '#/components/schemas/DinheiroPedido'}
+        valorRecebido: {type: number, nullable: true}
+        troco: {type: number, nullable: true}
+        dataHora: {type: string, description: DATETIME como texto, sem conversão de fuso.}
+    PedidoResumo:
+      type: object
+      required: [id, idCaixa, dataHora, status, tipoAtendimento, nomeCliente, valorTotal, formaPagamento, statusPagamento, nomeUsuario]
+      properties:
+        id: {type: integer}
+        idCaixa: {type: integer}
+        dataHora: {type: string}
+        status: {$ref: '#/components/schemas/StatusPedido'}
+        tipoAtendimento: {$ref: '#/components/schemas/TipoAtendimento'}
+        nomeCliente: {type: string, nullable: true}
+        valorTotal: {$ref: '#/components/schemas/DinheiroPedido'}
+        formaPagamento: {$ref: '#/components/schemas/FormaPagamentoPedido'}
+        statusPagamento: {type: string, enum: [PAGO, PENDENTE, CANCELADO]}
+        nomeUsuario: {type: string}
+    Pedido:
+      type: object
+      required: [id, idCaixa, idUsuario, nomeUsuario, idCliente, nomeCliente, dataHora, status, tipoAtendimento, enderecoEntrega, observacao, valorTotal, itens, pagamento]
+      properties:
+        id: {type: integer}
+        idCaixa: {type: integer}
+        idUsuario: {type: integer}
+        nomeUsuario: {type: string}
+        idCliente: {type: integer, nullable: true}
+        nomeCliente: {type: string, nullable: true}
+        dataHora: {type: string, description: DATETIME do banco, sem restringir ao dia informado para o cardápio.}
+        status: {$ref: '#/components/schemas/StatusPedido'}
+        tipoAtendimento: {$ref: '#/components/schemas/TipoAtendimento'}
+        enderecoEntrega: {type: string, nullable: true}
+        observacao: {type: string, nullable: true}
+        valorTotal: {$ref: '#/components/schemas/DinheiroPedido'}
+        itens:
+          type: array
+          items: {$ref: '#/components/schemas/PedidoItem'}
+        pagamento: {$ref: '#/components/schemas/PedidoPagamento'}
     Estoque:
       type: object
       required: [id, nome, categoria, siglaUnidade, quantidade, estoqueMinimo, abaixoDoMinimo, ativo]
@@ -1907,6 +2185,9 @@ components:
       type: object
       description: Na criação, ativo é ignorado e o produto nasce ativo. Na edição todos os campos são opcionais.
       properties:
+        usaCardapio:
+          type: boolean
+          description: Padrão true na criação; quando omitido na edição, preserva o valor atual.
         nome:
           type: string
           minLength: 2
@@ -1922,6 +2203,9 @@ components:
     Produto:
       type: object
       properties:
+        usaCardapio:
+          type: boolean
+          example: true
         id:
           type: integer
           example: 1

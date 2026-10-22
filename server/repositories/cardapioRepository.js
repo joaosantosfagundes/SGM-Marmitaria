@@ -2,8 +2,8 @@ import CardapioEntity from "../entities/cardapioEntity.js";
 import Repository from "./repository.js";
 
 export default class CardapioRepository extends Repository {
-    async obterPorData(data) {
-        return this.banco.ExecutaTransacao(async consultar => {
+    async obterPorData(data, consultar) {
+        let carregar = async consultar => {
             let cardapios = await consultar(
                 "select id_cardapio, data_cardapio from cardapio where data_cardapio = ? for share", [data]
             );
@@ -19,7 +19,8 @@ export default class CardapioRepository extends Repository {
             );
             return CardapioEntity.toMap(cardapios[0], preparacoes.map(item => ({ nome: item.nome, grupo: item.grupo })),
                 adicionais.map(item => ({ id: item.id_adicional, nome: item.nome, preco: Number(item.preco) })));
-        });
+        };
+        return consultar ? carregar(consultar) : this.banco.ExecutaTransacao(carregar);
     }
 
     async salvar(data, preparacoes, adicionais) {

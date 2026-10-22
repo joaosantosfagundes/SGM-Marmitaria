@@ -17,14 +17,15 @@ export default class ProdutoService {
         return await this.#repo.obter(id);
     }
 
-    async gravar({ nome, descricao, preco_padrao }) {
+    async gravar({ nome, descricao, preco_padrao, usaCardapio = true }) {
+        if (typeof usaCardapio !== 'boolean') throw { status: 400, msg: "O campo usaCardapio deve ser booleano." };
         let existente = await this.#repo.obterPorNome(nome);
         if (existente) {
             throw { status: 409, msg: "Já existe um produto com esse nome" };
         }
 
         // ativo sempre nasce true — não tem como cadastrar já inativo
-        let entidade = new ProdutoEntity(0, nome, descricao, preco_padrao, true);
+        let entidade = new ProdutoEntity(0, nome, descricao, preco_padrao, true, undefined, usaCardapio);
 
         if (!entidade.validar()) {
             throw { status: 400, msg: "Dados inválidos. Confira nome e preço." };
@@ -34,7 +35,8 @@ export default class ProdutoService {
         return entidade;
     }
 
-    async atualizar(id, { nome, descricao, preco_padrao, ativo }) {
+    async atualizar(id, { nome, descricao, preco_padrao, ativo, usaCardapio }) {
+        if (usaCardapio !== undefined && typeof usaCardapio !== 'boolean') throw { status: 400, msg: "O campo usaCardapio deve ser booleano." };
         let atual = await this.#repo.obter(id);
         if (!atual) {
             throw { status: 404, msg: "Produto não encontrado" };
@@ -51,6 +53,7 @@ export default class ProdutoService {
         atual.descricao = descricao ?? atual.descricao;
         atual.precoPadrao = preco_padrao ?? atual.precoPadrao;
         atual.ativo = ativo ?? atual.ativo;
+        atual.usaCardapio = usaCardapio ?? atual.usaCardapio;
 
         if (!atual.validar()) {
             throw { status: 400, msg: "Dados inválidos. Confira nome e preço." };
