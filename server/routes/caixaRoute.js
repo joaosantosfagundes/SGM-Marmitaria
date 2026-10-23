@@ -14,6 +14,10 @@ router.get('/atual', auth.validar.bind(auth), auth.permitir('ADMIN', 'ATENDENTE'
     controller.obterAtual(req, res);
 });
 
+router.get('/:id/resumo', auth.validar.bind(auth), auth.permitir('ADMIN', 'ATENDENTE'), (req, res) => {
+    controller.obterResumo(req, res);
+});
+
 router.post('/abrir', auth.validar.bind(auth), auth.permitir('ADMIN', 'ATENDENTE'), (req, res) => {
     controller.abrir(req, res);
 });

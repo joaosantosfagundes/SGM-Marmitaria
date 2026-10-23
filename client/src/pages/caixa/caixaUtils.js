@@ -14,3 +14,12 @@ export function converterValor(texto) {
     let numero = Number(valor.replace(',', '.'));
     return Number.isFinite(numero) && numero <= 99999999.99 ? numero : null;
 }
+
+export function calcularDiferenca(valorContado, saldoEsperado) {
+    return (Math.round(valorContado * 100) - Math.round(saldoEsperado * 100)) / 100;
+}
+
+export function situacaoConferencia(diferenca) {
+    if (diferenca === 0) return { texto: 'Conferido', classe: 'success' };
+    return diferenca > 0 ? { texto: 'Sobra de dinheiro', classe: 'warning' } : { texto: 'Falta de dinheiro', classe: 'danger' };
+}

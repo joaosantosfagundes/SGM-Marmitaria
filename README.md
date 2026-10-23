@@ -95,7 +95,7 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 - [x] RF_F9 — Caixa: abertura (troco inicial, responsável autenticado, caixa único aberto e últimas dez aberturas)
 
 ### Sprint 4 (28/09–17/10) — RF_F2–F4
-- [ ] RF_F2 — Backend implementado (pedido com itens, adicionais e pagamento na mesma transação); tela de lançamento de pedidos pendente
+- [x] RF_F2 — Backend e frontend concluídos: lançamento com itens, mistura, adicionais e pagamento; tela Pedidos com lista recente, detalhes e troco
 - [ ] RF_F3 — Status do Pedido
 - [x] RF_F4 — Movimentação de Estoque (entradas, perdas e ajustes manuais, saldo não negativo, transação com bloqueio por insumo, saldos e histórico)
 
@@ -103,7 +103,7 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 - [ ] RF_F5 — Pagamento
 - [ ] RF_F6 — Quitar Devedores
 - [ ] RF_F7 — Movimentação Financeira
-- [x] RF_F9 — Caixa: Abrir/Fechar em tela única com histórico (troco inicial, valor contado na gaveta e responsáveis autenticados; sem totais de venda)
+- [x] RF_F9 — Caixa: Abrir/Fechar, histórico, resumo por forma de pagamento e conferência do dinheiro físico com falta/sobra
 - [ ] RF_S1–S5 — Relatórios
 - [ ] Deploy
 
@@ -111,6 +111,41 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 
 - [x] Confirmações em diálogo próprio com suporte a teclado, foco controlado e notificações no padrão visual do sistema
 - [x] Formulário de adicionais em card acima da lista, no padrão dos demais cadastros
+
+## Resumo financeiro e conferência do caixa
+
+`GET /caixa/:id/resumo` está disponível para ADMIN e ATENDENTE e calcula valores de caixas
+abertos ou fechados. Usa `pedido.id_caixa` e `pagamento.id_pedido`, sem filtrar pelo dia:
+um caixa aberto ontem inclui todas as suas vendas de hoje até o fechamento.
+
+- **Recebido:** pagamentos PAGO em Dinheiro, Pix, Débito e Crédito, com total e quantidade por forma.
+- **Fiado pendente:** somente FIADO PENDENTE; aparece separado e não representa recebimento.
+- **Total vendido:** recebido + fiado pendente. O valor de abertura não é faturamento.
+- **Saldo esperado na gaveta:** abertura + vendas pagas em dinheiro. Usa `pagamento.valor`,
+  não o valor recebido do cliente; o troco já está descontado. `valor_recebido` null equivale ao valor exato.
+- **Conferência:** valor contado menos saldo esperado. Zero é Conferido, positivo é Sobra e negativo é Falta.
+  Uma diferença não impede fechar; a tela solicita confirmação e permite prosseguir.
+
+Na tela Caixa, Atualizar recarrega o resumo; Ver resumo no histórico consulta qualquer caixa sem editá-lo.
+Antes da confirmação e antes de enviar o fechamento, a tela reconsulta os valores. Se as vendas em dinheiro
+mudarem durante a confirmação, pede nova conferência. O fechamento aceita `idCaixa` opcional para
+proteger a identidade do caixa conferido; clientes antigos podem continuar enviando somente `valorFechamento`.
+O update condicional e a leitura do caixa fechado usam uma única `ExecutaTransacao`. O bloqueio exclusivo
+aguarda o FOR SHARE dos pedidos já em andamento, e pedidos posteriores não entram no caixa fechado.
+O resumo final é consultado depois do fechamento e inclui essas últimas vendas; a confirmação da tela
+não reserva o caixa nem mantém uma transação aberta enquanto o usuário decide.
+
+**Limitações:** não inclui sangrias, suprimentos, despesas, taxas, estornos ou recebimentos posteriores de fiado.
+Pedidos CANCELADO e pagamentos CANCELADO não contam. Não há fluxo de cancelamento/estorno nesta entrega:
+alterar status diretamente no banco muda o resumo calculado, sem registrar retirada/devolução física de dinheiro.
+FIADO PAGO não é inferido como dinheiro, Pix ou cartão: uma futura quitação precisará registrar a forma real e
+o caixa do recebimento. Cada registro de pagamento válido é somado uma vez, sem join com itens; o fluxo atual
+cria um pagamento por pedido, mas duplicações manuais no banco não são conciliadas automaticamente.
+Não existe saldo acumulado nem snapshot financeiro gravado, e nenhuma migration é necessária.
+
+Testes: `node --test server/tests/pedido.test.js server/tests/caixa.test.js`. O banco simulado cobre cálculos,
+status, permissões, fechamento, rollback e as duas ordens de concorrência S/X; não substitui testes de
+SQL, isolamento e bloqueios em MySQL 8 real.
 
 ## Atualização do banco para pedidos
 
@@ -120,7 +155,9 @@ A migration não seleciona banco e adiciona somente os campos do pedido, mistura
 Produtos existentes passam a usar o cardápio por padrão; desmarque "Escolhe mistura e adicionais do dia"
 nos produtos que não devem aceitar essas opções, como refrigerantes.
 
-RF_F2 está pronto no backend; a tela de lançamento continua pendente. O pedido não baixa estoque.
+RF_F2 está pronto no backend e no frontend, na rota `/pedidos`. ADMIN e ATENDENTE lançam pedidos;
+COZINHA consulta a lista e os detalhes. O pedido não baixa estoque. Mudança de status, cancelamento
+e impressão ficam para o RF_F3.
 Execute `node --test server/tests/pedido.test.js` na raiz para os testes com banco simulado:
 eles exercitam autenticação, rotas, regras, serialização e o controle de transação com falhas de gravação.
 Esses testes não substituem a conferência das migrations, constraints e bloqueios em MySQL 8 real.
