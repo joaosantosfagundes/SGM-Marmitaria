@@ -66,7 +66,7 @@ export default class PedidoService {
             if (!Array.isArray(adicionais)) throw { status: 400, msg: 'Os adicionais devem ser uma lista.' };
             item.adicionais = adicionais.map(entradaAdicional => {
                 let adicional = new ItemPedidoAdicionalEntity({ idAdicional: entradaAdicional?.idAdicional, quantidade: entradaAdicional?.quantidade });
-                if (!adicional.validar()) throw { status: 400, msg: 'Cada adicional exige ID válido e quantidade inteira entre 1 e 2147483647.' };
+                if (!adicional.validar()) throw { status: 400, msg: 'Cada adicional exige ID válido e quantidade inteira de 1 a 99.' };
                 return adicional;
             });
             return item;
@@ -75,7 +75,7 @@ export default class PedidoService {
         if (!pedido.pagamento.validar()) throw { status: 400, msg: 'Informe pagamento com forma DINHEIRO, PIX, DEBITO, CREDITO ou FIADO.' };
         if (pedido.pagamento.forma === 'FIADO' && pedido.idCliente === null) throw { status: 400, msg: 'Pagamento FIADO exige um cliente vinculado.' };
         if (pedido.pagamento.forma === 'DINHEIRO') {
-            if (!validarDinheiro(pedido.pagamento.valorRecebido)) throw { status: 400, msg: 'Informe valorRecebido numérico para DINHEIRO, com até duas casas decimais e no máximo R$ 99.999.999,99.' };
+            if (pedido.pagamento.valorRecebido !== null && !validarDinheiro(pedido.pagamento.valorRecebido)) throw { status: 400, msg: 'Quando informado para DINHEIRO, valorRecebido deve ser numérico, com até duas casas decimais e no máximo R$ 99.999.999,99.' };
         } else if (dados.pagamento.valorRecebido !== undefined) throw { status: 400, msg: 'valorRecebido só é aceito para pagamento em DINHEIRO.' };
 
         return this.#repo.criar(pedido, async consultar => {
@@ -120,7 +120,7 @@ export default class PedidoService {
             pedido.valorTotal = total / 100;
             pedido.pagamento.valor = pedido.valorTotal;
             pedido.pagamento.status = pedido.pagamento.forma === 'FIADO' ? 'PENDENTE' : 'PAGO';
-            if (pedido.pagamento.forma === 'DINHEIRO' && centavos(pedido.pagamento.valorRecebido) < total) {
+            if (pedido.pagamento.forma === 'DINHEIRO' && pedido.pagamento.valorRecebido !== null && centavos(pedido.pagamento.valorRecebido) < total) {
                 throw { status: 400, msg: 'O valor recebido é menor que o total do pedido.' };
             }
         });

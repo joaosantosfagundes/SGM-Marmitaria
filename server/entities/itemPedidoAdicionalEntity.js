@@ -43,7 +43,7 @@ export default class ItemPedidoAdicionalEntity extends Entity {
     }
 
     validar() {
-        return Number.isSafeInteger(this.#idAdicional) && this.#idAdicional > 0 && Number.isInteger(this.#quantidade) && this.#quantidade > 0 && this.#quantidade <= 2147483647;
+        return Number.isSafeInteger(this.#idAdicional) && this.#idAdicional > 0 && Number.isInteger(this.#quantidade) && this.#quantidade >= 1 && this.#quantidade <= 99;
     }
 }
 

@@ -162,7 +162,6 @@ for (const [nome, alterar] of [
     ['Mesa com endereço', b => { b.tipoAtendimento = 'MESA'; b.enderecoEntrega = 'Rua A, 123'; }],
     ['Fiado sem cliente', b => { b.pagamento = { forma: 'FIADO' }; }],
     ['Dinheiro insuficiente', b => { b.pagamento.valorRecebido = 40; }],
-    ['Dinheiro sem recebido', b => { delete b.pagamento.valorRecebido; }],
     ['Dinheiro recebido como string', b => { b.pagamento.valorRecebido = '50'; }],
     ['Dinheiro com três casas', b => { b.pagamento.valorRecebido = 50.001; }],
     ['Valor recebido em PIX', b => { b.pagamento.forma = 'PIX'; }],
@@ -173,12 +172,33 @@ for (const [nome, alterar] of [
     ['Quantidade zero', b => { b.itens[0].quantidade = 0; }],
     ['Quantidade acima de 99', b => { b.itens[0].quantidade = 100; }],
     ['Quantidade fracionária', b => { b.itens[0].quantidade = 1.5; }],
-    ['Adicional acima de INT', b => { b.itens[0].adicionais[0].quantidade = 2147483648; }],
+    ['Adicional acima de 99', b => { b.itens[0].adicionais[0].quantidade = 100; }],
+    ['Adicional com quantidade zero', b => { b.itens[0].adicionais[0].quantidade = 0; }],
+    ['Adicional com quantidade negativa', b => { b.itens[0].adicionais[0].quantidade = -1; }],
+    ['Adicional com quantidade fracionária', b => { b.itens[0].adicionais[0].quantidade = 1.5; }],
     ['Observação longa', b => { b.observacao = 'a'.repeat(256); }],
     ['Produto inexistente', b => { b.itens[0].idProduto = 999; }],
 ]) test(`${nome}: 400 sem registros parciais`, async () => {
     let b = corpo(); alterar(b); let r = await chamar(b);
     assert.equal(r.status, 400); assert.equal(estado.pedidos.length + estado.itens.length + estado.extras.length + estado.pagamentos.length, 0);
+});
+
+for (const [nome, alterar] of [
+    ['Dinheiro sem recebido', b => { delete b.pagamento.valorRecebido; }],
+    ['Dinheiro com recebido null', b => { b.pagamento.valorRecebido = null; }],
+]) test(`${nome}: cria pedido sem troco`, async () => {
+    let b = corpo(); alterar(b); let r = await chamar(b);
+    assert.equal(r.status, 201); assert.equal(r.body.pagamento.status, 'PAGO');
+    assert.equal(r.body.pagamento.valorRecebido, null); assert.equal(r.body.pagamento.troco, null);
+    assert.equal(estado.pagamentos[0].valor_recebido, null);
+    let consulta = await chamar(null, { metodo: 'get', caminho: '/:id', params: { id: String(r.body.id) } });
+    assert.equal(consulta.status, 200); assert.equal(consulta.body.pagamento.valorRecebido, null); assert.equal(consulta.body.pagamento.troco, null);
+});
+test('Adicional com quantidade 99: aceita o limite e calcula o total da linha', async () => {
+    let b = corpo(); b.itens[0].adicionais[0].quantidade = 99; b.pagamento.valorRecebido = 300;
+    let r = await chamar(b);
+    assert.equal(r.status, 201); assert.equal(r.body.itens[0].adicionais[0].quantidade, 99);
+    assert.equal(r.body.itens[0].adicionais[0].subtotal, 247.5); assert.equal(r.body.valorTotal, 287.7);
 });
 
 for (const forma of ['PIX', 'DEBITO', 'CREDITO', 'FIADO']) test(`Pagamento ${forma}`, async () => {

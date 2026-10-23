@@ -1413,14 +1413,16 @@ paths:
         corresponder às opções do grupo Mistura dessa data, ignorando caixa e espaços;
         grava-se o nome original. Sem opções, mistura deve ser null. Adicionais devem
         estar ativos e marcados no cardápio. Produto sem cardápio não aceita mistura nem adicionais.
-        A quantidade de adicional é o total da linha, sem multiplicar pela quantidade do produto.
+        A quantidade de cada adicional deve ser inteira de 1 a 99 e é o total da linha,
+        sem multiplicar pela quantidade do produto.
         Os preços são preservados no histórico. Subtotais e total têm limite de 99999999.99.
 
         DELIVERY exige endereço com 5 a 255 caracteres. MESA e BALCAO exigem endereço null.
         Cliente informado deve estar ativo. FIADO exige cliente e gera pagamento PENDENTE;
-        demais formas geram PAGO. DINHEIRO exige valorRecebido numérico, até duas casas,
+        demais formas geram PAGO. Para DINHEIRO, valorRecebido é opcional; omitido ou null,
+        grava-se null e o troco fica null. Se informado, deve ser numérico, com até duas casas,
         entre o total e 99999999.99. Outras formas não aceitam o campo valorRecebido,
-        nem mesmo null. Troco é calculado e retornado, nunca gravado.
+        nem mesmo null. Troco é calculado quando houver valor recebido e retornado, nunca gravado.
       requestBody:
         required: true
         content:
@@ -1773,8 +1775,8 @@ components:
         quantidade:
           type: integer
           minimum: 1
-          maximum: 2147483647
-          description: Total do adicional na linha; o subtotal e o total também devem caber em DECIMAL(10,2).
+          maximum: 99
+          description: Quantidade inteira de 1 a 99, total do adicional na linha; o subtotal e o total também devem caber em DECIMAL(10,2).
     PedidoItemEntrada:
       type: object
       required: [idProduto, quantidade]
@@ -1792,8 +1794,12 @@ components:
       properties:
         forma: {$ref: '#/components/schemas/FormaPagamentoPedido'}
         valorRecebido:
-          allOf: [{$ref: '#/components/schemas/DinheiroPedido'}]
-          description: Obrigatório para DINHEIRO, maior ou igual ao total. Não enviar em outras formas.
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 99999999.99
+          multipleOf: 0.01
+          description: Opcional para DINHEIRO; omitido ou null, valor recebido e troco ficam null. Se informado, deve ser maior ou igual ao total. Não enviar em outras formas, nem mesmo null.
     PedidoEntrada:
       type: object
       required: [data, tipoAtendimento, itens, pagamento]
@@ -1815,7 +1821,7 @@ components:
         id: {type: integer}
         idAdicional: {type: integer}
         nomeAdicional: {type: string}
-        quantidade: {type: integer}
+        quantidade: {type: integer, minimum: 1, maximum: 99}
         precoUnitario: {$ref: '#/components/schemas/DinheiroPedido'}
         subtotal: {$ref: '#/components/schemas/DinheiroPedido'}
     PedidoItem:
@@ -1841,8 +1847,8 @@ components:
         forma: {$ref: '#/components/schemas/FormaPagamentoPedido'}
         status: {type: string, enum: [PAGO, PENDENTE, CANCELADO]}
         valor: {$ref: '#/components/schemas/DinheiroPedido'}
-        valorRecebido: {type: number, nullable: true}
-        troco: {type: number, nullable: true}
+        valorRecebido: {type: number, nullable: true, description: Null se não informado no pagamento em dinheiro ou se a forma não for DINHEIRO.}
+        troco: {type: number, nullable: true, description: Calculado somente quando houver valor recebido em DINHEIRO; null nos demais casos.}
         dataHora: {type: string, description: DATETIME como texto, sem conversão de fuso.}
     PedidoResumo:
       type: object
