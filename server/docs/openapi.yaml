@@ -1132,6 +1132,90 @@ paths:
                 $ref: '#/components/schemas/Erro'
         '500':
           $ref: '#/components/responses/ErroInterno'
+  /caixa/{id}/resumo:
+    get:
+      tags: [Caixa]
+      operationId: obterResumoCaixa
+      summary: Consultar resumo financeiro e conferência de um caixa
+      description: |
+        Perfis ADMIN e ATENDENTE. Consulta caixa aberto ou fechado pelo seu ID.
+        Considera todo o período operacional, vinculando pedido.id_caixa a caixa.id_caixa
+        e pagamento.id_pedido a pedido.id_pedido, sem filtro de data ou fuso horário.
+        Cada pagamento é agregado uma única vez, sem joins com itens do pedido.
+        Pedidos CANCELADO e pagamentos CANCELADO são excluídos.
+
+        DINHEIRO, PIX, DEBITO e CREDITO somam somente pagamentos PAGO.
+        totalFiado soma somente FIADO PENDENTE e não entra no totalRecebido.
+        totalVendido = totalRecebido + totalFiado. A abertura não é faturamento.
+        saldoEsperadoDinheiro = valorAbertura + totalDinheiro, usando pagamento.valor,
+        nunca valor_recebido; o valor líquido da venda já desconta o troco.
+        valor_recebido null equivale ao pagamento exato e não altera o cálculo.
+
+        Para caixa fechado, diferenca = valorFechamento - saldoEsperadoDinheiro;
+        zero indica conferido, positivo sobra e negativo falta. Em caixa aberto é null.
+        quantidadePagamentos conta somente os pagamentos incluídos em cada categoria.
+        Não considera sangrias, suprimentos, despesas, taxas ou quitação posterior de FIADO.
+        O resumo é calculado na consulta, sem saldo acumulado ou snapshot salvo no banco.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Resumo financeiro do caixa, com valores numéricos e conferência.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResumoCaixa'}
+              examples:
+                aberto:
+                  value:
+                    idCaixa: 1
+                    status: ABERTO
+                    valorAbertura: 150
+                    totalDinheiro: 40
+                    totalPix: 80
+                    totalDebito: 70
+                    totalCredito: 50
+                    totalFiado: 30
+                    totalRecebido: 240
+                    totalVendido: 270
+                    saldoEsperadoDinheiro: 190
+                    valorFechamento: null
+                    diferenca: null
+                    quantidadePagamentos: {dinheiro: 1, pix: 1, debito: 1, credito: 1, fiado: 1}
+                fechadoComFalta:
+                  value:
+                    idCaixa: 1
+                    status: FECHADO
+                    valorAbertura: 150
+                    totalDinheiro: 40
+                    totalPix: 0
+                    totalDebito: 0
+                    totalCredito: 0
+                    totalFiado: 0
+                    totalRecebido: 40
+                    totalVendido: 40
+                    saldoEsperadoDinheiro: 190
+                    valorFechamento: 185
+                    diferenca: -5
+                    quantidadePagamentos: {dinheiro: 1, pix: 0, debito: 0, credito: 0, fiado: 0}
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          description: Caixa não encontrado.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Erro'}
+              example: {msg: Caixa não encontrado.}
+        '409':
+          description: Totais acima do limite de precisão monetária suportado.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Erro'}
+        '500':
+          $ref: '#/components/responses/ErroInterno'
   /caixa/abrir:
     post:
       tags: [Caixa]
@@ -1190,10 +1274,17 @@ paths:
         Perfis: ADMIN e ATENDENTE. Qualquer um desses perfis pode fechar o caixa ABERTO,
         mesmo que outra pessoa o tenha aberto. O responsável pelo fechamento é definido
         pelo usuário autenticado; campos de responsável enviados no corpo são ignorados.
-        valorFechamento é o dinheiro contado na gaveta, sem totais de venda ou pagamentos.
+        valorFechamento é somente o dinheiro contado na gaveta; o resumo é calculado separadamente.
         Deve ser número entre 0 e 99999999.99, com até duas casas decimais; zero é permitido.
         O corpo JSON usa ponto decimal, não vírgula ou string. O banco registra data/hora.
-        O UPDATE é condicional ao status ABERTO: apenas uma tentativa simultânea pode fechar.
+        idCaixa é opcional. Quando enviado, somente esse caixa pode ser fechado; se já
+        estiver fechado ou não existir, retorna 409 sem fechar outro caixa. O corpo antigo
+        com apenas valorFechamento continua fechando o caixa aberto.
+        O update é condicional ao status ABERTO e executado em transação com leitura da
+        resposta na mesma conexão. Seu bloqueio exclusivo aguarda pedidos que já têm FOR SHARE.
+        Pedidos posteriores ao fechamento não podem se vincular a esse caixa.
+        Diferenças de dinheiro não bloqueiam o fechamento. Consulte o resumo após fechar
+        para conferir os valores finais, incluindo pedidos concluídos enquanto se confirmava.
       requestBody:
         required: true
         content:
@@ -1205,6 +1296,8 @@ paths:
                 value: {valorFechamento: 150}
               gavetaVazia:
                 value: {valorFechamento: 0}
+              caixaConferidoNaTela:
+                value: {valorFechamento: 185, idCaixa: 1}
       responses:
         '200':
           description: Caixa fechado, incluindo nomes de quem abriu e de quem fechou, valor contado e data/hora do fechamento.
@@ -2017,7 +2110,37 @@ components:
           minimum: 0
           maximum: 99999999.99
           multipleOf: 0.01
-          description: Dinheiro contado na gaveta; zero é permitido. Não aceita string nem valor ausente. Sem totais de venda.
+          description: Dinheiro contado na gaveta; zero e divergência de conferência são permitidos. Não aceita string nem valor ausente.
+        idCaixa:
+          type: integer
+          minimum: 1
+          description: Opcional; ID do caixa conferido na tela. Evita fechar outro caixa aberto após uma confirmação antiga.
+    ResumoCaixa:
+      type: object
+      required: [idCaixa, status, valorAbertura, totalDinheiro, totalPix, totalDebito, totalCredito, totalFiado, totalRecebido, totalVendido, saldoEsperadoDinheiro, valorFechamento, diferenca, quantidadePagamentos]
+      properties:
+        idCaixa: {type: integer, minimum: 1}
+        status: {type: string, enum: [ABERTO, FECHADO]}
+        valorAbertura: {type: number, minimum: 0, multipleOf: 0.01, description: Dinheiro físico inicial; não representa venda.}
+        totalDinheiro: {type: number, minimum: 0, multipleOf: 0.01}
+        totalPix: {type: number, minimum: 0, multipleOf: 0.01}
+        totalDebito: {type: number, minimum: 0, multipleOf: 0.01}
+        totalCredito: {type: number, minimum: 0, multipleOf: 0.01}
+        totalFiado: {type: number, minimum: 0, multipleOf: 0.01, description: FIADO PENDENTE; não recebido.}
+        totalRecebido: {type: number, minimum: 0, multipleOf: 0.01}
+        totalVendido: {type: number, minimum: 0, multipleOf: 0.01, description: Total recebido + fiado pendente.}
+        saldoEsperadoDinheiro: {type: number, minimum: 0, multipleOf: 0.01, description: Abertura + vendas PAGO em DINHEIRO.}
+        valorFechamento: {type: number, minimum: 0, multipleOf: 0.01, nullable: true}
+        diferenca: {type: number, multipleOf: 0.01, nullable: true, description: Valor contado menos saldo esperado; null em caixa aberto.}
+        quantidadePagamentos:
+          type: object
+          required: [dinheiro, pix, debito, credito, fiado]
+          properties:
+            dinheiro: {type: integer, minimum: 0}
+            pix: {type: integer, minimum: 0}
+            debito: {type: integer, minimum: 0}
+            credito: {type: integer, minimum: 0}
+            fiado: {type: integer, minimum: 0}
     Caixa:
       type: object
       required: [id, idUsuarioAbertura, nomeUsuarioAbertura, idUsuarioFechamento, nomeUsuarioFechamento, dataAbertura, dataFechamento, valorAbertura, valorFechamento, status]
@@ -2058,7 +2181,7 @@ components:
           nullable: true
           minimum: 0
           maximum: 99999999.99
-          description: Dinheiro contado na gaveta, sem totais de venda; null enquanto o caixa estiver aberto.
+          description: Dinheiro físico contado na gaveta; null enquanto o caixa estiver aberto. Conferência disponível no endpoint de resumo.
           example: null
         status:
           type: string

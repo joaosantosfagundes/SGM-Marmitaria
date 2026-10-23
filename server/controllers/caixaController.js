@@ -23,6 +23,14 @@ export default class CaixaController {
         }
     }
 
+    async obterResumo(req, res) {
+        try {
+            return res.status(200).json(await this.#service.obterResumo(req.params.id));
+        } catch (error) {
+            return this.#tratarErro(res, error);
+        }
+    }
+
     async abrir(req, res) {
         try {
             let caixa = await this.#service.abrir(req.body, req.usuarioLogado.id);

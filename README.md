@@ -103,7 +103,7 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 - [ ] RF_F5 — Pagamento
 - [ ] RF_F6 — Quitar Devedores
 - [ ] RF_F7 — Movimentação Financeira
-- [x] RF_F9 — Caixa: Abrir/Fechar em tela única com histórico (troco inicial, valor contado na gaveta e responsáveis autenticados; sem totais de venda)
+- [x] RF_F9 — Caixa: Abrir/Fechar, histórico, resumo por forma de pagamento e conferência do dinheiro físico com falta/sobra
 - [ ] RF_S1–S5 — Relatórios
 - [ ] Deploy
 
@@ -111,6 +111,41 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 
 - [x] Confirmações em diálogo próprio com suporte a teclado, foco controlado e notificações no padrão visual do sistema
 - [x] Formulário de adicionais em card acima da lista, no padrão dos demais cadastros
+
+## Resumo financeiro e conferência do caixa
+
+`GET /caixa/:id/resumo` está disponível para ADMIN e ATENDENTE e calcula valores de caixas
+abertos ou fechados. Usa `pedido.id_caixa` e `pagamento.id_pedido`, sem filtrar pelo dia:
+um caixa aberto ontem inclui todas as suas vendas de hoje até o fechamento.
+
+- **Recebido:** pagamentos PAGO em Dinheiro, Pix, Débito e Crédito, com total e quantidade por forma.
+- **Fiado pendente:** somente FIADO PENDENTE; aparece separado e não representa recebimento.
+- **Total vendido:** recebido + fiado pendente. O valor de abertura não é faturamento.
+- **Saldo esperado na gaveta:** abertura + vendas pagas em dinheiro. Usa `pagamento.valor`,
+  não o valor recebido do cliente; o troco já está descontado. `valor_recebido` null equivale ao valor exato.
+- **Conferência:** valor contado menos saldo esperado. Zero é Conferido, positivo é Sobra e negativo é Falta.
+  Uma diferença não impede fechar; a tela solicita confirmação e permite prosseguir.
+
+Na tela Caixa, Atualizar recarrega o resumo; Ver resumo no histórico consulta qualquer caixa sem editá-lo.
+Antes da confirmação e antes de enviar o fechamento, a tela reconsulta os valores. Se as vendas em dinheiro
+mudarem durante a confirmação, pede nova conferência. O fechamento aceita `idCaixa` opcional para
+proteger a identidade do caixa conferido; clientes antigos podem continuar enviando somente `valorFechamento`.
+O update condicional e a leitura do caixa fechado usam uma única `ExecutaTransacao`. O bloqueio exclusivo
+aguarda o FOR SHARE dos pedidos já em andamento, e pedidos posteriores não entram no caixa fechado.
+O resumo final é consultado depois do fechamento e inclui essas últimas vendas; a confirmação da tela
+não reserva o caixa nem mantém uma transação aberta enquanto o usuário decide.
+
+**Limitações:** não inclui sangrias, suprimentos, despesas, taxas, estornos ou recebimentos posteriores de fiado.
+Pedidos CANCELADO e pagamentos CANCELADO não contam. Não há fluxo de cancelamento/estorno nesta entrega:
+alterar status diretamente no banco muda o resumo calculado, sem registrar retirada/devolução física de dinheiro.
+FIADO PAGO não é inferido como dinheiro, Pix ou cartão: uma futura quitação precisará registrar a forma real e
+o caixa do recebimento. Cada registro de pagamento válido é somado uma vez, sem join com itens; o fluxo atual
+cria um pagamento por pedido, mas duplicações manuais no banco não são conciliadas automaticamente.
+Não existe saldo acumulado nem snapshot financeiro gravado, e nenhuma migration é necessária.
+
+Testes: `node --test server/tests/pedido.test.js server/tests/caixa.test.js`. O banco simulado cobre cálculos,
+status, permissões, fechamento, rollback e as duas ordens de concorrência S/X; não substitui testes de
+SQL, isolamento e bloqueios em MySQL 8 real.
 
 ## Atualização do banco para pedidos
 
