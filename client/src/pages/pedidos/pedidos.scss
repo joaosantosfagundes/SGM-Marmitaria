@@ -1,0 +1,27 @@
+.pedidos-page,
+.pedido-detalhe {
+  min-width: 0;
+  overflow-wrap: anywhere;
+
+  .row > *, .pedido-produto, fieldset { min-width: 0; }
+  .pedido-campos { width: 100%; }
+  .pedido-texto { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .pedido-produto { white-space: normal; overflow-wrap: anywhere; }
+  .pedido-linha { cursor: pointer; }
+  .table-responsive { max-width: 100%; }
+}
+
+.pedido-detalhe {
+  overscroll-behavior: contain;
+
+  .modal-dialog-scrollable {
+    height: calc(100vh - var(--bs-modal-margin) * 2);
+    height: calc(100dvh - var(--bs-modal-margin) * 2);
+  }
+
+  .modal-body { overscroll-behavior: contain; }
+}
+
+@media (max-width: 576px) {
+  .pedidos-page .form-check-label { padding-block: .25rem; }
+}

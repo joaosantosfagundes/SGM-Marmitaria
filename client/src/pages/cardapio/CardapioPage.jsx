@@ -3,13 +3,7 @@ import toast from 'react-hot-toast';
 import ApiClient from '../../services/apiClient.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useConfirm } from '../../context/ConfirmContext.jsx';
-
-function dataLocal(date = new Date()) {
-    let ano = date.getFullYear();
-    let mes = String(date.getMonth() + 1).padStart(2, '0');
-    let dia = String(date.getDate()).padStart(2, '0');
-    return `${ano}-${mes}-${dia}`;
-}
+import { dataLocal } from '../../lib/dataLocal.js';
 
 function formatarPreco(valor) {
     return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
