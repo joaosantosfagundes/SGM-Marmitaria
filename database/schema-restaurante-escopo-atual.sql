@@ -100,6 +100,7 @@ CREATE TABLE produto (
     descricao VARCHAR(255),
     preco_padrao DECIMAL(10,2) NOT NULL DEFAULT 0.00, -- preço fixo do item (muda só em reajuste)
     ativo BOOLEAN NOT NULL DEFAULT TRUE,
+    usa_cardapio BOOLEAN NOT NULL DEFAULT TRUE,
     criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -186,11 +187,13 @@ CREATE TABLE cliente (
 CREATE TABLE pedido (
     id_pedido INT AUTO_INCREMENT PRIMARY KEY,
     id_usuario INT NOT NULL,
+    id_caixa INT NOT NULL,
     id_cliente INT NULL, -- só preenchido quando o pedido é fiado (ou, no futuro, delivery com cadastro)
     data_hora DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     status ENUM('RECEBIDO','EM_PREPARO','PRONTO','SAIU_ENTREGA','CANCELADO') NOT NULL DEFAULT 'RECEBIDO',
     tipo_atendimento ENUM('MESA','BALCAO','DELIVERY') NOT NULL DEFAULT 'BALCAO',
+    endereco_entrega VARCHAR(255) NULL,
 
     hora_pronto DATETIME NULL,
     hora_saiu_entrega DATETIME NULL,
@@ -199,6 +202,7 @@ CREATE TABLE pedido (
     valor_total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
 
     CONSTRAINT fk_pedido_usuario FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario),
+    CONSTRAINT fk_pedido_caixa FOREIGN KEY (id_caixa) REFERENCES caixa(id_caixa),
     CONSTRAINT fk_pedido_cliente FOREIGN KEY (id_cliente) REFERENCES cliente(id_cliente)
 );
 
@@ -210,6 +214,7 @@ CREATE TABLE item_pedido (
     quantidade INT NOT NULL,
     preco_unitario DECIMAL(10,2) NOT NULL, -- salva o valor no momento da venda (histórico)
     subtotal DECIMAL(10,2) NOT NULL,
+    opcao_mistura VARCHAR(150) NULL,
     observacao VARCHAR(255),
 
     CONSTRAINT fk_item_pedido_pedido FOREIGN KEY (id_pedido) REFERENCES pedido(id_pedido),
@@ -262,6 +267,7 @@ CREATE TABLE pagamento (
 
     forma_pagamento ENUM('DINHEIRO','PIX','DEBITO','CREDITO','FIADO') NOT NULL,
     valor DECIMAL(10,2) NOT NULL,
+    valor_recebido DECIMAL(10,2) NULL,
     status ENUM('PENDENTE','PAGO','CANCELADO') NOT NULL DEFAULT 'PENDENTE', -- fiado nasce PENDENTE, vira PAGO na quitação
     data_hora DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 

@@ -1,7 +1,7 @@
 import CardapioRepository from "../repositories/cardapioRepository.js";
 import AdicionalRepository from "../repositories/adicionalRepository.js";
 
-function validarData(data) {
+export function validarData(data) {
     if (typeof data !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(data)) return false;
     let [ano, mes, dia] = data.split("-").map(Number);
     let dataVerificada = new Date(Date.UTC(ano, mes - 1, dia));

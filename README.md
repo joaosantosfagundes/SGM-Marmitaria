@@ -95,7 +95,7 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 - [x] RF_F9 — Caixa: abertura (troco inicial, responsável autenticado, caixa único aberto e últimas dez aberturas)
 
 ### Sprint 4 (28/09–17/10) — RF_F2–F4
-- [ ] RF_F2 — Lançar Pedido
+- [ ] RF_F2 — Backend implementado (pedido com itens, adicionais e pagamento na mesma transação); tela de lançamento de pedidos pendente
 - [ ] RF_F3 — Status do Pedido
 - [x] RF_F4 — Movimentação de Estoque (entradas, perdas e ajustes manuais, saldo não negativo, transação com bloqueio por insumo, saldos e histórico)
 
@@ -111,6 +111,19 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 
 - [x] Confirmações em diálogo próprio com suporte a teclado, foco controlado e notificações no padrão visual do sistema
 - [x] Formulário de adicionais em card acima da lista, no padrão dos demais cadastros
+
+## Atualização do banco para pedidos
+
+Aplique uma única vez [`server/db/migrations/005-pedido.sql`](server/db/migrations/005-pedido.sql)
+no banco já atualizado com as migrations anteriores. A tabela `pedido` deve estar vazia.
+A migration não seleciona banco e adiciona somente os campos do pedido, mistura, produto e pagamento.
+Produtos existentes passam a usar o cardápio por padrão; desmarque "Escolhe mistura e adicionais do dia"
+nos produtos que não devem aceitar essas opções, como refrigerantes.
+
+RF_F2 está pronto no backend; a tela de lançamento continua pendente. O pedido não baixa estoque.
+Execute `node --test server/tests/pedido.test.js` na raiz para os testes com banco simulado:
+eles exercitam autenticação, rotas, regras, serialização e o controle de transação com falhas de gravação.
+Esses testes não substituem a conferência das migrations, constraints e bloqueios em MySQL 8 real.
 
 ## Atualização do banco para opções de mistura e adicionais
 

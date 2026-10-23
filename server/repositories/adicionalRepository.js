@@ -7,8 +7,9 @@ export default class AdicionalRepository extends Repository {
         return rows.map(row => AdicionalEntity.toMap(row));
     }
 
-    async obter(id) {
-        let rows = await this.banco.ExecutaComando("select * from adicional where id_adicional = ?", [id]);
+    async obter(id, consultar) {
+        let executar = consultar ?? this.banco.ExecutaComando.bind(this.banco);
+        let rows = await executar("select * from adicional where id_adicional = ?" + (consultar ? " for share" : ""), [id]);
         return rows.length ? AdicionalEntity.toMap(rows[0]) : null;
     }
 
