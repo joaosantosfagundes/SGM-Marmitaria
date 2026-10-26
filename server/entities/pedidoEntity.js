@@ -15,6 +15,12 @@ export default class PedidoEntity extends Entity {
     #valorTotal;
     #itens;
     #pagamento;
+    #horaPronto;
+    #horaSaiuEntrega;
+    #motivoCancelamento;
+    #horaCancelamento;
+    #idUsuarioCancelamento;
+    #nomeUsuarioCancelamento;
 
     get id() { return this.#id; }
     set id(value) { this.#id = value; }
@@ -44,12 +50,26 @@ export default class PedidoEntity extends Entity {
     set itens(value) { this.#itens = value; }
     get pagamento() { return this.#pagamento; }
     set pagamento(value) { this.#pagamento = value; }
+    get horaPronto() { return this.#horaPronto; }
+    set horaPronto(value) { this.#horaPronto = value; }
+    get horaSaiuEntrega() { return this.#horaSaiuEntrega; }
+    set horaSaiuEntrega(value) { this.#horaSaiuEntrega = value; }
+    get motivoCancelamento() { return this.#motivoCancelamento; }
+    set motivoCancelamento(value) { this.#motivoCancelamento = value; }
+    get horaCancelamento() { return this.#horaCancelamento; }
+    set horaCancelamento(value) { this.#horaCancelamento = value; }
+    get idUsuarioCancelamento() { return this.#idUsuarioCancelamento; }
+    set idUsuarioCancelamento(value) { this.#idUsuarioCancelamento = value; }
+    get nomeUsuarioCancelamento() { return this.#nomeUsuarioCancelamento; }
+    set nomeUsuarioCancelamento(value) { this.#nomeUsuarioCancelamento = value; }
 
     constructor({
         id = null, idCaixa = null, idUsuario = null, nomeUsuario = null,
         idCliente = null, nomeCliente = null, dataHora = null, status = 'RECEBIDO',
         tipoAtendimento = null, enderecoEntrega = null, observacao = null,
         valorTotal = null, itens = [], pagamento = null,
+        horaPronto = null, horaSaiuEntrega = null, motivoCancelamento = null,
+        horaCancelamento = null, idUsuarioCancelamento = null, nomeUsuarioCancelamento = null,
     } = {}) {
         super();
         this.#id = id;
@@ -66,6 +86,12 @@ export default class PedidoEntity extends Entity {
         this.#valorTotal = valorTotal;
         this.#itens = itens;
         this.#pagamento = pagamento;
+        this.#horaPronto = horaPronto;
+        this.#horaSaiuEntrega = horaSaiuEntrega;
+        this.#motivoCancelamento = motivoCancelamento;
+        this.#horaCancelamento = horaCancelamento;
+        this.#idUsuarioCancelamento = idUsuarioCancelamento;
+        this.#nomeUsuarioCancelamento = nomeUsuarioCancelamento;
     }
 
     static toMap(row) {
@@ -84,6 +110,12 @@ export default class PedidoEntity extends Entity {
             valorTotal: Number(row.valor_total),
             itens: [],
             pagamento: null,
+            horaPronto: row.hora_pronto,
+            horaSaiuEntrega: row.hora_saiu_entrega,
+            motivoCancelamento: row.motivo_cancelamento,
+            horaCancelamento: row.hora_cancelamento,
+            idUsuarioCancelamento: row.id_usuario_cancelamento,
+            nomeUsuarioCancelamento: row.nome_usuario_cancelamento,
         });
     }
 

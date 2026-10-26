@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { dataLocal } from '../../lib/dataLocal.js';
 import useConsulta from './useConsulta.js';
 import NovoPedido from './NovoPedido.jsx';
 import ListaPedidos from './ListaPedidos.jsx';
@@ -12,11 +13,14 @@ export default function PedidosPage() {
     const { usuario } = useAuth();
     const podeCriar = ['ADMIN', 'ATENDENTE'].includes(usuario?.perfil);
     const podeConsultar = ['ADMIN', 'ATENDENTE', 'COZINHA'].includes(usuario?.perfil);
+    const [dataConsulta, setDataConsulta] = useState(dataLocal);
+    const [statusConsulta, setStatusConsulta] = useState('');
+    const [detalheId, setDetalheId] = useState(null);
     const caixa = useConsulta(podeCriar ? 'caixa/atual' : null);
-    const lista = useConsulta(podeConsultar ? 'pedido?limite=20' : null);
+    const lista = useConsulta(podeConsultar && dataConsulta ? `pedido?data=${encodeURIComponent(dataConsulta)}${statusConsulta ? `&status=${statusConsulta}` : ''}` : null,
+        { atualizarAutomaticamente: dataConsulta === dataLocal(), pausada: detalheId !== null, dataAtualizacao: dataConsulta });
     const [mostrarForm, setMostrarForm] = useState(false);
     const [pedidoLancado, setPedidoLancado] = useState(null);
-    const [detalheId, setDetalheId] = useState(null);
     const [avisoCaixa, setAvisoCaixa] = useState('');
     const fecharDetalhe = useCallback(() => setDetalheId(null), []);
     let semCaixa = !caixa.carregando && !caixa.erro && !caixa.dados;
@@ -30,8 +34,20 @@ export default function PedidosPage() {
     function pedidoCriado(pedido) {
         setMostrarForm(false);
         setPedidoLancado(pedido);
+        setDataConsulta(dataLocal());
         lista.recarregar();
         caixa.recarregar();
+    }
+
+    function consultarHoje() {
+        let hoje = dataLocal();
+        if (dataConsulta === hoje) lista.recarregar();
+        else setDataConsulta(hoje);
+    }
+
+    function pedidoAlterado(pedido) {
+        lista.recarregar();
+        setPedidoLancado(anterior => anterior?.id === pedido.id ? pedido : anterior);
     }
 
     if (!podeConsultar) return <div className="alert alert-warning">Você não tem acesso aos pedidos.</div>;
@@ -39,7 +55,7 @@ export default function PedidosPage() {
     return (
         <div className="pedidos-page">
             <div className="page-header d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-                <div><h1 className="fs-3 mb-1">Pedidos</h1><p className="text-secondary mb-0">Lançamento e consulta dos pedidos recentes.</p></div>
+                <div><h1 className="fs-3 mb-1">Pedidos</h1><p className="text-secondary mb-0">Lançamento e consulta dos pedidos por dia.</p></div>
                 {podeCriar && !mostrarForm && <button type="button" className="btn btn-primary" disabled={bloqueado} onClick={() => { setMostrarForm(true); setPedidoLancado(null); }}><i className="ti ti-plus me-1" />Novo pedido</button>}
             </div>
             {podeCriar && <>
@@ -53,8 +69,8 @@ export default function PedidosPage() {
                 {mostrarForm && <NovoPedido bloqueado={bloqueado} onCancelar={() => setMostrarForm(false)} onSucesso={pedidoCriado} onCaixaFechado={mensagem => { setAvisoCaixa(mensagem); caixa.recarregar(); }} />}
                 {pedidoLancado && <ResultadoPedido pedido={pedidoLancado} onDetalhar={setDetalheId} />}
             </>}
-            <ListaPedidos consulta={lista} onDetalhar={setDetalheId} />
-            {detalheId !== null && <DetalhePedido key={detalheId} id={detalheId} onFechar={fecharDetalhe} />}
+            <ListaPedidos consulta={lista} data={dataConsulta} onData={setDataConsulta} onHoje={consultarHoje} status={statusConsulta} onStatus={setStatusConsulta} onDetalhar={setDetalheId} />
+            {detalheId !== null && <DetalhePedido key={detalheId} id={detalheId} onFechar={fecharDetalhe} onAlterado={pedidoAlterado} />}
         </div>
     );
 }

@@ -1502,10 +1502,12 @@ paths:
         Qualquer erro desfaz pedido, itens, adicionais e pagamento.
 
         data é a data local do cardápio informada pelo cliente (AAAA-MM-DD), sem calcular hoje.
-        Produtos ativos usam seus preços atuais. Se usaCardapio for true, mistura deve
+        Produtos ativos usam seus preços atuais. Se usaCardapio for true, exige cardápio
+        cadastrado para essa data com ao menos uma preparação; ausente ou vazio retorna 409.
+        Produtos com usaCardapio false continuam disponíveis sem cardápio. A mistura deve
         corresponder às opções do grupo Mistura dessa data, ignorando caixa e espaços;
         grava-se o nome original. Sem opções, mistura deve ser null. Adicionais devem
-        estar ativos e marcados no cardápio. Produto sem cardápio não aceita mistura nem adicionais.
+        estar ativos e marcados no cardápio. Produto com usaCardapio false não aceita mistura nem adicionais.
         A quantidade de cada adicional deve ser inteira de 1 a 99 e é o total da linha,
         sem multiplicar pela quantidade do produto.
         Os preços são preservados no histórico. Subtotais e total têm limite de 99999999.99.
@@ -1574,19 +1576,29 @@ paths:
         '404':
           $ref: '#/components/responses/NaoEncontrado'
         '409':
-          description: Sem caixa aberto ou catálogo com preço inválido.
+          description: Sem caixa aberto, cardápio ausente/vazio para produto que o utiliza ou catálogo com preço inválido.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Erro'
-              example: {msg: Abra o caixa antes de lançar pedidos.}
+              examples:
+                semCaixa:
+                  value: {msg: Abra o caixa antes de lançar pedidos.}
+                cardapioAusenteOuVazio:
+                  value: {msg: Monte o cardápio do dia antes de lançar este produto.}
         '500':
           $ref: '#/components/responses/ErroInterno'
     get:
       tags: [Pedidos]
       operationId: listarPedidos
       summary: Consultar pedidos resumidos
-      description: Perfis ADMIN, ATENDENTE e COZINHA. Ordem decrescente de data/hora e ID, sem filtro por hoje.
+      description: |
+        Perfis ADMIN, ATENDENTE e COZINHA. Ordem decrescente de data/hora e ID.
+        data é opcional e filtra o dia informado por intervalo de data_hora, do início
+        desse dia (inclusive) até o início do dia seguinte (exclusive), sem função na coluna.
+        A sessão MySQL usa deslocamento fixo -03:00. Não calcula hoje automaticamente.
+        Os filtros data, status e idCaixa podem ser usados juntos.
+        Com data, o limite padrão é 200; sem data é 50. O máximo continua 200.
       parameters:
         - name: status
           in: query
@@ -1594,9 +1606,15 @@ paths:
         - name: idCaixa
           in: query
           schema: {type: integer, minimum: 1}
+        - name: data
+          in: query
+          description: Data real no formato AAAA-MM-DD; consulta os pedidos desse dia. Data inválida retorna 400.
+          schema: {type: string, format: date}
+          example: '2026-10-22'
         - name: limite
           in: query
-          schema: {type: integer, minimum: 1, maximum: 200, default: 50}
+          description: Padrão 200 quando data é informada; 50 quando data é omitida. Máximo 200.
+          schema: {type: integer, minimum: 1, maximum: 200}
       responses:
         '200':
           description: Lista resumida, possivelmente vazia.
@@ -1621,7 +1639,7 @@ paths:
       tags: [Pedidos]
       operationId: obterPedido
       summary: Consultar pedido completo
-      description: Perfis ADMIN, ATENDENTE e COZINHA. Retorna preços da venda e troco calculado; não há alteração de status nesta tarefa.
+      description: Perfis ADMIN, ATENDENTE e COZINHA. Retorna preços da venda, troco calculado, horários de preparo/saída e os dados de cancelamento.
       parameters:
         - $ref: '#/components/parameters/Id'
       responses:
@@ -1638,6 +1656,80 @@ paths:
           $ref: '#/components/responses/SemPermissao'
         '404':
           $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /pedido/{id}/status:
+    put:
+      tags: [Pedidos]
+      operationId: alterarStatusPedido
+      summary: Avançar o status do pedido
+      description: >-
+        Perfis ADMIN, ATENDENTE e COZINHA. Um passo por vez: RECEBIDO → EM_PREPARO → PRONTO → SAIU_ENTREGA. SAIU_ENTREGA exige DELIVERY e perfil ADMIN ou ATENDENTE. Pedidos CANCELADO não podem avançar. Bloqueia o pedido com for update e confere o status anterior no update, na mesma transação. Registra horaPronto e horaSaiuEntrega nas respectivas etapas.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PedidoStatusEntrada'}
+            example: {status: EM_PREPARO}
+      responses:
+        '200':
+          description: Pedido completo atualizado, com itens, pagamento, horários e dados de cancelamento.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Pedido'}
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          description: Etapa inválida, pedido cancelado ou alteração concorrente.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Erro'}
+              example: {msg: 'O pedido foi alterado por outra pessoa. Atualize a lista.'}
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /pedido/{id}/cancelar:
+    post:
+      tags: [Pedidos]
+      operationId: cancelarPedido
+      summary: Cancelar pedido e pagamentos
+      description: >-
+        Perfis ADMIN e ATENDENTE. Exige motivo com 3 a 255 caracteres após remover espaços nas pontas. Pode cancelar em qualquer etapa, enquanto o caixa vinculado estiver ABERTO. Na mesma transação bloqueia o pedido com for update, consulta o caixa com for share e cancela TODOS os pagamentos. O responsável vem do JWT. Não altera estoque nem exclui registros. Cancelados deixam de compor o resumo financeiro existente.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PedidoCancelamentoEntrada'}
+            example: {motivo: Cliente desistiu do pedido}
+      responses:
+        '200':
+          description: Pedido completo atualizado, com itens, pagamento, horários e dados de cancelamento.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Pedido'}
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          description: Pedido já cancelado, caixa fechado ou alteração concorrente.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Erro'}
+              example: {msg: 'Não é possível cancelar: o caixa deste pedido já foi fechado.'}
         '500':
           $ref: '#/components/responses/ErroInterno'
 components:
@@ -1854,6 +1946,23 @@ components:
     StatusPedido:
       type: string
       enum: [RECEBIDO, EM_PREPARO, PRONTO, SAIU_ENTREGA, CANCELADO]
+    PedidoStatusEntrada:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [EM_PREPARO, PRONTO, SAIU_ENTREGA]
+          description: Próximo passo do pedido; não permite pular, repetir ou voltar. COZINHA não pode SAIU_ENTREGA.
+    PedidoCancelamentoEntrada:
+      type: object
+      required: [motivo]
+      properties:
+        motivo:
+          type: string
+          minLength: 3
+          maxLength: 255
+          example: Cliente desistiu do pedido
     TipoAtendimento:
       type: string
       enum: [BALCAO, MESA, DELIVERY]
@@ -1945,8 +2054,14 @@ components:
         dataHora: {type: string, description: DATETIME como texto, sem conversão de fuso.}
     PedidoResumo:
       type: object
-      required: [id, idCaixa, dataHora, status, tipoAtendimento, nomeCliente, valorTotal, formaPagamento, statusPagamento, nomeUsuario]
+      required: [id, idCaixa, dataHora, status, tipoAtendimento, nomeCliente, valorTotal, formaPagamento, statusPagamento, nomeUsuario, horaPronto, horaSaiuEntrega, motivoCancelamento, horaCancelamento, idUsuarioCancelamento, nomeUsuarioCancelamento]
       properties:
+        horaPronto: {type: string, nullable: true, example: '2026-10-25 12:30:00', description: DATETIME gravado ao marcar PRONTO.}
+        horaSaiuEntrega: {type: string, nullable: true, example: '2026-10-25 12:40:00', description: DATETIME gravado ao marcar SAIU_ENTREGA.}
+        motivoCancelamento: {type: string, nullable: true, maxLength: 255}
+        horaCancelamento: {type: string, nullable: true}
+        idUsuarioCancelamento: {type: integer, nullable: true}
+        nomeUsuarioCancelamento: {type: string, nullable: true}
         id: {type: integer}
         idCaixa: {type: integer}
         dataHora: {type: string}
@@ -1959,8 +2074,14 @@ components:
         nomeUsuario: {type: string}
     Pedido:
       type: object
-      required: [id, idCaixa, idUsuario, nomeUsuario, idCliente, nomeCliente, dataHora, status, tipoAtendimento, enderecoEntrega, observacao, valorTotal, itens, pagamento]
+      required: [id, idCaixa, idUsuario, nomeUsuario, idCliente, nomeCliente, dataHora, status, tipoAtendimento, enderecoEntrega, observacao, valorTotal, itens, pagamento, horaPronto, horaSaiuEntrega, motivoCancelamento, horaCancelamento, idUsuarioCancelamento, nomeUsuarioCancelamento]
       properties:
+        horaPronto: {type: string, nullable: true, example: '2026-10-25 12:30:00', description: DATETIME gravado ao marcar PRONTO.}
+        horaSaiuEntrega: {type: string, nullable: true, example: '2026-10-25 12:40:00', description: DATETIME gravado ao marcar SAIU_ENTREGA.}
+        motivoCancelamento: {type: string, nullable: true, maxLength: 255}
+        horaCancelamento: {type: string, nullable: true}
+        idUsuarioCancelamento: {type: integer, nullable: true}
+        nomeUsuarioCancelamento: {type: string, nullable: true}
         id: {type: integer}
         idCaixa: {type: integer}
         idUsuario: {type: integer}

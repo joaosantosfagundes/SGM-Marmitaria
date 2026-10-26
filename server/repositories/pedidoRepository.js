@@ -4,20 +4,28 @@ import ItemPedidoEntity from "../entities/itemPedidoEntity.js";
 import ItemPedidoAdicionalEntity from "../entities/itemPedidoAdicionalEntity.js";
 import PagamentoEntity from "../entities/pagamentoEntity.js";
 
-const CONSULTA_PEDIDOS = `select p.*, u.nome as nome_usuario, c.nome as nome_cliente from pedido p
+const CONSULTA_PEDIDOS = `select p.*, u.nome as nome_usuario, c.nome as nome_cliente,
+    uc.nome as nome_usuario_cancelamento from pedido p
     inner join usuario u on u.id_usuario = p.id_usuario
-    left join cliente c on c.id_cliente = p.id_cliente`;
+    left join cliente c on c.id_cliente = p.id_cliente
+    left join usuario uc on uc.id_usuario = p.id_usuario_cancelamento`;
 
 export default class PedidoRepository extends Repository {
-    async listar({ status, idCaixa, limite }) {
+    async listar({ status, idCaixa, data, limite }) {
         let sql = `select p.*, u.nome as nome_usuario, c.nome as nome_cliente,
-            pg.forma_pagamento, pg.status as status_pagamento from pedido p
+            uc.nome as nome_usuario_cancelamento, pg.forma_pagamento, pg.status as status_pagamento
+            from pedido p
             inner join usuario u on u.id_usuario = p.id_usuario
             left join cliente c on c.id_cliente = p.id_cliente
+            left join usuario uc on uc.id_usuario = p.id_usuario_cancelamento
             left join pagamento pg on pg.id_pedido = p.id_pedido where 1 = 1`;
         let valores = [];
         if (status !== undefined) { sql += " and p.status = ?"; valores.push(status); }
         if (idCaixa !== undefined) { sql += " and p.id_caixa = ?"; valores.push(idCaixa); }
+        if (data !== undefined) {
+            sql += " and p.data_hora >= ? and p.data_hora < date_add(?, interval 1 day)";
+            valores.push(data, data);
+        }
         sql += " order by p.data_hora desc, p.id_pedido desc limit ?";
         valores.push(limite);
         let rows = await this.banco.ExecutaComando(sql, valores);
@@ -28,6 +36,9 @@ export default class PedidoRepository extends Repository {
                 tipoAtendimento: pedido.tipoAtendimento, nomeCliente: pedido.nomeCliente,
                 valorTotal: pedido.valorTotal, formaPagamento: row.forma_pagamento,
                 statusPagamento: row.status_pagamento, nomeUsuario: pedido.nomeUsuario,
+                horaPronto: pedido.horaPronto, horaSaiuEntrega: pedido.horaSaiuEntrega,
+                motivoCancelamento: pedido.motivoCancelamento, horaCancelamento: pedido.horaCancelamento,
+                idUsuarioCancelamento: pedido.idUsuarioCancelamento, nomeUsuarioCancelamento: pedido.nomeUsuarioCancelamento,
             };
         });
     }
@@ -92,6 +103,45 @@ export default class PedidoRepository extends Repository {
                 [pedido.id, pagamento.forma, pagamento.valor, pagamento.status, pagamento.valorRecebido]
             );
             return this.obter(pedido.id, consultar);
+        });
+    }
+
+    async obterParaAtualizar(id, consultar) {
+        let rows = await consultar('select * from pedido where id_pedido = ? for update', [id]);
+        return rows.length ? PedidoEntity.toMap(rows[0]) : null;
+    }
+
+    async obterStatusCaixa(idCaixa, consultar) {
+        let rows = await consultar('select status from caixa where id_caixa = ? for share', [idCaixa]);
+        return rows.length ? rows[0].status : null;
+    }
+
+    async alterarStatus(id, status, validar) {
+        return this.banco.ExecutaTransacao(async consultar => {
+            let pedido = await this.obterParaAtualizar(id, consultar);
+            await validar(pedido);
+            let horario = status === 'PRONTO' ? ', hora_pronto = now()'
+                : status === 'SAIU_ENTREGA' ? ', hora_saiu_entrega = now()' : '';
+            let resultado = await consultar(
+                `update pedido set status = ?${horario} where id_pedido = ? and status = ?`,
+                [status, id, pedido.status]
+            );
+            return resultado.affectedRows === 1 ? this.obter(id, consultar) : null;
+        });
+    }
+
+    async cancelar(id, motivo, idUsuario, validar) {
+        return this.banco.ExecutaTransacao(async consultar => {
+            let pedido = await this.obterParaAtualizar(id, consultar);
+            await validar(pedido, consultar);
+            let resultado = await consultar(
+                `update pedido set status = 'CANCELADO', motivo_cancelamento = ?,
+                 hora_cancelamento = now(), id_usuario_cancelamento = ?
+                 where id_pedido = ? and status = ?`, [motivo, idUsuario, id, pedido.status]
+            );
+            if (resultado.affectedRows !== 1) return null;
+            await consultar("update pagamento set status = 'CANCELADO' where id_pedido = ?", [id]);
+            return this.obter(id, consultar);
         });
     }
 }

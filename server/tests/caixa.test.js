@@ -55,6 +55,14 @@ function caixasVisiveis(transacao) {
     return estado.caixas.map(caixa => ({ ...caixa, ...transacao?.caixas.get(caixa.id_caixa) }));
 }
 
+function pedidosVisiveis(transacao) {
+    return [...estado.pedidos, ...(transacao?.pedidos ?? [])].map(pedido => ({ ...pedido, ...transacao?.pedidoAlteracoes.get(pedido.id_pedido) }));
+}
+
+function pagamentosVisiveis(transacao) {
+    return [...estado.pagamentos, ...(transacao?.pagamentos ?? [])].map(pg => ({ ...pg, ...transacao?.pagamentoAlteracoes.get(pg.id_pagamento) }));
+}
+
 function resumir(id, q) {
     assert.match(q, /left join pedido p on p.id_caixa = c.id_caixa and p.status <> 'cancelado'/);
     assert.match(q, /left join pagamento pg on pg.id_pedido = p.id_pedido/);
@@ -78,6 +86,31 @@ async function executar(sql, valores = [], transacao) {
     consultas.push({ q, valores, transacao: transacao?.id ?? null });
     if (q.startsWith('select * from usuario')) return estado.usuarios.filter(usuario => usuario.id_usuario === valores[0]);
     if (q.includes('sum(case')) return resumir(valores[0], q);
+    if (q.startsWith('select * from pedido where')) {
+        await bloquear(`pedido:${valores[0]}`, transacao, 'X');
+        await interceptar?.(q, transacao);
+        return pedidosVisiveis(transacao).filter(p => p.id_pedido === valores[0]);
+    }
+    if (q.startsWith('select status from caixa')) {
+        await bloquear(valores[0], transacao, 'S');
+        await interceptar?.(q, transacao);
+        return caixasVisiveis(transacao).filter(c => c.id_caixa === valores[0]);
+    }
+    if (q.startsWith('update pedido')) {
+        let cancelando = q.includes('motivo_cancelamento');
+        let id = valores[cancelando ? 2 : 1];
+        let pedido = pedidosVisiveis(transacao).find(p => p.id_pedido === id && p.status === valores.at(-1));
+        if (!pedido) return { affectedRows: 0 };
+        transacao.pedidoAlteracoes.set(id, cancelando
+            ? { status: 'CANCELADO', motivo_cancelamento: valores[0], id_usuario_cancelamento: valores[1], hora_cancelamento: '2026-10-25 13:00:00' }
+            : { status: valores[0] });
+        return { affectedRows: 1 };
+    }
+    if (q.startsWith('update pagamento')) {
+        let pagamentos = pagamentosVisiveis(transacao).filter(pg => pg.id_pedido === valores[0]);
+        for (let pg of pagamentos) transacao.pagamentoAlteracoes.set(pg.id_pagamento, { status: 'CANCELADO' });
+        return { affectedRows: pagamentos.length };
+    }
     if (q.includes('from caixa c')) {
         let caixas = caixasVisiveis(transacao);
         if (q.includes("where c.status = 'aberto'")) caixas = caixas.filter(caixa => caixa.status === 'ABERTO');
@@ -119,22 +152,24 @@ async function executar(sql, valores = [], transacao) {
         transacao.pagamentos.push({ id_pagamento: id_pedido, id_pedido, forma_pagamento, valor: valor.toFixed(2), status, valor_recebido });
         return { insertId: id_pedido };
     }
-    if (q.includes('from pedido p')) return [...estado.pedidos, ...(transacao?.pedidos ?? [])].filter(pedido => pedido.id_pedido === valores[0]).map(pedido => ({ ...pedido, nome_usuario: 'Pessoa 1', nome_cliente: null }));
+    if (q.includes('from pedido p')) return pedidosVisiveis(transacao).filter(pedido => pedido.id_pedido === valores[0]).map(pedido => ({ ...pedido, nome_usuario: 'Pessoa 1', nome_cliente: null, nome_usuario_cancelamento: pedido.id_usuario_cancelamento ? `Pessoa ${pedido.id_usuario_cancelamento}` : null }));
     if (q.includes('from item_pedido_adicional')) return [];
     if (q.includes('from item_pedido ip')) return [{ id_item_pedido: 1, id_produto: 1, nome_produto: 'PF', quantidade: 1, preco_unitario: '40.00', subtotal: '40.00', opcao_mistura: null, observacao: null }];
-    if (q.startsWith('select * from pagamento')) return [...estado.pagamentos, ...(transacao?.pagamentos ?? [])].filter(pg => pg.id_pedido === valores[0]);
+    if (q.startsWith('select * from pagamento')) return pagamentosVisiveis(transacao).filter(pg => pg.id_pedido === valores[0]);
     throw new Error(`SQL não previsto no banco simulado: ${q}`);
 }
 
 pool.query = (sql, valores, callback) => { executar(sql, valores).then(rows => callback(null, rows), callback); };
 pool.getConnection = callback => {
-    let transacao = { id: ++proximaTransacao, caixas: new Map(), pedidos: [], pagamentos: [] };
+    let transacao = { id: ++proximaTransacao, caixas: new Map(), pedidos: [], pagamentos: [], pedidoAlteracoes: new Map(), pagamentoAlteracoes: new Map() };
     callback(null, {
         beginTransaction: callback => callback(null),
         query: (sql, valores, callback) => { executar(sql, valores, transacao).then(rows => callback(null, rows), callback); },
         commit: callback => {
             for (let [id, alteracoes] of transacao.caixas) Object.assign(estado.caixas.find(caixa => caixa.id_caixa === id), alteracoes);
             estado.pedidos.push(...transacao.pedidos); estado.pagamentos.push(...transacao.pagamentos);
+            for (let [id, alteracoes] of transacao.pedidoAlteracoes) Object.assign(estado.pedidos.find(p => p.id_pedido === id), alteracoes);
+            for (let [id, alteracoes] of transacao.pagamentoAlteracoes) Object.assign(estado.pagamentos.find(pg => pg.id_pagamento === id), alteracoes);
             commits++; liberar(transacao); callback(null);
         },
         rollback: callback => { rollbacks++; liberar(transacao); callback(null); },
@@ -156,7 +191,7 @@ after(() => { pool.query = queryOriginal; pool.getConnection = conexaoOriginal; 
 
 function venda({ forma = 'DINHEIRO', valor = '40.00', recebido = '50.00', status = 'PAGO', statusPedido = 'RECEBIDO', idCaixa = 1, data = '2026-10-23 12:00:00' } = {}) {
     let id = proximoPedido++;
-    estado.pedidos.push({ id_pedido: id, id_caixa: idCaixa, status: statusPedido, data_hora: data });
+    estado.pedidos.push({ id_pedido: id, id_caixa: idCaixa, id_usuario: 1, id_cliente: null, tipo_atendimento: 'BALCAO', valor_total: valor, status: statusPedido, data_hora: data });
     estado.pagamentos.push({ id_pagamento: id, id_pedido: id, forma_pagamento: forma, valor, valor_recebido: recebido, status, data_hora: data });
 }
 
@@ -306,4 +341,57 @@ test('Prévia da tela: vírgula/ponto e situações Conferido, Falta e Sobra', (
         assert.equal(calcularDiferenca(valor, 190), diferenca); assert.equal(situacaoConferencia(diferenca).texto, texto);
     }
     assert.equal(calcularDiferenca(150.25, 150.3), -0.05);
+});
+
+test('Cancelamento real do Service retira dinheiro e fiado do resumo sem apagar histórico', async () => {
+    venda(); venda({ forma: 'FIADO', status: 'PENDENTE', valor: '30.00' });
+    let caixa = new CaixaService(), pedidoService = new PedidoService();
+    assert.equal((await caixa.obterResumo('1')).totalVendido, 70);
+    await pedidoService.cancelar('1', 'Cliente desistiu', 2);
+    let resumo = await caixa.obterResumo('1');
+    assert.equal(resumo.totalDinheiro, 0); assert.equal(resumo.totalFiado, 30); assert.equal(resumo.totalVendido, 30);
+    assert.equal(resumo.saldoEsperadoDinheiro, 150);
+    await pedidoService.cancelar('2', 'Lançamento incorreto', 2);
+    assert.equal((await caixa.obterResumo('1')).totalVendido, 0);
+    assert.equal(estado.pedidos.length, 2); assert.equal(estado.pagamentos.length, 2);
+    assert.ok(estado.pagamentos.every(pg => pg.status === 'CANCELADO'));
+});
+
+test('Cancelamento obtém S antes: fechamento espera e o resumo exclui a venda', { timeout: 2000 }, async () => {
+    venda(); let entrou = sinal(), continuar = sinal(), esperando = sinal();
+    interceptar = async q => { if (q.startsWith('select status from caixa')) { entrou.resolver(); await continuar.promise; } };
+    aoEsperar = tipo => { if (tipo === 'X') esperando.resolver(); };
+    let cancelamento = new PedidoService().cancelar('1', 'Cliente desistiu', 2);
+    await entrou.promise;
+    let fechamento = new CaixaService().fechar({ valorFechamento: 150, idCaixa: 1 }, 1);
+    await esperando.promise; continuar.resolver(); await Promise.all([cancelamento, fechamento]);
+    assert.equal(estado.caixas[0].status, 'FECHADO'); assert.equal(estado.pedidos[0].status, 'CANCELADO');
+    assert.equal((await new CaixaService().obterResumo('1')).diferenca, 0);
+});
+
+test('Fechamento obtém X antes: cancelamento aguarda e é recusado com caixa fechado', { timeout: 2000 }, async () => {
+    venda(); let entrou = sinal(), continuar = sinal(), esperando = sinal();
+    interceptar = async q => { if (q.startsWith('update caixa')) { entrou.resolver(); await continuar.promise; } };
+    aoEsperar = tipo => { if (tipo === 'S') esperando.resolver(); };
+    let fechamento = new CaixaService().fechar({ valorFechamento: 190, idCaixa: 1 }, 1);
+    await entrou.promise;
+    let recusado = assert.rejects(new PedidoService().cancelar('1', 'Cliente desistiu', 2), error => error.status === 409 && /já foi fechado/.test(error.msg));
+    await esperando.promise; continuar.resolver(); await Promise.all([fechamento, recusado]);
+    assert.equal(estado.pedidos[0].status, 'RECEBIDO'); assert.equal(estado.pagamentos[0].status, 'PAGO');
+    assert.equal((await new CaixaService().obterResumo('1')).totalDinheiro, 40);
+});
+
+for (let acao of ['status', 'cancelamento']) test(`Duas requisições simultâneas de ${acao} serializam no pedido`, { timeout: 2000 }, async () => {
+    venda(); let entrou = sinal(), continuar = sinal(), esperando = sinal(), primeiro = true;
+    interceptar = async q => {
+        if (q.startsWith('select * from pedido where') && primeiro) { primeiro = false; entrou.resolver(); await continuar.promise; }
+    };
+    aoEsperar = tipo => { if (tipo === 'X') esperando.resolver(); };
+    let service = new PedidoService();
+    let executarAcao = () => acao === 'status' ? service.alterarStatus('1', 'EM_PREPARO', 'ATENDENTE') : service.cancelar('1', 'Cliente desistiu', 2);
+    let primeira = executarAcao(); await entrou.promise;
+    let segunda = assert.rejects(executarAcao(), error => error.status === 409);
+    await esperando.promise; continuar.resolver(); await Promise.all([primeira, segunda]);
+    assert.equal(estado.pedidos[0].status, acao === 'status' ? 'EM_PREPARO' : 'CANCELADO');
+    assert.equal(consultas.filter(q => q.q.startsWith('update pedido')).length, 1);
 });

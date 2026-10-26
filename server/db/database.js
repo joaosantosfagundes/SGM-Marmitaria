@@ -13,6 +13,16 @@ const pool = mysql.createPool({
     keepAliveInitialDelay: 30000
 });
 
+// Fuso fixo da operação em todas as sessões, inclusive nas conexões dedicadas às transações.
+pool.on('connection', connection => {
+    connection.query("set time_zone = '-03:00'", error => {
+        if (error) {
+            console.error('Erro ao definir o fuso horário da conexão MySQL:', error);
+            connection.destroy();
+        }
+    });
+});
+
 pool.on('error', (err) => {
     if (err.code === 'ECONNRESET' || err.code === 'PROTOCOL_CONNECTION_LOST') {
         console.warn('Conexão MySQL resetada — pool vai reconectar automaticamente');

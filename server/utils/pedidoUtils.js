@@ -1,5 +1,12 @@
 export const MAX_CENTAVOS = 9999999999;
 
+export function proximoStatusPedido(pedido) {
+    if (pedido.status === 'RECEBIDO') return 'EM_PREPARO';
+    if (pedido.status === 'EM_PREPARO') return 'PRONTO';
+    if (pedido.status === 'PRONTO' && pedido.tipoAtendimento === 'DELIVERY') return 'SAIU_ENTREGA';
+    return null;
+}
+
 export function validarDinheiro(valor) {
     return Number.isFinite(valor) && valor >= 0 && valor <= MAX_CENTAVOS / 100
         && Math.round(valor * 100) / 100 === valor;

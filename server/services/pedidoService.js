@@ -9,7 +9,7 @@ import CardapioRepository from "../repositories/cardapioRepository.js";
 import CaixaRepository from "../repositories/caixaRepository.js";
 import ClienteRepository from "../repositories/clienteRepository.js";
 import { validarData } from "./cardapioService.js";
-import { centavos, lerInteiro, MAX_CENTAVOS, validarDinheiro, validarId } from "../utils/pedidoUtils.js";
+import { centavos, lerInteiro, MAX_CENTAVOS, proximoStatusPedido, validarDinheiro, validarId } from "../utils/pedidoUtils.js";
 
 const STATUS = ['RECEBIDO', 'EM_PREPARO', 'PRONTO', 'SAIU_ENTREGA', 'CANCELADO'];
 
@@ -34,15 +34,44 @@ export default class PedidoService {
     #caixaRepo = new CaixaRepository();
     #clienteRepo = new ClienteRepository();
 
-    async listar({ status, idCaixa, limite = '50' } = {}) {
+    async listar({ status, idCaixa, data, limite } = {}) {
         if (status !== undefined && !STATUS.includes(status)) throw { status: 400, msg: 'Informe um status de pedido válido.' };
-        return this.#repo.listar({ status, idCaixa: idCaixa === undefined ? undefined : lerInteiro(idCaixa, 'um ID de caixa'), limite: lerInteiro(limite, 'um limite entre 1 e 200', 200) });
+        if (data !== undefined && !validarData(data)) throw { status: 400, msg: 'Informe uma data válida para consultar os pedidos (AAAA-MM-DD).' };
+        let limiteConsulta = limite === undefined ? (data === undefined ? '50' : '200') : limite;
+        return this.#repo.listar({ status, data, idCaixa: idCaixa === undefined ? undefined : lerInteiro(idCaixa, 'um ID de caixa'), limite: lerInteiro(limiteConsulta, 'um limite entre 1 e 200', 200) });
     }
 
     async obter(id) {
         let pedido = await this.#repo.obter(lerInteiro(id, 'um ID de pedido'));
         if (!pedido) throw { status: 404, msg: 'Pedido não encontrado.' };
         return pedido;
+    }
+
+    async alterarStatus(id, status, perfil) {
+        id = lerInteiro(id, 'um ID de pedido');
+        if (!['EM_PREPARO', 'PRONTO', 'SAIU_ENTREGA'].includes(status)) throw { status: 400, msg: 'Informe o status EM_PREPARO, PRONTO ou SAIU_ENTREGA.' };
+        if (perfil === 'COZINHA' && status === 'SAIU_ENTREGA') throw { status: 403, msg: 'Sem permissão para esta ação' };
+        let atualizado = await this.#repo.alterarStatus(id, status, pedido => {
+            if (!pedido) throw { status: 404, msg: 'Pedido não encontrado.' };
+            if (pedido.status === 'CANCELADO') throw { status: 409, msg: 'Pedido cancelado não pode mudar de status.' };
+            if (status === 'SAIU_ENTREGA' && pedido.tipoAtendimento !== 'DELIVERY') throw { status: 409, msg: 'Somente pedidos DELIVERY podem sair para entrega.' };
+            if (proximoStatusPedido(pedido) !== status) throw { status: 409, msg: 'Transição de status não permitida. Não é possível pular, voltar ou repetir etapas. Atualize a lista.' };
+        });
+        if (!atualizado) throw { status: 409, msg: 'O pedido foi alterado por outra pessoa. Atualize a lista.' };
+        return atualizado;
+    }
+
+    async cancelar(id, motivo, idUsuarioLogado) {
+        id = lerInteiro(id, 'um ID de pedido');
+        if (typeof motivo !== 'string' || motivo.trim().length < 3 || motivo.trim().length > 255) throw { status: 400, msg: 'Informe o motivo do cancelamento com 3 a 255 caracteres.' };
+        let cancelado = await this.#repo.cancelar(id, motivo.trim(), idUsuarioLogado, async (pedido, consultar) => {
+            if (!pedido) throw { status: 404, msg: 'Pedido não encontrado.' };
+            if (pedido.status === 'CANCELADO') throw { status: 409, msg: 'Este pedido já está cancelado.' };
+            let statusCaixa = await this.#repo.obterStatusCaixa(pedido.idCaixa, consultar);
+            if (statusCaixa !== 'ABERTO') throw { status: 409, msg: 'Não é possível cancelar: o caixa deste pedido já foi fechado.' };
+        });
+        if (!cancelado) throw { status: 409, msg: 'O pedido foi alterado por outra pessoa. Atualize a lista.' };
+        return cancelado;
     }
 
     async criar(dados, idUsuarioLogado) {
@@ -95,6 +124,9 @@ export default class PedidoService {
                     if (item.opcaoMistura !== null || item.adicionais.length) throw { status: 400, msg: 'Este produto não permite mistura nem adicionais do dia.' };
                 } else {
                     cardapio ??= await this.#cardapioRepo.obterPorData(dados.data, consultar);
+                    if (!cardapio.existe || !cardapio.preparacoes.length) {
+                        throw { status: 409, msg: 'Monte o cardápio do dia antes de lançar este produto.' };
+                    }
                     let opcoes = cardapio.preparacoes.filter(preparacao => preparacao.grupo === 'Mistura');
                     if (opcoes.length) {
                         let normalizar = valor => valor.toLocaleLowerCase('pt-BR').replace(/\s/g, '');

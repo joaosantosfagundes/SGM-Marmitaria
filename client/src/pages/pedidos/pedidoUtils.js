@@ -5,6 +5,14 @@ export const FORMAS_PAGAMENTO = { DINHEIRO: 'Dinheiro', PIX: 'Pix', DEBITO: 'Dé
 export const TIPOS_ATENDIMENTO = { BALCAO: 'Balcão', MESA: 'Mesa', DELIVERY: 'Delivery' };
 export const MAX_CENTAVOS = 9999999999;
 
+export function proximaAcaoPedido(pedido, perfil) {
+    if (!['ADMIN', 'ATENDENTE', 'COZINHA'].includes(perfil)) return null;
+    if (pedido.status === 'RECEBIDO') return { status: 'EM_PREPARO', texto: 'Iniciar preparo' };
+    if (pedido.status === 'EM_PREPARO') return { status: 'PRONTO', texto: 'Marcar como pronto' };
+    if (pedido.status === 'PRONTO' && pedido.tipoAtendimento === 'DELIVERY' && perfil !== 'COZINHA') return { status: 'SAIU_ENTREGA', texto: 'Saiu para entrega' };
+    return null;
+}
+
 export function centavos(valor) {
     return Math.round(Number(valor) * 100);
 }

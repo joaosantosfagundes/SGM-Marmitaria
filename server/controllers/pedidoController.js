@@ -31,6 +31,22 @@ export default class PedidoController {
         }
     }
 
+    async alterarStatus(req, res) {
+        try {
+            return res.status(200).json(await this.#service.alterarStatus(req.params.id, req.body?.status, req.usuarioLogado.perfil));
+        } catch (error) {
+            return this.#tratarErro(res, error);
+        }
+    }
+
+    async cancelar(req, res) {
+        try {
+            return res.status(200).json(await this.#service.cancelar(req.params.id, req.body?.motivo, req.usuarioLogado.id));
+        } catch (error) {
+            return this.#tratarErro(res, error);
+        }
+    }
+
     #tratarErro(res, error) {
         if (error?.status) return res.status(error.status).json({ msg: error.msg });
         console.error(error);

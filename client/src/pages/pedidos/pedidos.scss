@@ -24,4 +24,33 @@
 
 @media (max-width: 576px) {
   .pedidos-page .form-check-label { padding-block: .25rem; }
+  .pedido-detalhe .modal-footer > .btn { flex: 1 1 auto; }
+}
+
+.pedido-comanda { display: none; }
+
+@media print {
+  @page { size: 80mm auto; margin: 4mm; }
+
+  html, body { height: auto !important; overflow: visible !important; background: white !important; }
+  body > :not(.pedido-comanda) { display: none !important; }
+  body > .pedido-comanda {
+    display: block !important;
+    width: 72mm;
+    max-width: 100%;
+    margin: 0;
+    color: black;
+    background: white;
+    font: 12px/1.4 Arial, sans-serif;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+
+    h1 { font-size: 19px; margin: 0 0 8px; }
+    h2 { font-size: 14px; margin: 0 0 4px; }
+    p { margin: 0 0 6px; }
+    hr { border: 0; border-top: 1px dashed black; opacity: 1; margin: 8px 0; }
+    .comanda-item { margin: 10px 0; break-inside: avoid; }
+    .comanda-total { font-size: 16px; font-weight: bold; }
+    .comanda-cancelado { border: 2px solid black; text-align: center; font-size: 20px; font-weight: bold; }
+  }
 }

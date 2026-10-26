@@ -197,13 +197,17 @@ CREATE TABLE pedido (
 
     hora_pronto DATETIME NULL,
     hora_saiu_entrega DATETIME NULL,
+    motivo_cancelamento VARCHAR(255) NULL,
+    hora_cancelamento DATETIME NULL,
+    id_usuario_cancelamento INT NULL,
 
     observacao VARCHAR(255),
     valor_total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
 
     CONSTRAINT fk_pedido_usuario FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario),
     CONSTRAINT fk_pedido_caixa FOREIGN KEY (id_caixa) REFERENCES caixa(id_caixa),
-    CONSTRAINT fk_pedido_cliente FOREIGN KEY (id_cliente) REFERENCES cliente(id_cliente)
+    CONSTRAINT fk_pedido_cliente FOREIGN KEY (id_cliente) REFERENCES cliente(id_cliente),
+    CONSTRAINT fk_pedido_usuario_cancelamento FOREIGN KEY (id_usuario_cancelamento) REFERENCES usuario(id_usuario)
 );
 
 CREATE TABLE item_pedido (
