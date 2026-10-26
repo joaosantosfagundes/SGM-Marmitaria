@@ -7,9 +7,10 @@ export default function ResumoCardapio({ cardapio, data }) {
     return (
         <section className="rounded border p-3 mb-3 bg-light">
             <h3 className="h6">Cardápio de hoje <span className="small text-secondary">({data.split('-').reverse().join('/')})</span></h3>
-            {!cardapio.existe ? <div className="mb-0">
-                Não há cardápio para hoje. Você pode lançar produtos sem mistura e adicionais.
-                {' '}<Link to="/cardapio">Montar cardápio</Link>
+            {!cardapio.existe || !cardapio.preparacoes.length ? <div className="alert alert-warning mb-0">
+                <strong className="d-block">Monte o cardápio de hoje</strong>
+                Produtos que usam cardápio ficam indisponíveis até cadastrar as preparações. Os demais produtos continuam disponíveis.
+                {' '}<Link to="/cardapio" className="alert-link">Ir para Cardápio do Dia</Link>
             </div> : <dl className="small mb-0">
                 <dt>Itens fixos</dt><dd>{fixos.map(item => item.nome).join(', ') || 'Nenhum item fixo.'}</dd>
                 <dt>Opções de mistura</dt><dd>{misturas.map(item => item.nome).join(', ') || 'Nenhuma opção de mistura.'}</dd>

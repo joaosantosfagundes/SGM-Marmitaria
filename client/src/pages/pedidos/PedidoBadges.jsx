@@ -1,4 +1,4 @@
-const STATUS_PEDIDO = {
+export const STATUS_PEDIDO = {
     RECEBIDO: ['Recebido', 'text-bg-primary'],
     EM_PREPARO: ['Em preparo', 'text-bg-warning'],
     PRONTO: ['Pronto', 'text-bg-success'],

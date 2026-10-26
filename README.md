@@ -37,6 +37,8 @@ npm install
 npm run dev             # http://localhost:5000
 ```
 
+Cada conexão MySQL usa o deslocamento fixo `time_zone = '-03:00'`, inclusive em transações, mantendo `dateStrings: true`; os registros antigos não são convertidos.
+
 ### Frontend
 ```bash
 cd client
@@ -96,7 +98,7 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 
 ### Sprint 4 (28/09–17/10) — RF_F2–F4
 - [x] RF_F2 — Backend e frontend concluídos: lançamento com itens, mistura, adicionais e pagamento; tela Pedidos com lista recente, detalhes e troco
-- [ ] RF_F3 — Status do Pedido
+- [x] RF_F3 — Status do Pedido, cancelamento com motivo e comanda da cozinha
 - [x] RF_F4 — Movimentação de Estoque (entradas, perdas e ajustes manuais, saldo não negativo, transação com bloqueio por insumo, saldos e histórico)
 
 ### Sprint 5 (19/10–14/11) — restante + deploy
@@ -136,8 +138,9 @@ O resumo final é consultado depois do fechamento e inclui essas últimas vendas
 não reserva o caixa nem mantém uma transação aberta enquanto o usuário decide.
 
 **Limitações:** não inclui sangrias, suprimentos, despesas, taxas, estornos ou recebimentos posteriores de fiado.
-Pedidos CANCELADO e pagamentos CANCELADO não contam. Não há fluxo de cancelamento/estorno nesta entrega:
-alterar status diretamente no banco muda o resumo calculado, sem registrar retirada/devolução física de dinheiro.
+Pedidos CANCELADO e pagamentos CANCELADO não contam. O cancelamento de pedido exige caixa aberto e
+cancela todos os seus pagamentos; não registra estorno bancário nem retirada/devolução física de dinheiro.
+Alterar status diretamente no banco também muda o resumo calculado.
 FIADO PAGO não é inferido como dinheiro, Pix ou cartão: uma futura quitação precisará registrar a forma real e
 o caixa do recebimento. Cada registro de pagamento válido é somado uma vez, sem join com itens; o fluxo atual
 cria um pagamento por pedido, mas duplicações manuais no banco não são conciliadas automaticamente.
@@ -156,11 +159,33 @@ Produtos existentes passam a usar o cardápio por padrão; desmarque "Escolhe mi
 nos produtos que não devem aceitar essas opções, como refrigerantes.
 
 RF_F2 está pronto no backend e no frontend, na rota `/pedidos`. ADMIN e ATENDENTE lançam pedidos;
-COZINHA consulta a lista e os detalhes. O pedido não baixa estoque. Mudança de status, cancelamento
-e impressão ficam para o RF_F3.
+COZINHA consulta a lista, os detalhes, avança o preparo e imprime a comanda. O pedido não baixa estoque.
 Execute `node --test server/tests/pedido.test.js` na raiz para os testes com banco simulado:
 eles exercitam autenticação, rotas, regras, serialização e o controle de transação com falhas de gravação.
 Esses testes não substituem a conferência das migrations, constraints e bloqueios em MySQL 8 real.
+
+## Status, cancelamento e comanda (RF_F3)
+
+Aplique uma única vez [`server/db/migrations/006-pedido-status.sql`](server/db/migrations/006-pedido-status.sql)
+no banco já atualizado com a migration 005. Adiciona motivo, horário e usuário do cancelamento em `pedido`;
+os horários de pronto e saída já existem. Nenhuma migration é aplicada automaticamente.
+
+- `PUT /pedido/:id/status`: RECEBIDO → EM_PREPARO → PRONTO, com SAIU_ENTREGA somente em DELIVERY.
+  ADMIN e ATENDENTE avançam todas as etapas; COZINHA somente EM_PREPARO e PRONTO. Não permite pular ou voltar.
+- `POST /pedido/:id/cancelar`: ADMIN e ATENDENTE informam motivo de 3 a 255 caracteres. Bloqueia o pedido
+  e consulta seu caixa com bloqueio compartilhado: se o fechamento vencer a disputa, o cancelamento é recusado;
+  se o cancelamento vencer, o fechamento aguarda sua conclusão. Pedido e todos os pagamentos são cancelados
+  na mesma transação, sem baixa/devolução de estoque nem exclusão do histórico.
+- Os GETs incluem os horários e os dados de cancelamento. A tela oferece os próximos passos permitidos,
+  filtra por status e atualiza a lista de hoje a cada 30 segundos, sem sobrepor chamadas. Pausa com aba
+  oculta, modal aberto ou data histórica; o botão Atualizar continua disponível.
+- Imprimir comanda no detalhe ou no resumo do lançamento abre a impressão do navegador. O portal de impressão
+  mostra somente o cupom de 80 mm, com itens, observações, pagamento, total e faixa CANCELADO quando aplicável.
+  Configure a impressora para papel de 80 mm; a impressão não é automática.
+
+Testes: `node --test server/tests/pedido.test.js server/tests/caixa.test.js` cobre criação existente,
+transições, permissões, cancelamento, conflitos e rollback com banco simulado. Conferir a migration,
+os bloqueios no MySQL real e a impressão na impressora utilizada continua sendo necessário.
 
 ## Atualização do banco para opções de mistura e adicionais
 

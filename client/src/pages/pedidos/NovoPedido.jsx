@@ -40,6 +40,7 @@ export default function NovoPedido({ bloqueado, onCancelar, onSucesso, onCaixaFe
     let clientesAtivos = (clientes.dados ?? []).filter(cliente => cliente.ativo);
     let clientesFiltrados = clientesAtivos.filter(cliente => cliente.id === Number(idCliente) || cliente.nome.toLocaleLowerCase('pt-BR').includes(buscaCliente.toLocaleLowerCase('pt-BR')));
     let cardapio = menu.dados && { ...menu.dados, adicionais: menu.dados.adicionais.filter(item => (adicionais.dados ?? []).some(adicional => adicional.id === item.id && adicional.ativo)) };
+    let cardapioDisponivel = Boolean(cardapio?.existe && cardapio.preparacoes.length);
     let total = totalPedido(itens);
     let recebido = valorRecebido.trim() ? converterValor(valorRecebido) : null;
     let dinheiroInvalido = forma === 'DINHEIRO' && valorRecebido.trim() !== '' && (recebido === null || centavos(recebido) < total);
@@ -54,6 +55,7 @@ export default function NovoPedido({ bloqueado, onCancelar, onSucesso, onCaixaFe
 
     function configurar(produto, indice = null) {
         if (ocupado || !conferirDia()) return;
+        if (produto.usaCardapio && !cardapioDisponivel) return toast.error('Monte o cardápio de hoje antes de lançar este produto.');
         setConfiguracao({ chave: ++sequenciaRef.current, produto, indice, item: indice === null ? null : itens[indice] });
     }
 
@@ -121,8 +123,9 @@ export default function NovoPedido({ bloqueado, onCancelar, onSucesso, onCaixaFe
                             {produtos.length === 0 && <p className="text-secondary">Nenhum produto ativo cadastrado.</p>}
                             <div className="row g-2">
                                 {produtos.map(produto => <div className="col-12 col-sm-6" key={produto.id}>
-                                    <button type="button" className="btn btn-outline-primary text-start w-100 h-100 pedido-produto" disabled={Boolean(configuracao)} onClick={() => configurar(produto)}>
+                                    <button type="button" className="btn btn-outline-primary text-start w-100 h-100 pedido-produto" disabled={Boolean(configuracao) || (produto.usaCardapio && !cardapioDisponivel)} onClick={() => configurar(produto)}>
                                         <span className="d-block fw-semibold">{produto.nome}</span><span>{formatarValor(produto.precoPadrao)}</span>
+                                        {produto.usaCardapio && !cardapioDisponivel && <span className="d-block small mt-1">Monte o cardápio de hoje</span>}
                                     </button>
                                 </div>)}
                             </div>
