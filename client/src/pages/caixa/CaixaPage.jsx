@@ -116,7 +116,7 @@ export default function CaixaPage() {
                 let conferido = await ApiClient.get(`caixa/${caixaAtual.id}/resumo`);
                 if (conferido.status !== 'ABERTO' || calcularDiferenca(conferido.saldoEsperadoDinheiro, recente.saldoEsperadoDinheiro) !== 0) {
                     recente = conferido;
-                    if (recente.status === 'ABERTO') toast.error('Novas vendas alteraram o saldo esperado. Confira os valores atualizados e confirme novamente.');
+                    if (recente.status === 'ABERTO') toast.error('Novos recebimentos alteraram o saldo esperado. Confira os valores atualizados e confirme novamente.');
                     continue;
                 }
                 break;

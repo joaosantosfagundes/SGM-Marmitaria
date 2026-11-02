@@ -102,8 +102,8 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 - [x] RF_F4 — Movimentação de Estoque (entradas, perdas e ajustes manuais, saldo não negativo, transação com bloqueio por insumo, saldos e histórico)
 
 ### Sprint 5 (19/10–14/11) — restante + deploy
-- [ ] RF_F5 — Pagamento
-- [ ] RF_F6 — Quitar Devedores
+- [x] RF_F5 — Consulta de pagamentos por data, forma, status e caixa; pagamento criado no lançamento do pedido
+- [x] RF_F6 — Fiado por cliente e quitação individual ou em lote, vinculada ao caixa do recebimento
 - [ ] RF_F7 — Movimentação Financeira
 - [x] RF_F9 — Caixa: Abrir/Fechar, histórico, resumo por forma de pagamento e conferência do dinheiro físico com falta/sobra
 - [ ] RF_S1–S5 — Relatórios
@@ -120,10 +120,12 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 abertos ou fechados. Usa `pedido.id_caixa` e `pagamento.id_pedido`, sem filtrar pelo dia:
 um caixa aberto ontem inclui todas as suas vendas de hoje até o fechamento.
 
-- **Recebido:** pagamentos PAGO em Dinheiro, Pix, Débito e Crédito, com total e quantidade por forma.
+- **Recebido:** pagamentos diretos PAGO em Dinheiro, Pix, Débito e Crédito + fiados recebidos neste caixa,
+  com total e quantidade por forma. A seção `fiadoRecebido` usa a forma e o caixa da quitação.
 - **Fiado pendente:** somente FIADO PENDENTE; aparece separado e não representa recebimento.
-- **Total vendido:** recebido + fiado pendente. O valor de abertura não é faturamento.
-- **Saldo esperado na gaveta:** abertura + vendas pagas em dinheiro. Usa `pagamento.valor`,
+- **Total vendido:** vendas pagas diretamente + fiado pendente + fiado quitado originados neste caixa.
+  A venda permanece no caixa de origem, mesmo após quitar em outro caixa. Quitação não é nova venda.
+- **Saldo esperado na gaveta:** abertura + vendas e quitações recebidas em dinheiro. Usa `pagamento.valor`,
   não o valor recebido do cliente; o troco já está descontado. `valor_recebido` null equivale ao valor exato.
 - **Conferência:** valor contado menos saldo esperado. Zero é Conferido, positivo é Sobra e negativo é Falta.
   Uma diferença não impede fechar; a tela solicita confirmação e permite prosseguir.
@@ -133,22 +135,63 @@ Antes da confirmação e antes de enviar o fechamento, a tela reconsulta os valo
 mudarem durante a confirmação, pede nova conferência. O fechamento aceita `idCaixa` opcional para
 proteger a identidade do caixa conferido; clientes antigos podem continuar enviando somente `valorFechamento`.
 O update condicional e a leitura do caixa fechado usam uma única `ExecutaTransacao`. O bloqueio exclusivo
-aguarda o FOR SHARE dos pedidos já em andamento, e pedidos posteriores não entram no caixa fechado.
+aguarda o FOR SHARE dos pedidos e quitações já em andamento; recebimentos posteriores não entram no caixa fechado.
 O resumo final é consultado depois do fechamento e inclui essas últimas vendas; a confirmação da tela
 não reserva o caixa nem mantém uma transação aberta enquanto o usuário decide.
 
-**Limitações:** não inclui sangrias, suprimentos, despesas, taxas, estornos ou recebimentos posteriores de fiado.
+**Limitações:** não inclui sangrias, suprimentos, despesas, taxas, estornos, quitação parcial, descontos
+ou divisão da quitação em várias formas. A quitação individual ou de todos os pendentes do cliente usa uma única forma.
 Pedidos CANCELADO e pagamentos CANCELADO não contam. O cancelamento de pedido exige caixa aberto e
 cancela todos os seus pagamentos; não registra estorno bancário nem retirada/devolução física de dinheiro.
 Alterar status diretamente no banco também muda o resumo calculado.
-FIADO PAGO não é inferido como dinheiro, Pix ou cartão: uma futura quitação precisará registrar a forma real e
-o caixa do recebimento. Cada registro de pagamento válido é somado uma vez, sem join com itens; o fluxo atual
+FIADO PAGO sem metadados de quitação (registro legado/manual) não é inferido como dinheiro, Pix ou cartão.
+Cada registro de pagamento válido é somado uma vez, sem join com itens; o fluxo atual
 cria um pagamento por pedido, mas duplicações manuais no banco não são conciliadas automaticamente.
-Não existe saldo acumulado nem snapshot financeiro gravado, e nenhuma migration é necessária.
+Não existe saldo acumulado nem snapshot financeiro gravado. A migration 007 adiciona somente os dados da quitação.
 
 Testes: `node --test server/tests/pedido.test.js server/tests/caixa.test.js`. O banco simulado cobre cálculos,
 status, permissões, fechamento, rollback e as duas ordens de concorrência S/X; não substitui testes de
 SQL, isolamento e bloqueios em MySQL 8 real.
+
+## Consulta de pagamentos e quitação de fiado (RF_F5/RF_F6)
+
+Aplique uma única vez [`server/db/migrations/007-pagamento-quitacao.sql`](server/db/migrations/007-pagamento-quitacao.sql)
+no banco local **e no Railway**, depois das migrations anteriores. O schema não tinha nenhum dos quatro campos:
+`id_usuario_quitacao`, `data_quitacao`, `forma_quitacao` e `id_caixa_quitacao`; a migration adiciona esses campos
+e as FKs para usuário e caixa, sem alterar pagamentos antigos e sem linha `USE`. Não é executada automaticamente.
+
+- `/fiado`: ADMIN e ATENDENTE consultam clientes devedores, expandem os pedidos e quitam um pagamento ou
+  todos os pendentes do cliente. O diálogo pede a forma e a confirmação do recebimento. Dinheiro aceita
+  valor recebido opcional, com vírgula ou ponto, e mostra o troco.
+- `/pagamento`: consulta somente leitura, até 200 registros por vez. Filtros `data`, `forma`, `status`,
+  `idCaixa` e `limite` em `GET /pagamento`. Quando há quitação, data/forma/caixa se referem ao recebimento;
+  caso contrário, ao lançamento. A tabela preserva também os dados originais da venda.
+- `GET /pagamento/fiado`: todos os FIADO PENDENTE de pedidos não cancelados, agrupados por cliente.
+  Inclui clientes inativos com dívida e não limita por dia.
+- `POST /pagamento/:id/quitar` e `POST /pagamento/cliente/:idCliente/quitar`: corpo `{ "forma": "PIX" }`
+  ou `{ "forma": "DINHEIRO", "valorRecebido": 100 }`. Formas: DINHEIRO, PIX, DEBITO e CREDITO.
+  Valor recebido omitido/null em dinheiro deixa recebido/troco null; nas outras formas, não enviar o campo.
+  Usuário e caixa são determinados pelo servidor, e a forma original permanece FIADO.
+
+As quitações usam uma transação e bloqueiam pedidos e pagamentos em ordem consistente, antes de ler o
+caixa aberto com `for share`. O update exige FIADO PENDENTE e confere as linhas alteradas. O lote é
+integral: se uma pendência selecionada mudar durante a disputa, nenhuma quitação é gravada. Pedidos novos
+após a seleção ficam para outra quitação. No lote em dinheiro, o troco fica no último pagamento para não
+repetir o valor entregue. O saldo usa o valor da dívida, sem somar diretamente o valor recebido.
+
+Para testar pelo Swagger, faça login como ADMIN/ATENDENTE e crie um pedido FIADO com cliente:
+
+1. Consulte `GET /pagamento/fiado` e anote o ID do pagamento e do cliente.
+2. Feche o caixa da venda e, sem outro aberto, tente quitar: deve retornar 409. Abra um novo caixa e quite com PIX ou DINHEIRO.
+3. Consulte `GET /pagamento` e `GET /caixa/:id/resumo`: deve aparecer a quitação no caixa do recebimento.
+   Repetir a quitação retorna 409. Um fiado de caixa anterior mantém a venda na origem.
+4. Crie dois fiados do mesmo cliente e use a rota de quitação por cliente; os dois devem ficar PAGO juntos.
+5. Teste COZINHA: as quatro rotas de pagamento devem retornar 403.
+
+Testes automatizados com banco simulado: `node --test server/tests/pagamento.test.js server/tests/pedido.test.js server/tests/caixa.test.js`.
+Cobrem validações, permissões, cálculo em centavos, filtros, quitação em outro caixa, lote, rollback,
+dupla quitação e as duas ordens de disputa com o fechamento. Não substituem a execução da migration
+e a conferência do SQL/isolamento no MySQL real. Testes pelo Swagger escrevem no banco configurado.
 
 ## Atualização do banco para pedidos
 

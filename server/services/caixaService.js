@@ -26,13 +26,17 @@ export default class CaixaService {
         let valores = [resumo.valorAbertura, resumo.totalDinheiro, resumo.totalPix, resumo.totalDebito, resumo.totalCredito, resumo.totalFiado];
         let totais = valores.map(centavos);
         let [abertura, dinheiro, pix, debito, credito, fiado] = totais;
-        let recebido = dinheiro + pix + debito + credito;
-        let vendido = recebido + fiado;
-        let saldo = abertura + dinheiro;
-        if (![...totais, recebido, vendido, saldo].every(Number.isSafeInteger)) {
+        let fiadosRecebidos = ['dinheiro', 'pix', 'debito', 'credito'].map(forma => centavos(resumo.fiadoRecebido[forma]));
+        let recebidoFiado = fiadosRecebidos.reduce((total, valor) => total + valor, 0);
+        let vendasPagas = dinheiro + pix + debito + credito;
+        let recebido = vendasPagas + recebidoFiado;
+        let vendido = vendasPagas + fiado + centavos(resumo.totalFiadoQuitado);
+        let saldo = abertura + dinheiro + fiadosRecebidos[0];
+        if (![...totais, ...fiadosRecebidos, recebidoFiado, recebido, vendido, saldo].every(Number.isSafeInteger)) {
             throw { status: 409, msg: "Os totais deste caixa ultrapassam o limite de precisão monetária suportado." };
         }
         resumo.totalRecebido = recebido / 100;
+        resumo.fiadoRecebido.total = recebidoFiado / 100;
         resumo.totalVendido = vendido / 100;
         resumo.saldoEsperadoDinheiro = saldo / 100;
         resumo.diferenca = resumo.status === 'FECHADO' && resumo.valorFechamento !== null

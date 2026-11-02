@@ -15,6 +15,8 @@ export default class ResumoCaixaEntity extends Entity {
     #valorFechamento;
     #diferenca;
     #quantidadePagamentos;
+    #totalFiadoQuitado;
+    #fiadoRecebido;
 
     get idCaixa() { return this.#idCaixa; }
     get status() { return this.#status; }
@@ -34,6 +36,8 @@ export default class ResumoCaixaEntity extends Entity {
     get diferenca() { return this.#diferenca; }
     set diferenca(value) { this.#diferenca = value; }
     get quantidadePagamentos() { return this.#quantidadePagamentos; }
+    get totalFiadoQuitado() { return this.#totalFiadoQuitado; }
+    get fiadoRecebido() { return this.#fiadoRecebido; }
 
     constructor(row) {
         super();
@@ -45,6 +49,16 @@ export default class ResumoCaixaEntity extends Entity {
         this.#totalDebito = Number(row.total_debito);
         this.#totalCredito = Number(row.total_credito);
         this.#totalFiado = Number(row.total_fiado);
+        this.#totalFiadoQuitado = Number(row.total_fiado_quitado ?? 0);
+        this.#fiadoRecebido = {
+            dinheiro: Number(row.fiado_recebido_dinheiro ?? 0), pix: Number(row.fiado_recebido_pix ?? 0),
+            debito: Number(row.fiado_recebido_debito ?? 0), credito: Number(row.fiado_recebido_credito ?? 0),
+            total: 0,
+            quantidadePagamentos: {
+                dinheiro: Number(row.quantidade_fiado_recebido_dinheiro ?? 0), pix: Number(row.quantidade_fiado_recebido_pix ?? 0),
+                debito: Number(row.quantidade_fiado_recebido_debito ?? 0), credito: Number(row.quantidade_fiado_recebido_credito ?? 0),
+            },
+        };
         this.#valorFechamento = row.valor_fechamento == null ? null : Number(row.valor_fechamento);
         this.#totalRecebido = 0;
         this.#totalVendido = 0;

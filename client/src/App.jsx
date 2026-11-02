@@ -18,6 +18,8 @@ import CardapioPage from './pages/cardapio/CardapioPage.jsx';
 import CaixaPage from './pages/caixa/CaixaPage.jsx';
 import EstoquePage from './pages/estoque/EstoquePage.jsx';
 import PedidosPage from './pages/pedidos/PedidosPage.jsx';
+import FiadoPage from './pages/fiado/FiadoPage.jsx';
+import PagamentosPage from './pages/pagamento/PagamentosPage.jsx';
 
 import { pages } from './lib/menu.js';
 
@@ -33,6 +35,8 @@ const TELAS_PRONTAS = {
     '/caixa': CaixaPage,
     '/estoque': EstoquePage,
     '/pedidos': PedidosPage,
+    '/fiado': FiadoPage,
+    '/pagamento': PagamentosPage,
 
 };
 

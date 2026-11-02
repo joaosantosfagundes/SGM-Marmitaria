@@ -37,6 +37,15 @@ export default class CaixaRepository extends Repository {
     async obterResumo(id) {
         let rows = await this.banco.ExecutaComando(
             `select c.id_caixa, c.status, c.valor_abertura, c.valor_fechamento,
+             coalesce(sum(case when pg.status = 'PAGO' and pg.forma_pagamento = 'FIADO' then pg.valor else 0 end), 0) as total_fiado_quitado,
+             coalesce(max(q.total_dinheiro), 0) as fiado_recebido_dinheiro,
+             coalesce(max(q.quantidade_dinheiro), 0) as quantidade_fiado_recebido_dinheiro,
+             coalesce(max(q.total_pix), 0) as fiado_recebido_pix,
+             coalesce(max(q.quantidade_pix), 0) as quantidade_fiado_recebido_pix,
+             coalesce(max(q.total_debito), 0) as fiado_recebido_debito,
+             coalesce(max(q.quantidade_debito), 0) as quantidade_fiado_recebido_debito,
+             coalesce(max(q.total_credito), 0) as fiado_recebido_credito,
+             coalesce(max(q.quantidade_credito), 0) as quantidade_fiado_recebido_credito,
              coalesce(sum(case when pg.status = 'PAGO' and pg.forma_pagamento = 'DINHEIRO' then pg.valor else 0 end), 0) as total_dinheiro,
              coalesce(sum(case when pg.status = 'PAGO' and pg.forma_pagamento = 'PIX' then pg.valor else 0 end), 0) as total_pix,
              coalesce(sum(case when pg.status = 'PAGO' and pg.forma_pagamento = 'DEBITO' then pg.valor else 0 end), 0) as total_debito,
@@ -50,6 +59,20 @@ export default class CaixaRepository extends Repository {
              from caixa c
              left join pedido p on p.id_caixa = c.id_caixa and p.status <> 'CANCELADO'
              left join pagamento pg on pg.id_pedido = p.id_pedido
+             left join (
+                select pg.id_caixa_quitacao,
+                    sum(case when pg.forma_quitacao = 'DINHEIRO' then pg.valor else 0 end) as total_dinheiro,
+                    count(case when pg.forma_quitacao = 'DINHEIRO' then 1 end) as quantidade_dinheiro,
+                    sum(case when pg.forma_quitacao = 'PIX' then pg.valor else 0 end) as total_pix,
+                    count(case when pg.forma_quitacao = 'PIX' then 1 end) as quantidade_pix,
+                    sum(case when pg.forma_quitacao = 'DEBITO' then pg.valor else 0 end) as total_debito,
+                    count(case when pg.forma_quitacao = 'DEBITO' then 1 end) as quantidade_debito,
+                    sum(case when pg.forma_quitacao = 'CREDITO' then pg.valor else 0 end) as total_credito,
+                    count(case when pg.forma_quitacao = 'CREDITO' then 1 end) as quantidade_credito
+                from pagamento pg inner join pedido p on p.id_pedido = pg.id_pedido
+                where pg.forma_pagamento = 'FIADO' and pg.status = 'PAGO' and p.status <> 'CANCELADO'
+                group by pg.id_caixa_quitacao
+             ) q on q.id_caixa_quitacao = c.id_caixa
              where c.id_caixa = ?
              group by c.id_caixa, c.status, c.valor_abertura, c.valor_fechamento`, [id]
         );
@@ -66,7 +89,7 @@ export default class CaixaRepository extends Repository {
 
     async fechar(entidade) {
         return this.banco.ExecutaTransacao(async consultar => {
-            // O update obtém bloqueio exclusivo e aguarda os pedidos que já mantêm for share neste caixa.
+            // Aguarda os pedidos e quitações que mantêm for share neste caixa.
             let resultado = await consultar(
                 `update caixa set status = 'FECHADO', data_fechamento = now(),
                  id_usuario_fechamento = ?, valor_fechamento = ?
