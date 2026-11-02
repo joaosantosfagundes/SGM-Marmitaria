@@ -47,6 +47,8 @@ tags:
     description: Consulta de saldos e movimentações manuais de insumos
   - name: Pedidos
     description: Criação de pedido com pagamento e consulta; sem baixa de estoque
+  - name: Pagamentos
+    description: Consulta e quitação de fiado, somente ADMIN e ATENDENTE
 paths:
   /login:
     post:
@@ -1146,15 +1148,18 @@ paths:
 
         DINHEIRO, PIX, DEBITO e CREDITO somam somente pagamentos PAGO.
         totalFiado soma somente FIADO PENDENTE e não entra no totalRecebido.
-        totalVendido = totalRecebido + totalFiado. A abertura não é faturamento.
-        saldoEsperadoDinheiro = valorAbertura + totalDinheiro, usando pagamento.valor,
+        fiadoRecebido separa FIADO PAGO por forma_quitacao, usando id_caixa_quitacao,
+        mesmo que a venda seja de outro caixa. totalRecebido inclui essas quitações.
+        totalVendido mantém somente as vendas originadas neste caixa: pagamentos diretos
+        + totalFiado pendente + totalFiadoQuitado, sem contar a quitação como nova venda.
+        saldoEsperadoDinheiro = valorAbertura + totalDinheiro + fiadoRecebido.dinheiro, usando pagamento.valor,
         nunca valor_recebido; o valor líquido da venda já desconta o troco.
         valor_recebido null equivale ao pagamento exato e não altera o cálculo.
 
         Para caixa fechado, diferenca = valorFechamento - saldoEsperadoDinheiro;
         zero indica conferido, positivo sobra e negativo falta. Em caixa aberto é null.
         quantidadePagamentos conta somente os pagamentos incluídos em cada categoria.
-        Não considera sangrias, suprimentos, despesas, taxas ou quitação posterior de FIADO.
+        Não considera sangrias, suprimentos, despesas, taxas ou estornos.
         O resumo é calculado na consulta, sem saldo acumulado ou snapshot salvo no banco.
       parameters:
         - $ref: '#/components/parameters/Id'
@@ -1181,6 +1186,8 @@ paths:
                     valorFechamento: null
                     diferenca: null
                     quantidadePagamentos: {dinheiro: 1, pix: 1, debito: 1, credito: 1, fiado: 1}
+                    totalFiadoQuitado: 0
+                    fiadoRecebido: {dinheiro: 0, pix: 0, debito: 0, credito: 0, total: 0, quantidadePagamentos: {dinheiro: 0, pix: 0, debito: 0, credito: 0}}
                 fechadoComFalta:
                   value:
                     idCaixa: 1
@@ -1196,6 +1203,26 @@ paths:
                     saldoEsperadoDinheiro: 190
                     valorFechamento: 185
                     diferenca: -5
+                    quantidadePagamentos: {dinheiro: 1, pix: 0, debito: 0, credito: 0, fiado: 0}
+                    totalFiadoQuitado: 0
+                    fiadoRecebido: {dinheiro: 0, pix: 0, debito: 0, credito: 0, total: 0, quantidadePagamentos: {dinheiro: 0, pix: 0, debito: 0, credito: 0}}
+                recebendoFiadoDeOutroCaixa:
+                  value:
+                    idCaixa: 2
+                    status: ABERTO
+                    valorAbertura: 150
+                    totalDinheiro: 40
+                    totalPix: 0
+                    totalDebito: 0
+                    totalCredito: 0
+                    totalFiado: 0
+                    totalFiadoQuitado: 0
+                    fiadoRecebido: {dinheiro: 70, pix: 30, debito: 0, credito: 0, total: 100, quantidadePagamentos: {dinheiro: 1, pix: 1, debito: 0, credito: 0}}
+                    totalRecebido: 140
+                    totalVendido: 40
+                    saldoEsperadoDinheiro: 260
+                    valorFechamento: null
+                    diferenca: null
                     quantidadePagamentos: {dinheiro: 1, pix: 0, debito: 0, credito: 0, fiado: 0}
         '400':
           $ref: '#/components/responses/DadosInvalidos'
@@ -1732,6 +1759,152 @@ paths:
               example: {msg: 'Não é possível cancelar: o caixa deste pedido já foi fechado.'}
         '500':
           $ref: '#/components/responses/ErroInterno'
+  /pagamento:
+    get:
+      tags: [Pagamentos]
+      operationId: listarPagamentos
+      summary: Consultar pagamentos e quitações
+      description: >-
+        Perfis ADMIN e ATENDENTE. Somente consulta; os pagamentos continuam nascendo no lançamento do pedido. Os filtros data, forma e idCaixa usam a quitação quando registrada, ou o lançamento original quando não há quitação. Datas reais no formato AAAA-MM-DD, com intervalos inclusivos no início e exclusivos no dia seguinte, no fuso fixo -03:00.
+      parameters:
+        - name: data
+          in: query
+          schema: {type: string, format: date}
+          description: Data local do recebimento (ou lançamento, se ainda não quitado).
+        - name: forma
+          in: query
+          schema: {type: string, enum: [DINHEIRO, PIX, DEBITO, CREDITO, FIADO]}
+          description: Forma efetiva; FIADO seleciona pagamentos sem forma de quitação.
+        - name: status
+          in: query
+          schema: {type: string, enum: [PENDENTE, PAGO, CANCELADO]}
+        - name: idCaixa
+          in: query
+          schema: {type: integer, minimum: 1}
+          description: Caixa do recebimento; antes da quitação, caixa da venda.
+        - name: limite
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 200, default: 200}
+      responses:
+        '200':
+          description: Consulta ou quitação concluída.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/PagamentoConsulta'}
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /pagamento/fiado:
+    get:
+      tags: [Pagamentos]
+      operationId: listarFiados
+      summary: Consultar fiados pendentes por cliente
+      description: >-
+        Perfis ADMIN e ATENDENTE. Retorna todos os pagamentos FIADO PENDENTE de pedidos não cancelados, agrupados por cliente, com telefone, quantidade, total em aberto e detalhes dos pedidos. Inclui dívidas antigas e de clientes inativos; não filtra por hoje nem limita a 200.
+      responses:
+        '200':
+          description: Consulta ou quitação concluída.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/ClienteFiado'}
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /pagamento/{id}/quitar:
+    post:
+      tags: [Pagamentos]
+      operationId: quitarPagamento
+      summary: Quitar um pagamento fiado
+      description: >-
+        Perfis ADMIN e ATENDENTE. Exige FIADO PENDENTE de pedido não cancelado e caixa aberto. Na mesma conexão de ExecutaTransacao bloqueia primeiro o pedido e depois o pagamento (for update), lê o caixa aberto com for share e confere o update condicional. Registra usuário do JWT, data, forma e caixa da quitação; mantém forma original FIADO. Não cria outro pagamento nem altera estoque. Duas tentativas não quitam duas vezes. O fechamento aguarda a quitação já em andamento, ou a quitação é recusada se o caixa tiver sido fechado.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/QuitacaoEntrada'}
+            examples:
+              pix: {value: {forma: PIX}}
+              dinheiro: {value: {forma: DINHEIRO, valorRecebido: 100}}
+      responses:
+        '200':
+          description: Consulta ou quitação concluída.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuitacaoResultado'
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          description: Sem caixa aberto, pagamento já quitado/cancelado, pedido cancelado, cliente sem pendências ou atualização concorrente. Nenhuma quitação parcial é gravada.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Erro'}
+              example: {msg: Abra o caixa antes de quitar fiados.}
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /pagamento/cliente/{idCliente}/quitar:
+    post:
+      tags: [Pagamentos]
+      operationId: quitarFiadosCliente
+      summary: Quitar todos os fiados pendentes do cliente
+      description: >-
+        Perfis ADMIN e ATENDENTE. Seleciona as pendências existentes ao iniciar a operação e quita em transação única; não inclui pedidos cancelados. Se uma pendência selecionada for alterada enquanto aguarda os bloqueios, retorna 409 e não grava nenhuma quitação. Novos pedidos após a seleção ficam para outra quitação. O valor recebido em dinheiro se refere ao lote inteiro; o troco fica no último pagamento para não duplicar o valor entregue. Todos usam a mesma forma, usuário e caixa aberto. Não aceita quitação parcial, desconto ou múltiplas formas no lote.
+      parameters:
+        - name: idCliente
+          in: path
+          required: true
+          schema: {type: integer, minimum: 1}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/QuitacaoEntrada'}
+            examples:
+              pix: {value: {forma: PIX}}
+              dinheiro: {value: {forma: DINHEIRO, valorRecebido: 100}}
+      responses:
+        '200':
+          description: Consulta ou quitação concluída.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuitacaoResultado'
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '409':
+          description: Sem caixa aberto, pagamento já quitado/cancelado, pedido cancelado, cliente sem pendências ou atualização concorrente. Nenhuma quitação parcial é gravada.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Erro'}
+              example: {msg: Abra o caixa antes de quitar fiados.}
+        '500':
+          $ref: '#/components/responses/ErroInterno'
 components:
   securitySchemes:
     cookieAuth:
@@ -1938,6 +2111,70 @@ components:
               - {nome: Ovo, grupo: Mistura}
             adicionais: [3, 5]
   schemas:
+    QuitacaoEntrada:
+      type: object
+      required: [forma]
+      properties:
+        forma: {type: string, enum: [DINHEIRO, PIX, DEBITO, CREDITO]}
+        valorRecebido:
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 99999999.99
+          multipleOf: 0.01
+          description: Opcional/null só para DINHEIRO. Se informado, deve cobrir o total calculado pelo servidor. Não enviar em outras formas, nem null.
+    QuitacaoResultado:
+      type: object
+      required: [pagamentos, quantidade, total, forma, idCaixaQuitacao, valorRecebido, troco]
+      properties:
+        pagamentos:
+          type: array
+          items: {$ref: '#/components/schemas/PagamentoConsulta'}
+        quantidade: {type: integer, minimum: 1}
+        total: {type: number, minimum: 0, multipleOf: 0.01}
+        forma: {type: string, enum: [DINHEIRO, PIX, DEBITO, CREDITO]}
+        idCaixaQuitacao: {type: integer}
+        valorRecebido: {type: number, nullable: true}
+        troco: {type: number, nullable: true, description: Troco do lote inteiro; null sem valor recebido.}
+    ClienteFiado:
+      type: object
+      required: [idCliente, nome, telefone, quantidade, totalEmAberto, pedidos]
+      properties:
+        idCliente: {type: integer}
+        nome: {type: string}
+        telefone: {type: string, nullable: true}
+        quantidade: {type: integer}
+        totalEmAberto: {type: number, minimum: 0, multipleOf: 0.01}
+        pedidos:
+          type: array
+          items: {$ref: '#/components/schemas/PagamentoConsulta'}
+    PagamentoConsulta:
+      allOf:
+        - $ref: '#/components/schemas/PedidoPagamento'
+        - type: object
+          properties:
+            idPedido: {type: integer}
+            idCliente: {type: integer, nullable: true}
+            nomeCliente: {type: string, nullable: true}
+            telefoneCliente: {type: string, nullable: true}
+            statusPedido: {$ref: '#/components/schemas/StatusPedido'}
+            idCaixa: {type: integer, description: Caixa original da venda.}
+    FiadoRecebidoCaixa:
+      type: object
+      required: [dinheiro, pix, debito, credito, total, quantidadePagamentos]
+      properties:
+        dinheiro: {type: number, minimum: 0, multipleOf: 0.01}
+        pix: {type: number, minimum: 0, multipleOf: 0.01}
+        debito: {type: number, minimum: 0, multipleOf: 0.01}
+        credito: {type: number, minimum: 0, multipleOf: 0.01}
+        total: {type: number, minimum: 0, multipleOf: 0.01}
+        quantidadePagamentos:
+          type: object
+          properties:
+            dinheiro: {type: integer}
+            pix: {type: integer}
+            debito: {type: integer}
+            credito: {type: integer}
     DinheiroPedido:
       type: number
       minimum: 0
@@ -2045,12 +2282,17 @@ components:
       type: object
       required: [id, forma, status, valor, valorRecebido, troco, dataHora]
       properties:
+        idUsuarioQuitacao: {type: integer, nullable: true}
+        nomeUsuarioQuitacao: {type: string, nullable: true}
+        dataQuitacao: {type: string, nullable: true, description: DATETIME no fuso fixo -03:00.}
+        formaQuitacao: {type: string, nullable: true, enum: [DINHEIRO, PIX, DEBITO, CREDITO]}
+        idCaixaQuitacao: {type: integer, nullable: true}
         id: {type: integer}
         forma: {$ref: '#/components/schemas/FormaPagamentoPedido'}
         status: {type: string, enum: [PAGO, PENDENTE, CANCELADO]}
         valor: {$ref: '#/components/schemas/DinheiroPedido'}
-        valorRecebido: {type: number, nullable: true, description: Null se não informado no pagamento em dinheiro ou se a forma não for DINHEIRO.}
-        troco: {type: number, nullable: true, description: Calculado somente quando houver valor recebido em DINHEIRO; null nos demais casos.}
+        valorRecebido: {type: number, nullable: true, description: Opcional em venda ou quitação em DINHEIRO. No lote quitado, o valor é distribuído pelos pagamentos sem repetir o recebido total.}
+        troco: {type: number, nullable: true, description: Calculado quando houver valor recebido na venda ou quitação em DINHEIRO; null nos demais casos.}
         dataHora: {type: string, description: DATETIME como texto, sem conversão de fuso.}
     PedidoResumo:
       type: object
@@ -2238,8 +2480,10 @@ components:
           description: Opcional; ID do caixa conferido na tela. Evita fechar outro caixa aberto após uma confirmação antiga.
     ResumoCaixa:
       type: object
-      required: [idCaixa, status, valorAbertura, totalDinheiro, totalPix, totalDebito, totalCredito, totalFiado, totalRecebido, totalVendido, saldoEsperadoDinheiro, valorFechamento, diferenca, quantidadePagamentos]
+      required: [idCaixa, status, valorAbertura, totalDinheiro, totalPix, totalDebito, totalCredito, totalFiado, totalRecebido, totalVendido, saldoEsperadoDinheiro, valorFechamento, diferenca, quantidadePagamentos, totalFiadoQuitado, fiadoRecebido]
       properties:
+        totalFiadoQuitado: {type: number, minimum: 0, multipleOf: 0.01, description: Fiados vendidos neste caixa que já foram quitados em qualquer caixa. Preserva o total vendido, sem somar no recebido do caixa de origem.}
+        fiadoRecebido: {$ref: '#/components/schemas/FiadoRecebidoCaixa'}
         idCaixa: {type: integer, minimum: 1}
         status: {type: string, enum: [ABERTO, FECHADO]}
         valorAbertura: {type: number, minimum: 0, multipleOf: 0.01, description: Dinheiro físico inicial; não representa venda.}
@@ -2249,8 +2493,8 @@ components:
         totalCredito: {type: number, minimum: 0, multipleOf: 0.01}
         totalFiado: {type: number, minimum: 0, multipleOf: 0.01, description: FIADO PENDENTE; não recebido.}
         totalRecebido: {type: number, minimum: 0, multipleOf: 0.01}
-        totalVendido: {type: number, minimum: 0, multipleOf: 0.01, description: Total recebido + fiado pendente.}
-        saldoEsperadoDinheiro: {type: number, minimum: 0, multipleOf: 0.01, description: Abertura + vendas PAGO em DINHEIRO.}
+        totalVendido: {type: number, minimum: 0, multipleOf: 0.01, description: Vendas pagas diretamente + fiado pendente + fiado quitado originados neste caixa. Quitações não contam como novas vendas.}
+        saldoEsperadoDinheiro: {type: number, minimum: 0, multipleOf: 0.01, description: Abertura + vendas e quitações recebidas em dinheiro; não é faturamento.}
         valorFechamento: {type: number, minimum: 0, multipleOf: 0.01, nullable: true}
         diferenca: {type: number, multipleOf: 0.01, nullable: true, description: Valor contado menos saldo esperado; null em caixa aberto.}
         quantidadePagamentos:

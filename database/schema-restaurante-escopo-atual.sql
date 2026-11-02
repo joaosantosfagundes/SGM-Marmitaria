@@ -274,8 +274,14 @@ CREATE TABLE pagamento (
     valor_recebido DECIMAL(10,2) NULL,
     status ENUM('PENDENTE','PAGO','CANCELADO') NOT NULL DEFAULT 'PENDENTE', -- fiado nasce PENDENTE, vira PAGO na quitação
     data_hora DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    id_usuario_quitacao INT NULL,
+    data_quitacao DATETIME NULL,
+    forma_quitacao ENUM('DINHEIRO','PIX','DEBITO','CREDITO') NULL,
+    id_caixa_quitacao INT NULL,
 
     CONSTRAINT fk_pagamento_pedido FOREIGN KEY (id_pedido) REFERENCES pedido(id_pedido),
+    CONSTRAINT fk_pagamento_usuario_quitacao FOREIGN KEY (id_usuario_quitacao) REFERENCES usuario(id_usuario),
+    CONSTRAINT fk_pagamento_caixa_quitacao FOREIGN KEY (id_caixa_quitacao) REFERENCES caixa(id_caixa),
     CONSTRAINT chk_pagamento_valor CHECK (valor > 0)
 );
 
