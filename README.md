@@ -104,7 +104,7 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 ### Sprint 5 (19/10–14/11) — restante + deploy
 - [x] RF_F5 — Consulta de pagamentos por data, forma, status e caixa; pagamento criado no lançamento do pedido
 - [x] RF_F6 — Fiado por cliente e quitação individual ou em lote, vinculada ao caixa do recebimento
-- [ ] RF_F7 — Movimentação Financeira
+- [x] RF_F7 — Entradas e saídas manuais, filtros e totais, recorrência informativa e compra de estoque com despesa atômica
 - [x] RF_F9 — Caixa: Abrir/Fechar, histórico, resumo por forma de pagamento e conferência do dinheiro físico com falta/sobra
 - [ ] RF_S1–S5 — Relatórios
 - [ ] Deploy
@@ -192,6 +192,58 @@ Testes automatizados com banco simulado: `node --test server/tests/pagamento.tes
 Cobrem validações, permissões, cálculo em centavos, filtros, quitação em outro caixa, lote, rollback,
 dupla quitação e as duas ordens de disputa com o fechamento. Não substituem a execução da migration
 e a conferência do SQL/isolamento no MySQL real. Testes pelo Swagger escrevem no banco configurado.
+
+## Movimentação financeira (RF_F7)
+
+`/financeiro` registra o que **não é venda**: despesas (aluguel, salário, gás, insumos etc.) e entradas avulsas.
+Vendas e quitações continuam em `pagamento`. O futuro relatório RF_S3 poderá combinar os recebimentos de
+`pagamento` com estes lançamentos, sem registrar vendas novamente aqui. Esta entrega não implementa RF_S3.
+Os lançamentos não exigem caixa aberto nem alteram o dinheiro esperado na gaveta: não são sangrias/suprimentos.
+
+- ADMIN cria, edita e exclui lançamentos manuais. ATENDENTE apenas consulta; COZINHA não acessa o financeiro.
+- `GET /financeiro?dataInicio=2026-11-01&dataFim=2026-11-30&tipo=SAIDA&categoria=Aluguel`
+  retorna `{ movimentacoes, totais: { entradas, saidas, saldo } }`. Todos os filtros são opcionais.
+  O período inclui as duas datas, a categoria é exata conforme a collation do banco e os totais usam todos
+  os registros filtrados, sem truncar a listagem. Registros legados com `id_pedido` preenchido são excluídos
+  da consulta e dos totais para não duplicar vendas; a coluna e os dados antigos são preservados.
+- `POST /financeiro` recebe `{ "tipo": "SAIDA", "categoria": "Aluguel", "valor": 500,
+  "dataHora": "2026-11-02T10:30", "recorrente": true, "quantidadeMeses": 12 }`, com descrição opcional.
+  O valor é maior que zero, até duas casas e no máximo R$ 99.999.999,99. A data/hora é local, editável e sem UTC.
+  O responsável vem do JWT; na edição é preservado o usuário que registrou originalmente.
+- Recorrência é informativa: meses inteiros de 2 a 2147483647 quando recorrente, null caso contrário.
+  Não há parcelas ou lançamentos futuros automáticos; o valor não é multiplicado pelos meses.
+- `PUT /financeiro/:id` aceita campos parciais. `DELETE /financeiro/:id` exclui definitivamente, com confirmação
+  na interface. Ambos bloqueiam a linha na transação e recusam registros vinculados a estoque ou pedido.
+
+No Estoque, ADMIN pode informar `valorPago` ao registrar `ENTRADA_COMPRA`. O valor é o **total pago**,
+gera uma SAIDA em "Compra de insumo" com o mesmo usuário e data/hora do estoque e é gravado na mesma
+`ExecutaTransacao` do saldo e histórico. Se qualquer gravação falhar, tudo é desfeito. Sem valor/null,
+nada é lançado no financeiro. COZINHA mantém a movimentação de estoque sem valor pago; não pode criar
+uma despesa indiretamente. Despesas vinculadas não são editadas/excluídas nesta entrega.
+
+**Banco local e Railway:** aplique uma vez [`server/db/migrations/008-movimentacao-financeira.sql`](server/db/migrations/008-movimentacao-financeira.sql)
+depois das migrations anteriores. A tabela já tinha os campos básicos e CHECK de valor positivo; a migration
+adiciona a FK opcional de estoque, unicidade por movimentação e CHECK de recorrência. Não seleciona banco,
+não executa automaticamente e não corrige dados antigos em silêncio. Antes de aplicar, confira possíveis
+recorrências inconsistentes; elas impedem a criação da constraint:
+
+```sql
+select id_movimentacao_financeira, recorrente, quantidade_meses
+from movimentacao_financeira
+where (recorrente = 0 and quantidade_meses is not null)
+   or (recorrente = 1 and (quantidade_meses is null or quantidade_meses < 2))
+   or recorrente not in (0, 1);
+```
+
+**Swagger:** faça login como ADMIN, crie um lançamento manual, consulte por período, edite a data e exclua.
+Tente valor zero e recorrência de 1 mês: devem retornar 400. Registre uma ENTRADA_COMPRA em
+`POST /estoque/movimentacoes` com `valorPago`, confira a saída em `GET /financeiro` e tente editá-la/excluí-la:
+deve retornar 409. ATENDENTE consulta, mas recebe 403 nas três escritas; COZINHA recebe 403 no financeiro
+e ao informar valor pago no estoque. Os testes de escrita no Swagger alteram o banco configurado.
+
+Testes: `node --test server/tests/financeiro.test.js server/tests/pedido.test.js server/tests/pagamento.test.js server/tests/caixa.test.js`.
+O banco simulado cobre permissões, validação, recorrência, totais em centavos, filtros, vínculos protegidos
+e rollback de saldo/histórico/despesa. Não substitui testar a migration e o SQL em MySQL 8 real.
 
 ## Atualização do banco para pedidos
 

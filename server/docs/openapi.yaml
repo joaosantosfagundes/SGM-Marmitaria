@@ -21,6 +21,8 @@ servers:
 security:
   - cookieAuth: []
 tags:
+  - name: Financeiro
+    description: Entradas avulsas e despesas, sem vendas; ADMIN escreve e ATENDENTE consulta
   - name: Login
     description: Acesso e sessão por cookie httpOnly
   - name: Redefinição de senha
@@ -1455,6 +1457,12 @@ paths:
         bloqueio do insumo e SELECT FOR UPDATE do estoque. Se não houver linha de
         estoque, ela é criada com zero nessa transação. Saldo insuficiente ou acima
         de 9999999.999 retorna 409 e desfaz toda a operação, inclusive a criação da linha.
+
+        A transação também inclui a saída financeira quando ADMIN informa valorPago em ENTRADA_COMPRA.
+        O valor é o total pago pela compra, não o valor unitário; deve ser positivo e ter até duas casas.
+        Omitido/null não gera despesa. COZINHA pode registrar estoque sem valor, mas valorPago retorna 403.
+        A despesa usa categoria Compra de insumo, data/hora da movimentação e usuário do JWT,
+        sem vínculo com caixa. Falha financeira também reverte saldo e histórico.
       requestBody:
         required: true
         content:
@@ -1464,6 +1472,8 @@ paths:
             examples:
               compra:
                 value: {idInsumo: 1, tipo: ENTRADA_COMPRA, quantidade: 10, motivo: null}
+              compraComDespesa:
+                value: {idInsumo: 1, tipo: ENTRADA_COMPRA, quantidade: 10, valorPago: 70.30}
               perda:
                 value: {idInsumo: 1, tipo: PERDA, quantidade: 3, motivo: Produto vencido}
               ajusteEntrada:
@@ -1905,6 +1915,142 @@ paths:
               example: {msg: Abra o caixa antes de quitar fiados.}
         '500':
           $ref: '#/components/responses/ErroInterno'
+  /financeiro:
+    get:
+      tags: [Financeiro]
+      operationId: listarFinanceiro
+      summary: Consultar lançamentos e totais do período
+      description: >-
+        ADMIN e ATENDENTE. Não inclui vendas de pagamento nem registros legados com id_pedido preenchido. Lista todos os lançamentos não vinculados a pedidos, incluindo despesas de estoque, e soma os mesmos filtros em centavos. Sem corte ou limite silencioso. Não altera o saldo físico do caixa.
+      parameters:
+        - name: dataInicio
+          in: query
+          schema: {type: string, format: date}
+          description: Início inclusivo do período.
+        - name: dataFim
+          in: query
+          schema: {type: string, format: date}
+          description: Último dia incluído; consulta usa limite exclusivo no dia seguinte.
+        - name: tipo
+          in: query
+          schema: {type: string, enum: [ENTRADA, SAIDA]}
+        - name: categoria
+          in: query
+          schema: {type: string, maxLength: 100}
+          description: Categoria exata, conforme a collation do banco.
+      responses:
+        '200':
+          description: Operação concluída.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/FinanceiroConsulta'}
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '409':
+          description: Vínculo impede a alteração/exclusão, lançamento foi alterado ou totais excedem a precisão suportada.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Erro'}
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+    post:
+      tags: [Financeiro]
+      operationId: criarFinanceiro
+      summary: Criar lançamento manual
+      description: >-
+        Somente ADMIN. Usuário vem do JWT; não aceita vínculos com pedido ou estoque enviados no corpo. Não exige caixa aberto, não lança vendas e não gera recorrências futuras. Escrita com ExecutaTransacao.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/FinanceiroEntrada'}
+      responses:
+        '201':
+          description: Operação concluída.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Financeiro'}
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '409':
+          description: Vínculo impede a alteração/exclusão, lançamento foi alterado ou totais excedem a precisão suportada.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Erro'}
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /financeiro/{id}:
+    put:
+      tags: [Financeiro]
+      operationId: atualizarFinanceiro
+      summary: Editar lançamento manual
+      description: >-
+        Somente ADMIN. Aceita campos parciais, preserva o usuário original e permite editar a data/hora. Bloqueia a linha na transação. Lançamentos vinculados ao estoque ou a pedido não podem ser editados. Para desligar recorrência, envie recorrente false e quantidadeMeses null.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/FinanceiroDados'}
+      responses:
+        '200':
+          description: Operação concluída.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Financeiro'}
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          description: Vínculo impede a alteração/exclusão, lançamento foi alterado ou totais excedem a precisão suportada.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Erro'}
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+    delete:
+      tags: [Financeiro]
+      operationId: excluirFinanceiro
+      summary: Excluir lançamento manual definitivamente
+      description: >-
+        Somente ADMIN. Exclusão real, com bloqueio da linha na transação; não permite excluir lançamentos vinculados a estoque ou pedido.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Operação concluída.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Mensagem'}
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          description: Vínculo impede a alteração/exclusão, lançamento foi alterado ou totais excedem a precisão suportada.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Erro'}
+        '500':
+          $ref: '#/components/responses/ErroInterno'
 components:
   securitySchemes:
     cookieAuth:
@@ -2111,6 +2257,48 @@ components:
               - {nome: Ovo, grupo: Mistura}
             adicionais: [3, 5]
   schemas:
+    FinanceiroDados:
+      type: object
+      properties:
+        tipo: {type: string, enum: [ENTRADA, SAIDA]}
+        categoria: {type: string, minLength: 1, maxLength: 100, example: Aluguel}
+        descricao: {type: string, nullable: true, maxLength: 255}
+        valor: {type: number, minimum: 0.01, maximum: 99999999.99, multipleOf: 0.01}
+        dataHora:
+          type: string
+          example: '2026-11-02T15:30:00'
+          description: Data/hora local real, sem UTC ou offset. Aceita AAAA-MM-DDTHH:mm[:ss] ou espaço no lugar do T. Saída normalizada para AAAA-MM-DD HH:mm:ss.
+        recorrente: {type: boolean, default: false, description: Apenas informativo; não gera lançamentos nem multiplica o valor.}
+        quantidadeMeses: {type: integer, nullable: true, minimum: 2, maximum: 2147483647, description: Obrigatório se recorrente; null caso contrário.}
+    FinanceiroEntrada:
+      allOf:
+        - $ref: '#/components/schemas/FinanceiroDados'
+        - type: object
+          required: [tipo, categoria, valor, dataHora]
+    Financeiro:
+      allOf:
+        - $ref: '#/components/schemas/FinanceiroDados'
+        - type: object
+          properties:
+            id: {type: integer}
+            idUsuario: {type: integer}
+            nomeUsuario: {type: string}
+            idPedido: {type: integer, nullable: true, description: Campo legado preservado; registros com pedido não integram esta consulta.}
+            idMovimentacaoEstoque: {type: integer, nullable: true, description: Somente gerado pela entrada de compra; bloqueia edição e exclusão.}
+    FinanceiroConsulta:
+      type: object
+      required: [movimentacoes, totais]
+      properties:
+        movimentacoes:
+          type: array
+          items: {$ref: '#/components/schemas/Financeiro'}
+        totais:
+          type: object
+          required: [entradas, saidas, saldo]
+          properties:
+            entradas: {type: number, multipleOf: 0.01}
+            saidas: {type: number, multipleOf: 0.01}
+            saldo: {type: number, multipleOf: 0.01, description: Entradas menos saídas; pode ser negativo.}
     QuitacaoEntrada:
       type: object
       required: [forma]
@@ -2383,6 +2571,13 @@ components:
       type: object
       required: [idInsumo, tipo, quantidade]
       properties:
+        valorPago:
+          type: number
+          nullable: true
+          minimum: 0.01
+          maximum: 99999999.99
+          multipleOf: 0.01
+          description: Opcional, somente ADMIN e ENTRADA_COMPRA; total pago. Cria a saída vinculada na mesma transação. Omitido/null não cria financeiro.
         idInsumo:
           type: integer
           minimum: 1
@@ -2446,6 +2641,12 @@ components:
       type: object
       required: [movimentacao, novoSaldo]
       properties:
+        financeiro:
+          type: object
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Financeiro'
+          description: Saída financeira vinculada; null quando valorPago não foi informado.
         movimentacao:
           $ref: '#/components/schemas/MovimentacaoEstoque'
         novoSaldo:

@@ -3,8 +3,9 @@ import toast from 'react-hot-toast';
 import ApiClient from '../../services/apiClient.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useConfirm } from '../../context/ConfirmContext.jsx';
+import { converterValor } from '../caixa/caixaUtils.js';
 
-const FORM_VAZIO = { idInsumo: '', tipo: 'ENTRADA_COMPRA', quantidade: '', motivo: '' };
+const FORM_VAZIO = { idInsumo: '', tipo: 'ENTRADA_COMPRA', quantidade: '', motivo: '', valorPago: '' };
 const TIPOS = {
     ENTRADA_COMPRA: 'Entrada de compra', PERDA: 'Perda',
     AJUSTE_ENTRADA: 'Ajuste de entrada', AJUSTE_SAIDA: 'Ajuste de saída',
@@ -37,6 +38,7 @@ export default function EstoquePage() {
     const confirmar = useConfirm();
     const podeConsultar = ['ADMIN', 'ATENDENTE', 'COZINHA'].includes(usuario?.perfil);
     const podeRegistrar = ['ADMIN', 'COZINHA'].includes(usuario?.perfil);
+    const podeRegistrarValor = usuario?.perfil === 'ADMIN';
     const [saldos, setSaldos] = useState([]);
     const [movimentacoes, setMovimentacoes] = useState([]);
     const [busca, setBusca] = useState('');
@@ -142,6 +144,11 @@ export default function EstoquePage() {
             return;
         }
         let saida = form.tipo === 'PERDA' || form.tipo === 'AJUSTE_SAIDA';
+        let valorPago;
+        if (podeRegistrarValor && form.tipo === 'ENTRADA_COMPRA' && form.valorPago.trim()) {
+            valorPago = converterValor(form.valorPago);
+            if (valorPago === null || valorPago <= 0) { toast.error('Informe um valor pago maior que zero, com até duas casas decimais.'); return; }
+        }
         if (saida && !(await confirmar({
             titulo: 'Registrar saída de estoque',
             mensagem: `Registrar ${TIPOS[form.tipo].toLocaleLowerCase('pt-BR')} de ${formatarQuantidade(quantidade)} ${selecionado.siglaUnidade} de "${selecionado.nome}"? O saldo será reduzido e a movimentação ficará no histórico.`,
@@ -152,9 +159,10 @@ export default function EstoquePage() {
         try {
             await ApiClient.post('estoque/movimentacoes', {
                 idInsumo: selecionado.id, tipo: form.tipo, quantidade, motivo: motivo || null,
+                ...(valorPago !== undefined ? { valorPago } : {}),
             });
             fecharForm();
-            toast.success('Movimentação registrada!');
+            toast.success(valorPago !== undefined ? 'Estoque e despesa da compra registrados!' : 'Movimentação registrada!');
             atualizar();
         } catch (error) {
             tratarErro(error);
@@ -193,7 +201,7 @@ export default function EstoquePage() {
                             </div>
                             <div className="col-md-6">
                                 <label htmlFor="tipo-movimentacao" className="form-label small">Tipo</label>
-                                <select id="tipo-movimentacao" className="form-select" value={form.tipo} onChange={event => setForm({ ...form, tipo: event.target.value })}>
+                                <select id="tipo-movimentacao" className="form-select" value={form.tipo} onChange={event => setForm({ ...form, tipo: event.target.value, valorPago: '' })}>
                                     {Object.entries(TIPOS).map(([tipo, nome]) => <option key={tipo} value={tipo}>{nome}</option>)}
                                 </select>
                             </div>
@@ -211,6 +219,11 @@ export default function EstoquePage() {
                                 <textarea id="motivo-movimentacao" className="form-control" rows={2} maxLength={255} minLength={exigeMotivo ? 3 : undefined} required={exigeMotivo} value={form.motivo} onChange={event => setForm({ ...form, motivo: event.target.value })} />
                                 <div className="form-text">Obrigatório para perdas e ajustes: de 3 a 255 caracteres.</div>
                             </div>
+                            {podeRegistrarValor && form.tipo === 'ENTRADA_COMPRA' && <div className="col-12 col-md-6">
+                                <label htmlFor="valor-pago-compra" className="form-label small">Valor pago (R$) — opcional</label>
+                                <input id="valor-pago-compra" type="text" inputMode="decimal" className="form-control" placeholder="0,00" value={form.valorPago} onChange={event => setForm({ ...form, valorPago: event.target.value })} />
+                                <div className="form-text">Valor total da compra. Ao preencher, uma saída financeira vinculada será registrada junto com o estoque.</div>
+                            </div>}
                         </div>
                     </fieldset>
                     <div className="d-flex flex-wrap gap-2 mt-3">

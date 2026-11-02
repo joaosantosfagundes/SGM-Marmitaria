@@ -1,8 +1,11 @@
 import MovimentacaoEstoqueEntity, { QUANTIDADE_MAXIMA, TIPOS_MOVIMENTACAO } from "../entities/movimentacaoEstoqueEntity.js";
 import EstoqueRepository from "../repositories/estoqueRepository.js";
+import FinanceiroRepository from '../repositories/financeiroRepository.js';
+import MovimentacaoFinanceiraEntity from '../entities/movimentacaoFinanceiraEntity.js';
 
 export default class EstoqueService {
     #repo;
+    #financeiroRepo = new FinanceiroRepository();
 
     constructor() {
         this.#repo = new EstoqueRepository();
@@ -26,7 +29,13 @@ export default class EstoqueService {
         return this.#repo.listarMovimentacoes(filtro, Number(limite));
     }
 
-    async registrar(dados, idUsuarioLogado) {
+    async registrar(dados, idUsuarioLogado, perfil) {
+        let valorPago = dados?.valorPago ?? null;
+        if (valorPago !== null) {
+            if (perfil !== 'ADMIN') throw { status: 403, msg: 'Somente administradores podem registrar o valor pago da compra.' };
+            if (dados.tipo !== 'ENTRADA_COMPRA') throw { status: 400, msg: 'Valor pago só é permitido em entrada de compra.' };
+            if (!MovimentacaoFinanceiraEntity.validarValor(valorPago)) throw { status: 400, msg: 'O valor pago deve ser maior que zero, com até duas casas decimais e no máximo R$ 99.999.999,99.' };
+        }
         let entidade = new MovimentacaoEstoqueEntity(0, dados?.idInsumo, idUsuarioLogado,
             dados?.tipo, dados?.quantidade, dados?.motivo);
         if (!Number.isSafeInteger(entidade.idInsumo) || entidade.idInsumo <= 0) {
@@ -64,6 +73,12 @@ export default class EstoqueService {
                 throw { status: 409, msg: "O saldo não pode ultrapassar 9.999.999,999 (limite do estoque)." };
             }
             return novoSaldo;
+        }, valorPago === null ? null : async (consultar, movimentacao, estoque) => {
+            let financeiro = new MovimentacaoFinanceiraEntity({ idUsuario: idUsuarioLogado, tipo: 'SAIDA',
+                categoria: 'Compra de insumo', descricao: `Compra de ${estoque.nome}`, valor: valorPago,
+                dataHora: movimentacao.dataHora, idMovimentacaoEstoque: movimentacao.id });
+            if (!financeiro.validar()) throw { status: 400, msg: 'Dados da despesa de compra inválidos.' };
+            return this.#financeiroRepo.inserir(financeiro, consultar);
         });
     }
 }
