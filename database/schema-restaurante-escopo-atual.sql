@@ -294,6 +294,7 @@ CREATE TABLE movimentacao_financeira (
     id_movimentacao_financeira INT AUTO_INCREMENT PRIMARY KEY,
     id_usuario INT NOT NULL,
     id_pedido INT NULL,
+    id_movimentacao_estoque INT NULL,
 
     tipo ENUM('ENTRADA','SAIDA') NOT NULL,
     categoria VARCHAR(100) NOT NULL,
@@ -307,6 +308,9 @@ CREATE TABLE movimentacao_financeira (
 
     CONSTRAINT fk_financeiro_usuario FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario),
     CONSTRAINT fk_financeiro_pedido FOREIGN KEY (id_pedido) REFERENCES pedido(id_pedido),
+    CONSTRAINT fk_financeiro_movimentacao_estoque FOREIGN KEY (id_movimentacao_estoque) REFERENCES movimentacao_estoque(id_movimentacao),
+    CONSTRAINT uq_financeiro_movimentacao_estoque UNIQUE (id_movimentacao_estoque),
+    CONSTRAINT chk_financeiro_recorrencia CHECK ((recorrente = 0 AND quantidade_meses IS NULL) OR (recorrente = 1 AND quantidade_meses IS NOT NULL AND quantidade_meses >= 2)),
     CONSTRAINT chk_financeiro_valor CHECK (valor > 0)
 );
 

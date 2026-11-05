@@ -33,7 +33,7 @@ export default class EstoqueRepository extends Repository {
         return rows.map(row => MovimentacaoEstoqueEntity.toMap(row));
     }
 
-    async registrar(entidade, calcularNovoSaldo) {
+    async registrar(entidade, calcularNovoSaldo, registrarFinanceiro) {
         return this.banco.ExecutaTransacao(async consultar => {
             // O bloqueio do insumo também serializa a criação de um estoque ausente.
             let insumos = await consultar("select * from insumo where id_insumo = ? for update", [entidade.idInsumo]);
@@ -55,7 +55,9 @@ export default class EstoqueRepository extends Repository {
                 [entidade.idInsumo, entidade.idUsuario, entidade.tipo, entidade.quantidade, entidade.motivo]
             );
             let rows = await consultar(`${CONSULTA_MOVIMENTACOES} where m.id_movimentacao = ?`, [resultado.insertId]);
-            return { movimentacao: MovimentacaoEstoqueEntity.toMap(rows[0]), novoSaldo };
+            let movimentacao = MovimentacaoEstoqueEntity.toMap(rows[0]);
+            let financeiro = registrarFinanceiro ? await registrarFinanceiro(consultar, movimentacao, estoque) : null;
+            return { movimentacao, novoSaldo, financeiro };
         });
     }
 }

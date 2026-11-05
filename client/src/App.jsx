@@ -20,6 +20,7 @@ import EstoquePage from './pages/estoque/EstoquePage.jsx';
 import PedidosPage from './pages/pedidos/PedidosPage.jsx';
 import FiadoPage from './pages/fiado/FiadoPage.jsx';
 import PagamentosPage from './pages/pagamento/PagamentosPage.jsx';
+import FinanceiroPage from './pages/financeiro/FinanceiroPage.jsx';
 
 import { pages } from './lib/menu.js';
 
@@ -37,6 +38,7 @@ const TELAS_PRONTAS = {
     '/pedidos': PedidosPage,
     '/fiado': FiadoPage,
     '/pagamento': PagamentosPage,
+    '/financeiro': FinanceiroPage,
 
 };
 

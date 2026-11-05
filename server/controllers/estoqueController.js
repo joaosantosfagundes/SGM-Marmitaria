@@ -26,7 +26,7 @@ export default class EstoqueController {
 
     async registrar(req, res) {
         try {
-            let resultado = await this.#service.registrar(req.body, req.usuarioLogado.id);
+            let resultado = await this.#service.registrar(req.body, req.usuarioLogado.id, req.usuarioLogado.perfil);
             return res.status(201).json(resultado);
         } catch (error) {
             return this.#tratarErro(res, error);

@@ -14,8 +14,7 @@ import caixaRouter from './caixaRoute.js';
 import estoqueRouter from './estoqueRoute.js';
 import pedidoRouter from './pedidoRoute.js';
 import pagamentoRouter from './pagamentoRoute.js';
-// TODO (Sprint 2/3, seguindo o padrão de usuarioRoute.js):
-// import financeiroRouter from './financeiroRoute.js'; // RF_F7 - Mov. Financeira
+import financeiroRouter from './financeiroRoute.js';
 
 const router = express.Router();
 
@@ -33,6 +32,6 @@ router.use('/caixa', caixaRouter);
 router.use('/estoque', estoqueRouter);
 router.use('/pedido', pedidoRouter);
 router.use('/pagamento', pagamentoRouter);
-// router.use('/financeiro', financeiroRouter);
+router.use('/financeiro', financeiroRouter);
 
 export default router;
