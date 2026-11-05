@@ -104,7 +104,7 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 ### Sprint 5 (19/10–14/11) — restante + deploy
 - [x] RF_F5 — Consulta de pagamentos por data, forma, status e caixa; pagamento criado no lançamento do pedido
 - [x] RF_F6 — Fiado por cliente e quitação individual ou em lote, vinculada ao caixa do recebimento
-- [x] RF_F7 — Entradas e saídas manuais, filtros e totais, recorrência informativa e compra de estoque com despesa atômica
+- [x] RF_F7 — Entradas e saídas manuais, recebimentos consolidados por caixa fechado, filtros e totais, recorrência informativa e compra de estoque com despesa atômica
 - [x] RF_F9 — Caixa: Abrir/Fechar, histórico, resumo por forma de pagamento e conferência do dinheiro físico com falta/sobra
 - [ ] RF_S1–S5 — Relatórios
 - [ ] Deploy
@@ -195,17 +195,34 @@ e a conferência do SQL/isolamento no MySQL real. Testes pelo Swagger escrevem n
 
 ## Movimentação financeira (RF_F7)
 
-`/financeiro` registra o que **não é venda**: despesas (aluguel, salário, gás, insumos etc.) e entradas avulsas.
-Vendas e quitações continuam em `pagamento`. O futuro relatório RF_S3 poderá combinar os recebimentos de
-`pagamento` com estes lançamentos, sem registrar vendas novamente aqui. Esta entrega não implementa RF_S3.
-Os lançamentos não exigem caixa aberto nem alteram o dinheiro esperado na gaveta: não são sangrias/suprimentos.
+`/financeiro` mostra uma única ENTRADA por caixa FECHADO com recebimentos, junto das despesas (aluguel,
+salário, gás, insumos etc.) e entradas avulsas. Enquanto o caixa estiver aberto, seus recebimentos são
+acompanhados em Caixa e Pagamento. O detalhe de cada pagamento e a quitação de fiado continuam nessas telas.
+A entrada usa a data/hora do fechamento e soma vendas pagas e fiados recebidos naquele caixa, mesmo que
+o caixa atravesse dias. Vendas e quitações continuam gravadas somente em `pagamento`; o consolidado é
+calculado na consulta, sem criar uma cópia em `movimentacao_financeira` ou mudar o fluxo de fechamento.
+O valor da entrada é o total recebido, não o dinheiro contado na gaveta: não inclui abertura, troco ou
+diferenças de conferência. Por exemplo, R$ 150 de abertura + R$ 300 de recebimentos geram uma entrada de R$ 300.
+O saldo do período é entradas menos saídas; não representa o dinheiro físico da gaveta.
+Os lançamentos manuais não exigem caixa aberto nem alteram o dinheiro esperado na gaveta: não são sangrias/suprimentos.
+Esta integração não entrega os demais recursos dos relatórios RF_S1–S5.
 
 - ADMIN cria, edita e exclui lançamentos manuais. ATENDENTE apenas consulta; COZINHA não acessa o financeiro.
 - `GET /financeiro?dataInicio=2026-11-01&dataFim=2026-11-30&tipo=SAIDA&categoria=Aluguel`
-  retorna `{ movimentacoes, totais: { entradas, saidas, saldo } }`. Todos os filtros são opcionais.
+  retorna `{ movimentacoes, totais: { entradas, saidas, saldo, recebimentosCaixas, entradasAvulsas } }`. Todos os filtros são opcionais.
   O período inclui as duas datas, a categoria é exata conforme a collation do banco e os totais usam todos
   os registros filtrados, sem truncar a listagem. Registros legados com `id_pedido` preenchido são excluídos
-  da consulta e dos totais para não duplicar vendas; a coluna e os dados antigos são preservados.
+  da consulta e dos totais para não duplicar os recebimentos lidos de `pagamento`; a coluna e os dados antigos são preservados.
+- Vendas diretas consideram apenas pagamentos PAGO em DINHEIRO, PIX, DEBITO ou CREDITO, pelo caixa do
+  pedido e valor efetivo da venda (`valor`, sem somar `valor_recebido`). Fiados só entram quando PAGO,
+  no caixa da quitação, sem repetir a receita no caixa da venda. Pagamentos PENDENTE/CANCELADO e pedidos CANCELADO não entram.
+  FIADO PAGO legado sem dados completos de quitação não é considerado um recebimento presumido.
+- Os consolidados têm `origem: CAIXA`, `id: null`, `idCaixa`, categoria "Fechamento de caixa" e descrição
+  "Recebimentos do caixa #N". São somente consulta; o responsável é quem fechou (ou quem abriu, para registro
+  legado sem usuário de fechamento). Os lançamentos manuais têm `origem: MANUAL` e as despesas de compra,
+  `origem: ESTOQUE`. O período usa o fechamento para caixas e a data/hora informada nos lançamentos manuais.
+  Todos os totais seguem os mesmos filtros. Um caixa fechado sem recebimentos ou sem data de fechamento
+  não gera entrada. Dois caixas fechados no mesmo dia permanecem como duas entradas. Nenhum join com itens multiplica pagamentos.
 - `POST /financeiro` recebe `{ "tipo": "SAIDA", "categoria": "Aluguel", "valor": 500,
   "dataHora": "2026-11-02T10:30", "recorrente": true, "quantidadeMeses": 12 }`, com descrição opcional.
   O valor é maior que zero, até duas casas e no máximo R$ 99.999.999,99. A data/hora é local, editável e sem UTC.
@@ -236,14 +253,23 @@ where (recorrente = 0 and quantidade_meses is not null)
 ```
 
 **Swagger:** faça login como ADMIN, crie um lançamento manual, consulte por período, edite a data e exclua.
+Lance uma venda de R$ 40,00 em dinheiro com R$ 50,00 recebido: `GET /financeiro` ainda não deve incluir
+esse recebimento com o caixa aberto. Feche o caixa e consulte pela data do fechamento: deve aparecer uma
+entrada de R$ 40,00 em "Fechamento de caixa", sem abertura nem troco. Atualizar não deve duplicar a entrada.
+Crie um FIADO e quite em outro caixa: só deve integrar o financeiro no fechamento do caixa que recebeu.
+Confira também um caixa aberto em um dia e fechado no seguinte: toda a entrada fica na data do fechamento.
 Tente valor zero e recorrência de 1 mês: devem retornar 400. Registre uma ENTRADA_COMPRA em
 `POST /estoque/movimentacoes` com `valorPago`, confira a saída em `GET /financeiro` e tente editá-la/excluí-la:
 deve retornar 409. ATENDENTE consulta, mas recebe 403 nas três escritas; COZINHA recebe 403 no financeiro
 e ao informar valor pago no estoque. Os testes de escrita no Swagger alteram o banco configurado.
 
 Testes: `node --test server/tests/financeiro.test.js server/tests/pedido.test.js server/tests/pagamento.test.js server/tests/caixa.test.js`.
-O banco simulado cobre permissões, validação, recorrência, totais em centavos, filtros, vínculos protegidos
-e rollback de saldo/histórico/despesa. Não substitui testar a migration e o SQL em MySQL 8 real.
+O banco simulado cobre permissões, validação, recorrência, totais em centavos, caixa aberto sem entrada,
+consolidação após POST /caixa/fechar, duplicação, troco, quitação em outro caixa, filtros pela data de fechamento,
+cancelados, vínculos protegidos e rollback do fechamento e de saldo/histórico/despesa.
+Não substitui testar a migration e o SQL em MySQL 8 real. Alterações diretas no banco mudam o consolidado calculado;
+não existe snapshot gravado nem conciliação automática de pagamentos duplicados inseridos manualmente.
+A consolidação por caixa fechado não exige migration adicional à 008.
 
 ## Atualização do banco para pedidos
 

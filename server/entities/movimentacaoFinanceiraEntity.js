@@ -3,6 +3,7 @@ import { validarDinheiro, validarId } from '../utils/pedidoUtils.js';
 
 export default class MovimentacaoFinanceiraEntity extends Entity {
     #id; #idUsuario; #nomeUsuario; #idPedido; #idMovimentacaoEstoque;
+    #idCaixa;
     #tipo; #categoria; #descricao; #valor; #dataHora; #recorrente; #quantidadeMeses;
 
     get id() { return this.#id; }
@@ -11,6 +12,8 @@ export default class MovimentacaoFinanceiraEntity extends Entity {
     get nomeUsuario() { return this.#nomeUsuario; }
     get idPedido() { return this.#idPedido; }
     get idMovimentacaoEstoque() { return this.#idMovimentacaoEstoque; }
+    get idCaixa() { return this.#idCaixa; }
+    get origem() { return this.#idCaixa !== null ? 'CAIXA' : this.#idMovimentacaoEstoque !== null ? 'ESTOQUE' : 'MANUAL'; }
     get tipo() { return this.#tipo; }
     get categoria() { return this.#categoria; }
     get descricao() { return this.#descricao; }
@@ -20,10 +23,12 @@ export default class MovimentacaoFinanceiraEntity extends Entity {
     get quantidadeMeses() { return this.#quantidadeMeses; }
 
     constructor({ id = null, idUsuario = null, nomeUsuario = null, idPedido = null, idMovimentacaoEstoque = null,
+        idCaixa = null,
         tipo, categoria, descricao = null, valor, dataHora, recorrente = false, quantidadeMeses = null } = {}) {
         super();
         this.#id = id; this.#idUsuario = idUsuario; this.#nomeUsuario = nomeUsuario;
         this.#idPedido = idPedido; this.#idMovimentacaoEstoque = idMovimentacaoEstoque;
+        this.#idCaixa = idCaixa;
         this.#tipo = tipo; this.#categoria = typeof categoria === 'string' ? categoria.trim() : categoria;
         this.#descricao = typeof descricao === 'string' ? descricao.trim() || null : descricao;
         this.#valor = valor; this.#dataHora = dataHora;
@@ -33,7 +38,7 @@ export default class MovimentacaoFinanceiraEntity extends Entity {
     static toMap(row) {
         return new MovimentacaoFinanceiraEntity({ id: row.id_movimentacao_financeira,
             idUsuario: row.id_usuario, nomeUsuario: row.nome_usuario, idPedido: row.id_pedido,
-            idMovimentacaoEstoque: row.id_movimentacao_estoque, tipo: row.tipo, categoria: row.categoria,
+            idMovimentacaoEstoque: row.id_movimentacao_estoque, idCaixa: row.id_caixa, tipo: row.tipo, categoria: row.categoria,
             descricao: row.descricao, valor: Number(row.valor), dataHora: row.data_hora,
             recorrente: Boolean(row.recorrente), quantidadeMeses: row.quantidade_meses == null ? null : Number(row.quantidade_meses) });
     }

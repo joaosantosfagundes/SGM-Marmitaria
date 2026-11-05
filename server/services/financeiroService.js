@@ -12,22 +12,27 @@ export default class FinanceiroService {
         if (tipo !== undefined && !['ENTRADA', 'SAIDA'].includes(tipo)) throw { status: 400, msg: 'Informe o tipo ENTRADA ou SAIDA.' };
         if (categoria !== undefined && (typeof categoria !== 'string' || !categoria.trim() || categoria.length > 100)) throw { status: 400, msg: 'Informe uma categoria com até 100 caracteres.' };
         let movimentacoes = await this.#repo.listar({ dataInicio, dataFim, tipo, categoria: categoria?.trim() });
-        let entradas = 0, saidas = 0;
+        let entradas = 0, saidas = 0, recebimentosCaixas = 0, entradasAvulsas = 0;
         for (let movimentacao of movimentacoes) {
-            if (movimentacao.tipo === 'ENTRADA') entradas += centavos(movimentacao.valor);
-            else saidas += centavos(movimentacao.valor);
+            let valor = centavos(movimentacao.valor);
+            if (movimentacao.tipo === 'ENTRADA') {
+                entradas += valor;
+                if (movimentacao.origem === 'CAIXA') recebimentosCaixas += valor;
+                else entradasAvulsas += valor;
+            } else saidas += valor;
         }
-        if (![entradas, saidas, entradas - saidas].every(Number.isSafeInteger)) throw { status: 409, msg: 'Os totais ultrapassam a precisão monetária suportada.' };
-        return { movimentacoes, totais: { entradas: entradas / 100, saidas: saidas / 100, saldo: (entradas - saidas) / 100 } };
+        if (![entradas, saidas, entradas - saidas, recebimentosCaixas, entradasAvulsas].every(Number.isSafeInteger)) throw { status: 409, msg: 'Os totais ultrapassam a precisão monetária suportada.' };
+        return { movimentacoes, totais: { entradas: entradas / 100, saidas: saidas / 100, saldo: (entradas - saidas) / 100,
+            recebimentosCaixas: recebimentosCaixas / 100, entradasAvulsas: entradasAvulsas / 100 } };
     }
 
     #preparar(dados, idUsuario) {
         if (!dados || typeof dados !== 'object') throw { status: 400, msg: 'Informe os dados do lançamento.' };
-        if (dados.idPedido != null || dados.idMovimentacaoEstoque != null || dados.id_pedido != null || dados.id_movimentacao_estoque != null) throw { status: 400, msg: 'Vínculos com pedido ou estoque não podem ser informados por esta tela.' };
+        if (dados.idCaixa != null || dados.id_caixa != null || dados.idPedido != null || dados.idPagamento != null || dados.idMovimentacaoEstoque != null || dados.id_pedido != null || dados.id_pagamento != null || dados.id_movimentacao_estoque != null) throw { status: 400, msg: 'Vínculos com caixa, pedido, pagamento ou estoque não podem ser informados por esta tela.' };
         let dataHora = MovimentacaoFinanceiraEntity.normalizarDataHora(dados.dataHora);
         if (!dataHora) throw { status: 400, msg: 'Informe uma data e hora reais para o lançamento, sem conversão para UTC.' };
         if (!MovimentacaoFinanceiraEntity.validarValor(dados.valor)) throw { status: 400, msg: 'O valor deve ser numérico, maior que zero, com até duas casas decimais e no máximo R$ 99.999.999,99.' };
-        let entidade = new MovimentacaoFinanceiraEntity({ ...dados, id: null, idUsuario, dataHora });
+        let entidade = new MovimentacaoFinanceiraEntity({ ...dados, id: null, idUsuario, dataHora, idCaixa: null });
         if (!entidade.validar()) throw { status: 400, msg: 'Informe ENTRADA ou SAIDA, categoria de até 100 caracteres, descrição de até 255 e recorrência válida: booleano e, se recorrente, quantidade de meses inteira de 2 a 2147483647; caso contrário, meses deve ser null.' };
         return entidade;
     }

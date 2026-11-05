@@ -1921,12 +1921,17 @@ paths:
       operationId: listarFinanceiro
       summary: Consultar lançamentos e totais do período
       description: >-
-        ADMIN e ATENDENTE. Não inclui vendas de pagamento nem registros legados com id_pedido preenchido. Lista todos os lançamentos não vinculados a pedidos, incluindo despesas de estoque, e soma os mesmos filtros em centavos. Sem corte ou limite silencioso. Não altera o saldo físico do caixa.
+        ADMIN e ATENDENTE. Reúne lançamentos manuais, despesas de estoque e uma entrada consolidada por caixa FECHADO com recebimentos.
+        Caixas abertos não entram. O período do consolidado usa data_fechamento; um caixa que atravessa dias continua como uma única entrada no fechamento.
+        Soma pagamento.valor dos pagamentos diretos PAGO em DINHEIRO, PIX, DEBITO ou CREDITO pelo caixa do pedido e FIADO PAGO pelo caixa da quitação, com metadados completos.
+        Exclui pedidos CANCELADO, pagamentos pendentes/cancelados e cópias legadas em movimentacao_financeira com id_pedido preenchido.
+        Não usa valor_abertura, valor_fechamento, valor_recebido/troco nem diferença da gaveta como receita. Caixas sem recebimentos ou sem data de fechamento não geram entrada.
+        Usa agregação SQL sem join com itens, sem gravar outra receita e sem alterar o fechamento. O saldo é entradas menos saídas do período, não o dinheiro físico da gaveta.
       parameters:
         - name: dataInicio
           in: query
           schema: {type: string, format: date}
-          description: Início inclusivo do período.
+          description: Início inclusivo. Para consolidados usa a data do fechamento; para lançamentos manuais, a data/hora informada.
         - name: dataFim
           in: query
           schema: {type: string, format: date}
@@ -1937,13 +1942,18 @@ paths:
         - name: categoria
           in: query
           schema: {type: string, maxLength: 100}
-          description: Categoria exata, conforme a collation do banco.
+          description: Categoria exata, conforme a collation do banco. Consolidados usam Fechamento de caixa.
       responses:
         '200':
           description: Operação concluída.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/FinanceiroConsulta'}
+              example:
+                movimentacoes:
+                  - {id: null, origem: CAIXA, idPedido: null, idCaixa: 3, idUsuario: 2, nomeUsuario: Ana, tipo: ENTRADA, categoria: Fechamento de caixa, descricao: 'Recebimentos do caixa #3', valor: 300, dataHora: '2026-11-02 18:00:00', recorrente: false, quantidadeMeses: null, idMovimentacaoEstoque: null}
+                  - {id: 1, origem: MANUAL, idPedido: null, idCaixa: null, idUsuario: 1, nomeUsuario: João, tipo: SAIDA, categoria: Gás, descricao: null, valor: 20, dataHora: '2026-11-02 10:00:00', recorrente: false, quantidadeMeses: null, idMovimentacaoEstoque: null}
+                totais: {entradas: 300, saidas: 20, saldo: 280, recebimentosCaixas: 300, entradasAvulsas: 0}
         '400':
           $ref: '#/components/responses/DadosInvalidos'
         '401':
@@ -1962,7 +1972,7 @@ paths:
       operationId: criarFinanceiro
       summary: Criar lançamento manual
       description: >-
-        Somente ADMIN. Usuário vem do JWT; não aceita vínculos com pedido ou estoque enviados no corpo. Não exige caixa aberto, não lança vendas e não gera recorrências futuras. Escrita com ExecutaTransacao.
+        Somente ADMIN. Usuário vem do JWT; não aceita vínculos com caixa, pedido, pagamento ou estoque enviados no corpo. Registre somente despesas e entradas avulsas; vendas e fiados recebidos aparecem automaticamente no consolidado após o fechamento do caixa. Não exige caixa aberto e não gera recorrências futuras. Escrita com ExecutaTransacao.
       requestBody:
         required: true
         content:
@@ -2276,15 +2286,22 @@ components:
         - type: object
           required: [tipo, categoria, valor, dataHora]
     Financeiro:
-      allOf:
-        - $ref: '#/components/schemas/FinanceiroDados'
-        - type: object
-          properties:
-            id: {type: integer}
-            idUsuario: {type: integer}
-            nomeUsuario: {type: string}
-            idPedido: {type: integer, nullable: true, description: Campo legado preservado; registros com pedido não integram esta consulta.}
-            idMovimentacaoEstoque: {type: integer, nullable: true, description: Somente gerado pela entrada de compra; bloqueia edição e exclusão.}
+      type: object
+      properties:
+        id: {type: integer, nullable: true, description: ID do lançamento financeiro; null para consolidado de caixa. Nunca usar idCaixa para editar ou excluir um lançamento.}
+        idUsuario: {type: integer}
+        nomeUsuario: {type: string, description: Responsável pelo fechamento do caixa ou pelo lançamento manual. Legado sem usuário de fechamento usa quem abriu.}
+        origem: {type: string, enum: [MANUAL, ESTOQUE, CAIXA], readOnly: true}
+        idCaixa: {type: integer, nullable: true, readOnly: true, description: Caixa FECHADO de origem do consolidado. Null em lançamentos manuais ou de estoque.}
+        idPedido: {type: integer, nullable: true, description: Campo legado preservado. Cópias de pagamentos em movimentacao_financeira continuam excluídas da consulta.}
+        idMovimentacaoEstoque: {type: integer, nullable: true, description: Somente gerado pela entrada de compra; bloqueia edição e exclusão.}
+        tipo: {type: string, enum: [ENTRADA, SAIDA]}
+        categoria: {type: string, example: Fechamento de caixa}
+        descricao: {type: string, nullable: true, example: 'Recebimentos do caixa #3'}
+        valor: {type: number, minimum: 0.01, multipleOf: 0.01, description: Consolidado é a soma dos recebimentos do caixa; pode superar o limite de um lançamento individual.}
+        dataHora: {type: string, example: '2026-11-02 18:00:00', description: Data/hora local do fechamento para CAIXA ou do lançamento para MANUAL/ESTOQUE.}
+        recorrente: {type: boolean}
+        quantidadeMeses: {type: integer, nullable: true}
     FinanceiroConsulta:
       type: object
       required: [movimentacoes, totais]
@@ -2294,11 +2311,13 @@ components:
           items: {$ref: '#/components/schemas/Financeiro'}
         totais:
           type: object
-          required: [entradas, saidas, saldo]
+          required: [entradas, saidas, saldo, recebimentosCaixas, entradasAvulsas]
           properties:
-            entradas: {type: number, multipleOf: 0.01}
+            entradas: {type: number, multipleOf: 0.01, description: Recebimentos de caixas fechados + entradas avulsas que atendem aos filtros.}
             saidas: {type: number, multipleOf: 0.01}
             saldo: {type: number, multipleOf: 0.01, description: Entradas menos saídas; pode ser negativo.}
+            recebimentosCaixas: {type: number, multipleOf: 0.01, description: Soma dos recebimentos consolidados dos caixas fechados no período.}
+            entradasAvulsas: {type: number, multipleOf: 0.01, description: Entradas manuais do período.}
     QuitacaoEntrada:
       type: object
       required: [forma]

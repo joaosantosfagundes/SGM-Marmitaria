@@ -6,12 +6,37 @@ const CONSULTA = `select m.*, u.nome as nome_usuario from movimentacao_financeir
 
 export default class FinanceiroRepository extends Repository {
     async listar({ dataInicio, dataFim, tipo, categoria }) {
-        let sql = `${CONSULTA} where m.id_pedido is null`, valores = [];
-        if (dataInicio !== undefined) { sql += ' and m.data_hora >= ?'; valores.push(dataInicio); }
-        if (dataFim !== undefined) { sql += ' and m.data_hora < date_add(?, interval 1 day)'; valores.push(dataFim); }
-        if (tipo !== undefined) { sql += ' and m.tipo = ?'; valores.push(tipo); }
-        if (categoria !== undefined) { sql += ' and m.categoria = ?'; valores.push(categoria); }
-        sql += ' order by m.data_hora desc, m.id_movimentacao_financeira desc';
+        let sql = `select f.*, u.nome as nome_usuario from (
+            select m.id_movimentacao_financeira, m.id_usuario, m.id_pedido, m.id_movimentacao_estoque,
+                m.tipo, m.categoria, m.descricao, m.valor, m.data_hora, m.recorrente, m.quantidade_meses,
+                null as id_caixa
+            from movimentacao_financeira m where m.id_pedido is null
+            union all
+            select null, coalesce(c.id_usuario_fechamento, c.id_usuario_abertura), null, null,
+                'ENTRADA', 'Fechamento de caixa', concat('Recebimentos do caixa #', c.id_caixa),
+                sum(r.valor), c.data_fechamento, 0, null, c.id_caixa
+            from caixa c inner join (
+                select p.id_caixa, pg.valor
+                from pagamento pg inner join pedido p on p.id_pedido = pg.id_pedido
+                where pg.status = 'PAGO' and p.status <> 'CANCELADO'
+                    and pg.forma_pagamento in ('DINHEIRO', 'PIX', 'DEBITO', 'CREDITO')
+                union all
+                select pg.id_caixa_quitacao, pg.valor
+                from pagamento pg inner join pedido p on p.id_pedido = pg.id_pedido
+                where pg.status = 'PAGO' and p.status <> 'CANCELADO' and pg.forma_pagamento = 'FIADO'
+                    and pg.data_quitacao is not null and pg.id_caixa_quitacao is not null
+                    and pg.id_usuario_quitacao is not null
+                    and pg.forma_quitacao in ('DINHEIRO', 'PIX', 'DEBITO', 'CREDITO')
+            ) r on r.id_caixa = c.id_caixa
+            where c.status = 'FECHADO' and c.data_fechamento is not null
+            group by c.id_caixa, c.id_usuario_fechamento, c.id_usuario_abertura, c.data_fechamento
+            having sum(r.valor) > 0
+            ) f inner join usuario u on u.id_usuario = f.id_usuario where 1 = 1`, valores = [];
+        if (dataInicio !== undefined) { sql += ' and f.data_hora >= ?'; valores.push(dataInicio); }
+        if (dataFim !== undefined) { sql += ' and f.data_hora < date_add(?, interval 1 day)'; valores.push(dataFim); }
+        if (tipo !== undefined) { sql += ' and f.tipo = ?'; valores.push(tipo); }
+        if (categoria !== undefined) { sql += ' and f.categoria = ?'; valores.push(categoria); }
+        sql += ' order by f.data_hora desc, f.id_caixa desc, f.id_movimentacao_financeira desc';
         let rows = await this.banco.ExecutaComando(sql, valores);
         return rows.map(row => MovimentacaoFinanceiraEntity.toMap(row));
     }
