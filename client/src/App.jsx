@@ -21,6 +21,7 @@ import PedidosPage from './pages/pedidos/PedidosPage.jsx';
 import FiadoPage from './pages/fiado/FiadoPage.jsx';
 import PagamentosPage from './pages/pagamento/PagamentosPage.jsx';
 import FinanceiroPage from './pages/financeiro/FinanceiroPage.jsx';
+import RelatoriosPage from './pages/relatorios/RelatoriosPage.jsx';
 
 import { pages } from './lib/menu.js';
 
@@ -39,6 +40,7 @@ const TELAS_PRONTAS = {
     '/fiado': FiadoPage,
     '/pagamento': PagamentosPage,
     '/financeiro': FinanceiroPage,
+    '/relatorios': RelatoriosPage,
 
 };
 
@@ -61,7 +63,7 @@ export default function App() {
             <Route path="/caixa/abrir" element={<Navigate to="/caixa" replace />} />
             <Route path="/caixa/fechar" element={<Navigate to="/caixa" replace />} />
 
-            {Object.entries(pages).map(([path, { title, description }]) => {
+            {Object.entries(pages).map(([path, { title, description, perfis }]) => {
                 const TelaPronta = TELAS_PRONTAS[path];
 
                 return (
@@ -69,7 +71,7 @@ export default function App() {
                         key={path}
                         path={path}
                         element={
-                            <ProtectedRoute>
+                            <ProtectedRoute perfis={perfis}>
                                 <AppShell>
                                     {TelaPronta
                                         ? <TelaPronta />

@@ -51,6 +51,8 @@ tags:
     description: Criação de pedido com pagamento e consulta; sem baixa de estoque
   - name: Pagamentos
     description: Consulta e quitação de fiado, somente ADMIN e ATENDENTE
+  - name: Relatórios
+    description: Vendas, estoque e produtos mais vendidos para ADMIN e ATENDENTE
 paths:
   /login:
     post:
@@ -2061,6 +2063,84 @@ paths:
               schema: {$ref: '#/components/schemas/Erro'}
         '500':
           $ref: '#/components/responses/ErroInterno'
+  /relatorio/vendas:
+    get:
+      tags: [Relatórios]
+      operationId: relatorioVendas
+      summary: Consultar vendas e pedidos pela data do pedido
+      description: >-
+        ADMIN e ATENDENTE. Agrega pedidos pela data de lançamento em UTC−3, por dia, forma original
+        de pagamento, tipo de atendimento e status. Cancelados têm contagem e valor separados.
+        O total vendido e o ticket médio incluem fiado pendente, apresentado também como valor a receber.
+        Pedidos sem pagamento ficam no grupo SEM_PAGAMENTO. Para registros legados com vários pagamentos,
+        a forma vem do primeiro pagamento registrado.
+      parameters:
+        - $ref: '#/components/parameters/RelatorioDataInicio'
+        - $ref: '#/components/parameters/RelatorioDataFim'
+      responses:
+        '200':
+          description: Resumo e agrupamentos das vendas no período.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RelatorioVendas'}
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /relatorio/estoque:
+    get:
+      tags: [Relatórios]
+      operationId: relatorioEstoque
+      summary: Consultar saldos atuais e movimentações por insumo
+      description: >-
+        ADMIN e ATENDENTE. Retorna o saldo atual e o mínimo de cada insumo. As entradas de compra, perdas
+        e ajustes de entrada e saída são somados separadamente no período. As quantidades usam a unidade do insumo.
+      parameters:
+        - $ref: '#/components/parameters/RelatorioDataInicio'
+        - $ref: '#/components/parameters/RelatorioDataFim'
+      responses:
+        '200':
+          description: Saldos atuais e totais de movimentação por insumo.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RelatorioEstoque'}
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /relatorio/produtos-mais-vendidos:
+    get:
+      tags: [Relatórios]
+      operationId: relatorioProdutosMaisVendidos
+      summary: Consultar o ranking de produtos e adicionais vendidos
+      description: >-
+        ADMIN e ATENDENTE. Usa pedidos válidos pela data de lançamento. Cada lista contém as quantidades
+        e os subtotais históricos agregados por produto ou adicional, ordenados por quantidade decrescente.
+      parameters:
+        - $ref: '#/components/parameters/RelatorioDataInicio'
+        - $ref: '#/components/parameters/RelatorioDataFim'
+      responses:
+        '200':
+          description: Listas de produtos e adicionais vendidos no período.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RelatorioProdutosMaisVendidos'}
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
 components:
   securitySchemes:
     cookieAuth:
@@ -2069,6 +2149,18 @@ components:
       name: token
       description: Cookie JWT httpOnly criado por POST /login. Faça login pela operação; o navegador envia o cookie automaticamente. Não é preenchido manualmente no botão Authorize.
   parameters:
+    RelatorioDataInicio:
+      name: dataInicio
+      in: query
+      description: Primeiro dia incluído. Sem datas, a consulta usa o dia atual em UTC−3. Uma data sozinha seleciona aquele dia.
+      schema: {type: string, format: date}
+      example: '2026-11-05'
+    RelatorioDataFim:
+      name: dataFim
+      in: query
+      description: Último dia incluído, até o fim do dia em UTC−3. Deve ser igual ou posterior à data inicial.
+      schema: {type: string, format: date}
+      example: '2026-11-06'
     Id:
       name: id
       in: path
@@ -2267,6 +2359,83 @@ components:
               - {nome: Ovo, grupo: Mistura}
             adicionais: [3, 5]
   schemas:
+    RelatorioPeriodo:
+      type: object
+      required: [dataInicio, dataFim]
+      properties:
+        dataInicio: {type: string, format: date}
+        dataFim: {type: string, format: date}
+    RelatorioTotaisVendas:
+      type: object
+      required: [quantidadePedidos, quantidadeVendidos, quantidadeCancelados, totalVendido, totalCancelado, fiadoPendente, ticketMedio]
+      properties:
+        quantidadePedidos: {type: integer, description: Total de pedidos incluindo cancelados.}
+        quantidadeVendidos: {type: integer, description: Pedidos válidos incluindo fiado pendente.}
+        quantidadeCancelados: {type: integer}
+        totalVendido: {type: number, description: Soma do valor dos pedidos válidos em reais.}
+        totalCancelado: {type: number, description: Valor original dos pedidos cancelados em reais.}
+        fiadoPendente: {type: number, description: Parcela do total vendido ainda a receber por fiado.}
+        ticketMedio: {type: number, description: Valor médio dos pedidos válidos arredondado para centavos.}
+    RelatorioGrupoVendas:
+      allOf:
+        - $ref: '#/components/schemas/RelatorioTotaisVendas'
+        - type: object
+          required: [chave]
+          properties:
+            chave: {type: string, description: 'Dia em AAAA-MM-DD ou código da forma de pagamento, atendimento ou status.', example: '2026-11-05'}
+    RelatorioVendas:
+      type: object
+      required: [periodo, resumo, porDia, porFormaPagamento, porTipoAtendimento, porStatus]
+      properties:
+        periodo: {$ref: '#/components/schemas/RelatorioPeriodo'}
+        resumo: {$ref: '#/components/schemas/RelatorioTotaisVendas'}
+        porDia:
+          type: array
+          items: {$ref: '#/components/schemas/RelatorioGrupoVendas'}
+        porFormaPagamento:
+          type: array
+          items: {$ref: '#/components/schemas/RelatorioGrupoVendas'}
+        porTipoAtendimento:
+          type: array
+          items: {$ref: '#/components/schemas/RelatorioGrupoVendas'}
+        porStatus:
+          type: array
+          items: {$ref: '#/components/schemas/RelatorioGrupoVendas'}
+    RelatorioEstoque:
+      type: object
+      required: [periodo, insumos]
+      properties:
+        periodo: {$ref: '#/components/schemas/RelatorioPeriodo'}
+        insumos:
+          type: array
+          items:
+            type: object
+            required: [insumo, entradas, perdas, ajustesEntrada, ajustesSaida]
+            properties:
+              insumo: {$ref: '#/components/schemas/Estoque'}
+              entradas: {type: number, description: Quantidade somada das entradas de compra no período.}
+              perdas: {type: number}
+              ajustesEntrada: {type: number}
+              ajustesSaida: {type: number}
+    RelatorioItemRanking:
+      type: object
+      required: [id, nome, quantidade, totalVendido]
+      properties:
+        id: {type: integer, description: ID do produto ou adicional conforme a lista.}
+        nome: {type: string}
+        quantidade: {type: integer}
+        totalVendido: {type: number, description: Soma dos subtotais históricos em reais.}
+    RelatorioProdutosMaisVendidos:
+      type: object
+      required: [periodo, produtos, adicionais]
+      properties:
+        periodo: {$ref: '#/components/schemas/RelatorioPeriodo'}
+        produtos:
+          type: array
+          items: {$ref: '#/components/schemas/RelatorioItemRanking'}
+        adicionais:
+          type: array
+          items: {$ref: '#/components/schemas/RelatorioItemRanking'}
     FinanceiroDados:
       type: object
       properties:
