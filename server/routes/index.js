@@ -15,6 +15,7 @@ import estoqueRouter from './estoqueRoute.js';
 import pedidoRouter from './pedidoRoute.js';
 import pagamentoRouter from './pagamentoRoute.js';
 import financeiroRouter from './financeiroRoute.js';
+import relatorioRouter from './relatorioRoute.js';
 
 const router = express.Router();
 
@@ -33,5 +34,6 @@ router.use('/estoque', estoqueRouter);
 router.use('/pedido', pedidoRouter);
 router.use('/pagamento', pagamentoRouter);
 router.use('/financeiro', financeiroRouter);
+router.use('/relatorio', relatorioRouter);
 
 export default router;

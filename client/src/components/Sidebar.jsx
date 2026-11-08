@@ -1,12 +1,21 @@
 import { Link, useLocation } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
-import { menu } from "../lib/menu.js";
+import { getPageByPath, menu } from "../lib/menu.js";
+import { useAuth } from "../context/AuthContext.jsx";
 
 export default function Sidebar() {
   const [open, setOpen] = useState(false);
+  const { usuario } = useAuth();
   const location = useLocation();
   const activePath = location.pathname;
   const navRef = useRef(null);
+  const gruposVisiveis = menu.map(group => ({
+    ...group,
+    items: group.items.filter(item => {
+      const perfis = getPageByPath(item.href)?.perfis;
+      return !perfis || perfis.includes(usuario?.perfil);
+    }),
+  })).filter(group => group.items.length);
 
   useEffect(() => {
     navRef.current?.querySelector(".nav-link.active")?.scrollIntoView({ block: "nearest", inline: "nearest" });
@@ -28,7 +37,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="pt-3" ref={navRef}>
-        {menu.map((group) => (
+        {gruposVisiveis.map((group) => (
           <div key={group.label} className="mb-3">
             <div className="px-4 py-2 text-secondary small">{group.label}</div>
             {group.items.map((item) => (

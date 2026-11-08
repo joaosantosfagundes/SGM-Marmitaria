@@ -1,0 +1,42 @@
+.relatorios-page {
+  min-width: 0;
+
+  .table-responsive { overflow-wrap: normal; }
+  .relatorio-grafico-area { max-width: 650px; margin-inline: auto; }
+}
+
+@media print {
+  @page relatorio { size: A4; margin: 12mm; }
+
+  html:has(.relatorios-page), body:has(.relatorios-page) {
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  body:has(.relatorios-page) #root > :not(#content),
+  .relatorios-page .relatorio-controles { display: none !important; }
+
+  body:has(.relatorios-page) #content {
+    min-height: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+
+    > .container-fluid { padding: 0; }
+  }
+
+  .relatorios-page {
+    page: relatorio;
+    color: black;
+    font-size: 10pt;
+
+    .page-card { padding: .5rem 0 !important; border: 0; box-shadow: none; }
+    .table-responsive { overflow: visible !important; }
+    .relatorio-indicadores > div { flex: 1 1 18%; width: auto; }
+    .relatorio-indicadores > div, .relatorio-grafico, tr { break-inside: avoid; }
+    .relatorio-grafico { print-color-adjust: exact; }
+    h2, h3 { break-after: avoid; }
+    thead { display: table-header-group; }
+    th, td { white-space: normal !important; overflow-wrap: anywhere; }
+  }
+}

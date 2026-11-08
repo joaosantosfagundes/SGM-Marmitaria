@@ -106,13 +106,44 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 - [x] RF_F6 — Fiado por cliente e quitação individual ou em lote, vinculada ao caixa do recebimento
 - [x] RF_F7 — Entradas e saídas manuais, recebimentos consolidados por caixa fechado, filtros e totais, recorrência informativa e compra de estoque com despesa atômica
 - [x] RF_F9 — Caixa: Abrir/Fechar, histórico, resumo por forma de pagamento e conferência do dinheiro físico com falta/sobra
-- [ ] RF_S1–S5 — Relatórios
+- [x] RF_S1 — Vendas e pedidos por data do pedido, com ticket médio e fiado a receber
+- [x] RF_S2 — Saldos atuais e resumo das movimentações de estoque
+- [ ] RF_S3 — Relatório financeiro
+- [x] RF_S4 — Ranking de produtos e adicionais por quantidade ou valor
+- [ ] RF_S5 — Relatório de fiado
 - [ ] Deploy
 
 ### Ajustes de interface
 
 - [x] Confirmações em diálogo próprio com suporte a teclado, foco controlado e notificações no padrão visual do sistema
 - [x] Formulário de adicionais em card acima da lista, no padrão dos demais cadastros
+
+## Relatórios de operação (RF_S1, RF_S2 e RF_S4)
+
+Abra `/relatorios` com o perfil ADMIN ou ATENDENTE. As abas compartilham o período, que começa no dia
+atual da operação (UTC−3). O botão **Imprimir** abre a impressão do navegador em A4 com o relatório
+da aba ativa, o período consultado e as tabelas. A navegação e os controles ficam fora da folha.
+
+- **Vendas e pedidos** usa `pedido.data_hora` e apresenta quantidades e valores por dia, forma original
+  de pagamento, tipo de atendimento e status. Cancelados têm contagem e valor separados. O ticket médio
+  divide o total vendido pelos pedidos válidos. O fiado pendente integra o vendido e aparece como valor
+  a receber. O Financeiro usa a data de fechamento do caixa para consolidar recebimentos.
+- **Estoque** mostra o saldo atual, o mínimo e o destaque quando o saldo fica abaixo dele. O filtro de
+  período afeta as quantidades de compra, perda e ajustes de entrada e saída por insumo.
+- **Produtos mais vendidos** permite ordenar por quantidade ou valor vendido. Produtos e adicionais são
+  agregados separadamente pelos subtotais históricos de pedidos válidos.
+
+No Swagger, faça login como ADMIN ou ATENDENTE e abra as rotas GET `/relatorio/vendas`, `/relatorio/estoque`
+e `/relatorio/produtos-mais-vendidos`. Use `dataInicio` e `dataFim` no formato `AAAA-MM-DD` com as duas
+bordas inclusivas. Um único parâmetro seleciona aquele dia. O perfil COZINHA recebe 403.
+Pedidos legados sem pagamento ficam em **Sem pagamento registrado**. Se houver mais de um pagamento legado
+para o mesmo pedido, a classificação usa o primeiro, como no detalhe do pedido.
+
+As consultas usam o esquema atual e dispensam migrations no banco local e no Railway.
+Execute `node --test server/tests/relatorio.test.js` com Node.js 22.13+ para rodar as consultas em SQLite
+em memória com dados de teste. A mesma suíte pode usar MySQL 8 com `SGM_RELATORIO_MYSQL_TEST_PORT` apontando
+para uma instância local descartável com usuário `root` de teste sem senha. Nesse modo a suíte cria e remove
+um esquema exclusivo de fixtures.
 
 ## Resumo financeiro e conferência do caixa
 

@@ -33,8 +33,6 @@ export const menu = [
   {
     label: "Relatórios",
     items: [
-      // RF_S1–S5: por enquanto uma entrada só; quando implementar, vira
-      // /relatorios/vendas, /relatorios/estoque etc. (sub-itens).
       { href: "/relatorios", label: "Relatórios", icon: "ti-chart-bar" },
     ],
   },
@@ -58,7 +56,7 @@ export const pages = {
   "/financeiro": { title: "Financeiro", description: "Entradas, despesas e movimentações financeiras." },
   "/fiado": { title: "Fiado", description: "Consulta e quitação de valores em aberto." },
   "/pagamento": { title: "Pagamento", description: "Registro de pagamentos dos pedidos." },
-  "/relatorios": { title: "Relatórios", description: "Relatórios gerenciais (RF_S1–S5)." },
+  "/relatorios": { title: "Relatórios", description: "Relatórios de operação.", perfis: ["ADMIN", "ATENDENTE"] },
   "/usuarios": { title: "Usuários", description: "Cadastro e gerenciamento de usuários do sistema." },
 };
 

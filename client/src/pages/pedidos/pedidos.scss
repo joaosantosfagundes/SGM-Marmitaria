@@ -30,11 +30,16 @@
 .pedido-comanda { display: none; }
 
 @media print {
-  @page { size: 80mm auto; margin: 4mm; }
+  @page comanda { margin: 4mm; }
 
-  html, body { height: auto !important; overflow: visible !important; background: white !important; }
-  body > :not(.pedido-comanda) { display: none !important; }
+  html:has(> body > .pedido-comanda), body:has(> .pedido-comanda) {
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+  body:has(> .pedido-comanda) > :not(.pedido-comanda) { display: none !important; }
   body > .pedido-comanda {
+    page: comanda;
     display: block !important;
     width: 72mm;
     max-width: 100%;
