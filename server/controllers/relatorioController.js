@@ -19,9 +19,25 @@ export default class RelatorioController {
         }
     }
 
+    async financeiro(req, res) {
+        try {
+            return res.status(200).json(await this.#service.financeiro(req.query));
+        } catch (error) {
+            return this.#tratarErro(res, error);
+        }
+    }
+
     async produtosMaisVendidos(req, res) {
         try {
             return res.status(200).json(await this.#service.produtosMaisVendidos(req.query));
+        } catch (error) {
+            return this.#tratarErro(res, error);
+        }
+    }
+
+    async fiado(req, res) {
+        try {
+            return res.status(200).json(await this.#service.fiado(req.query));
         } catch (error) {
             return this.#tratarErro(res, error);
         }

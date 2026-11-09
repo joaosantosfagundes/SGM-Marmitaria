@@ -1,8 +1,12 @@
 import RelatorioRepository from '../repositories/relatorioRepository.js';
+import FinanceiroRepository from '../repositories/financeiroRepository.js';
+import { centavos } from '../utils/pedidoUtils.js';
 import { validarData } from './cardapioService.js';
+import { calcularTotaisFinanceiro } from './financeiroService.js';
 
 export default class RelatorioService {
     #repo = new RelatorioRepository();
+    #financeiro = new FinanceiroRepository();
 
     #periodo({ dataInicio, dataFim } = {}) {
         let hoje = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -37,6 +41,44 @@ export default class RelatorioService {
     async estoque(filtros) {
         let { periodo, limites } = this.#periodo(filtros);
         return { periodo, insumos: await this.#repo.estoque(limites) };
+    }
+
+    async financeiro(filtros) {
+        let { periodo } = this.#periodo(filtros);
+        let porCategoria = [], porFormaPagamento = [];
+        let entradas = 0, saidas = 0, recebimentosCaixas = 0, fiadoAReceber = 0;
+
+        for (let { grupo, chave, tipo, valor } of await this.#financeiro.resumir(periodo)) {
+            if (grupo === 'categoria') {
+                porCategoria.push({ categoria: chave, tipo, valor });
+                if (tipo === 'ENTRADA') entradas += centavos(valor);
+                else saidas += centavos(valor);
+            } else if (grupo === 'forma') {
+                porFormaPagamento.push({ forma: chave, valor });
+                recebimentosCaixas += centavos(valor);
+            } else {
+                fiadoAReceber = valor;
+            }
+        }
+
+        return { periodo, totais: calcularTotaisFinanceiro(entradas, saidas, recebimentosCaixas),
+            porCategoria, porFormaPagamento, fiadoAReceber };
+    }
+
+    async fiado(filtros) {
+        let { periodo, limites } = this.#periodo(filtros);
+        let clientes = new Map();
+        for (let { pedido, ...resumo } of await this.#repo.fiado(limites)) {
+            let cliente = clientes.get(resumo.idCliente);
+            if (!cliente) {
+                cliente = { ...resumo, pendentes: [], quitados: [] };
+                clientes.set(cliente.idCliente, cliente);
+            }
+            if (pedido.status === 'PENDENTE') cliente.pendentes.push(pedido);
+            else cliente.quitados.push(pedido);
+        }
+
+        return { periodo, clientes: [...clientes.values()] };
     }
 
     async produtosMaisVendidos(filtros) {

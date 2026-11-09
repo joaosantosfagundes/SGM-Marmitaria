@@ -108,9 +108,9 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 - [x] RF_F9 — Caixa: Abrir/Fechar, histórico, resumo por forma de pagamento e conferência do dinheiro físico com falta/sobra
 - [x] RF_S1 — Vendas e pedidos por data do pedido, com ticket médio e fiado a receber
 - [x] RF_S2 — Saldos atuais e resumo das movimentações de estoque
-- [ ] RF_S3 — Relatório financeiro
+- [x] RF_S3 — Relatório financeiro por categoria e forma de pagamento, com recebimentos de caixas fechados
 - [x] RF_S4 — Ranking de produtos e adicionais por quantidade ou valor
-- [ ] RF_S5 — Relatório de fiado
+- [x] RF_S5 — Fiado por cliente, com pendências atuais e quitações do período
 - [ ] Deploy
 
 ### Ajustes de interface
@@ -118,7 +118,7 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 - [x] Confirmações em diálogo próprio com suporte a teclado, foco controlado e notificações no padrão visual do sistema
 - [x] Formulário de adicionais em card acima da lista, no padrão dos demais cadastros
 
-## Relatórios de operação (RF_S1, RF_S2 e RF_S4)
+## Relatórios (RF_S1–RF_S5)
 
 Abra `/relatorios` com o perfil ADMIN ou ATENDENTE. As abas compartilham o período, que começa no dia
 atual da operação (UTC−3). O botão **Imprimir** abre a impressão do navegador em A4 com o relatório
@@ -130,12 +130,20 @@ da aba ativa, o período consultado e as tabelas. A navegação e os controles f
   a receber. O Financeiro usa a data de fechamento do caixa para consolidar recebimentos.
 - **Estoque** mostra o saldo atual, o mínimo e o destaque quando o saldo fica abaixo dele. O filtro de
   período afeta as quantidades de compra, perda e ajustes de entrada e saída por insumo.
+- **Financeiro** é exclusivo de ADMIN e usa os mesmos lançamentos da tela Financeiro. Consolida as
+  vendas pagas e as quitações pela data de fechamento do caixa que recebeu o dinheiro. Mostra entradas,
+  saídas e saldo do período, lançamentos por categoria e recebimentos pela forma efetiva de pagamento.
+  O fiado a receber é o saldo atual das pendências e aparece à parte do saldo financeiro.
 - **Produtos mais vendidos** permite ordenar por quantidade ou valor vendido. Produtos e adicionais são
   agregados separadamente pelos subtotais históricos de pedidos válidos.
+- **Fiado por cliente** lista as pendências atuais e os pedidos quitados no período, com totais por
+  cliente, contagem de pedidos pendentes e data do fiado pendente mais antigo. O período usa a data
+  da quitação e inclui clientes que quitaram no período mesmo com saldo em aberto zerado.
 
-No Swagger, faça login como ADMIN ou ATENDENTE e abra as rotas GET `/relatorio/vendas`, `/relatorio/estoque`
-e `/relatorio/produtos-mais-vendidos`. Use `dataInicio` e `dataFim` no formato `AAAA-MM-DD` com as duas
-bordas inclusivas. Um único parâmetro seleciona aquele dia. O perfil COZINHA recebe 403.
+No Swagger, faça login como ADMIN ou ATENDENTE e abra as rotas GET `/relatorio/vendas`, `/relatorio/estoque`,
+`/relatorio/produtos-mais-vendidos` e `/relatorio/fiado`. Com ADMIN, consulte também `/relatorio/financeiro`.
+Use `dataInicio` e `dataFim` no formato `AAAA-MM-DD` com as duas bordas inclusivas. Um único parâmetro
+seleciona aquele dia. COZINHA recebe 403 em todos os relatórios e ATENDENTE recebe 403 no financeiro.
 Pedidos legados sem pagamento ficam em **Sem pagamento registrado**. Se houver mais de um pagamento legado
 para o mesmo pedido, a classificação usa o primeiro, como no detalhe do pedido.
 
@@ -236,7 +244,7 @@ O valor da entrada é o total recebido, não o dinheiro contado na gaveta: não 
 diferenças de conferência. Por exemplo, R$ 150 de abertura + R$ 300 de recebimentos geram uma entrada de R$ 300.
 O saldo do período é entradas menos saídas; não representa o dinheiro físico da gaveta.
 Os lançamentos manuais não exigem caixa aberto nem alteram o dinheiro esperado na gaveta: não são sangrias/suprimentos.
-Esta integração não entrega os demais recursos dos relatórios RF_S1–S5.
+O relatório RF_S3 reutiliza essa consulta e detalha os totais por categoria e forma de pagamento.
 
 - ADMIN cria, edita e exclui lançamentos manuais. ATENDENTE apenas consulta; COZINHA não acessa o financeiro.
 - `GET /financeiro?dataInicio=2026-11-01&dataFim=2026-11-30&tipo=SAIDA&categoria=Aluguel`

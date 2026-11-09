@@ -52,7 +52,7 @@ tags:
   - name: Pagamentos
     description: Consulta e quitação de fiado, somente ADMIN e ATENDENTE
   - name: Relatórios
-    description: Vendas, estoque e produtos mais vendidos para ADMIN e ATENDENTE
+    description: Vendas, estoque, ranking e fiado para ADMIN e ATENDENTE. Financeiro exclusivo de ADMIN.
 paths:
   /login:
     post:
@@ -2116,6 +2116,39 @@ paths:
           $ref: '#/components/responses/SemPermissao'
         '500':
           $ref: '#/components/responses/ErroInterno'
+  /relatorio/financeiro:
+    get:
+      tags: [Relatórios]
+      operationId: relatorioFinanceiro
+      summary: Consultar entradas, saídas e recebimentos por forma de pagamento
+      description: >-
+        Apenas ADMIN. Usa os mesmos lançamentos da tela Financeiro, com uma entrada por caixa fechado
+        que recebeu vendas pagas ou quitações de fiado. A quitação pertence ao caixa que recebeu o valor.
+        O período usa a data de fechamento dos caixas e a data dos demais lançamentos, em UTC−3.
+        A receita usa o valor do pagamento. Abertura, troco e diferenças de conferência ficam fora dos totais.
+        O fiado pendente atual é informativo e aparece à parte do saldo do período.
+      parameters:
+        - $ref: '#/components/parameters/RelatorioDataInicio'
+        - $ref: '#/components/parameters/RelatorioDataFim'
+      responses:
+        '200':
+          description: Totais do período, lançamentos por categoria, recebimentos por forma e fiado em aberto.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RelatorioFinanceiro'}
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '409':
+          description: Totais acima da precisão monetária suportada.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Erro'}
+        '500':
+          $ref: '#/components/responses/ErroInterno'
   /relatorio/produtos-mais-vendidos:
     get:
       tags: [Relatórios]
@@ -2133,6 +2166,32 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/RelatorioProdutosMaisVendidos'}
+        '400':
+          $ref: '#/components/responses/DadosInvalidos'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+  /relatorio/fiado:
+    get:
+      tags: [Relatórios]
+      operationId: relatorioFiado
+      summary: Consultar fiados pendentes e quitados por cliente
+      description: >-
+        ADMIN e ATENDENTE. Inclui pedidos válidos com fiado atualmente pendente ou quitado no período.
+        O filtro de período usa a data da quitação, em UTC−3. Clientes que quitaram no período aparecem
+        mesmo com saldo em aberto zerado.
+      parameters:
+        - $ref: '#/components/parameters/RelatorioDataInicio'
+        - $ref: '#/components/parameters/RelatorioDataFim'
+      responses:
+        '200':
+          description: Totais por cliente e listas de pedidos pendentes e quitados.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RelatorioFiado'}
         '400':
           $ref: '#/components/responses/DadosInvalidos'
         '401':
@@ -2417,6 +2476,30 @@ components:
               perdas: {type: number}
               ajustesEntrada: {type: number}
               ajustesSaida: {type: number}
+    RelatorioFinanceiro:
+      type: object
+      required: [periodo, totais, porCategoria, porFormaPagamento, fiadoAReceber]
+      properties:
+        periodo: {$ref: '#/components/schemas/RelatorioPeriodo'}
+        totais: {$ref: '#/components/schemas/FinanceiroTotais'}
+        porCategoria:
+          type: array
+          items:
+            type: object
+            required: [categoria, tipo, valor]
+            properties:
+              categoria: {type: string, example: Fechamento de caixa}
+              tipo: {type: string, enum: [ENTRADA, SAIDA]}
+              valor: {type: number, multipleOf: 0.01, example: 176.25}
+        porFormaPagamento:
+          type: array
+          items:
+            type: object
+            required: [forma, valor]
+            properties:
+              forma: {type: string, enum: [DINHEIRO, PIX, DEBITO, CREDITO], example: PIX}
+              valor: {type: number, multipleOf: 0.01, example: 76}
+        fiadoAReceber: {type: number, multipleOf: 0.01, description: Saldo atual do fiado pendente apresentado à parte dos totais., example: 44.75}
     RelatorioItemRanking:
       type: object
       required: [id, nome, quantidade, totalVendido]
@@ -2436,6 +2519,40 @@ components:
         adicionais:
           type: array
           items: {$ref: '#/components/schemas/RelatorioItemRanking'}
+    RelatorioFiado:
+      type: object
+      required: [periodo, clientes]
+      properties:
+        periodo: {$ref: '#/components/schemas/RelatorioPeriodo'}
+        clientes:
+          type: array
+          items:
+            type: object
+            required: [idCliente, nome, totalEmAberto, quantidadePendentes, fiadoMaisAntigo, totalQuitadoNoPeriodo, pendentes, quitados]
+            properties:
+              idCliente: {type: integer, example: 1}
+              nome: {type: string, example: Ana}
+              totalEmAberto: {type: number, multipleOf: 0.01, example: 44.75}
+              quantidadePendentes: {type: integer, example: 2}
+              fiadoMaisAntigo: {type: string, nullable: true, description: Data e hora do fiado pendente mais antigo em UTC−3., example: '2026-11-05 18:00:00'}
+              totalQuitadoNoPeriodo: {type: number, multipleOf: 0.01, example: 17.75}
+              pendentes:
+                type: array
+                items: {$ref: '#/components/schemas/RelatorioPedidoFiado'}
+              quitados:
+                type: array
+                items: {$ref: '#/components/schemas/RelatorioPedidoFiado'}
+    RelatorioPedidoFiado:
+      type: object
+      required: [idPagamento, idPedido, status, dataHora, valor, dataQuitacao, formaQuitacao]
+      properties:
+        idPagamento: {type: integer, example: 16}
+        idPedido: {type: integer, example: 16}
+        status: {type: string, enum: [PENDENTE, PAGO]}
+        dataHora: {type: string, description: Data e hora do lançamento do fiado em UTC−3., example: '2026-11-08 15:15:00'}
+        valor: {type: number, multipleOf: 0.01, example: 17.75}
+        dataQuitacao: {type: string, nullable: true, example: '2026-11-15 23:59:59'}
+        formaQuitacao: {type: string, nullable: true, enum: [DINHEIRO, PIX, DEBITO, CREDITO, null], example: CREDITO}
     FinanceiroDados:
       type: object
       properties:
@@ -2478,15 +2595,16 @@ components:
         movimentacoes:
           type: array
           items: {$ref: '#/components/schemas/Financeiro'}
-        totais:
-          type: object
-          required: [entradas, saidas, saldo, recebimentosCaixas, entradasAvulsas]
-          properties:
-            entradas: {type: number, multipleOf: 0.01, description: Recebimentos de caixas fechados + entradas avulsas que atendem aos filtros.}
-            saidas: {type: number, multipleOf: 0.01}
-            saldo: {type: number, multipleOf: 0.01, description: Entradas menos saídas; pode ser negativo.}
-            recebimentosCaixas: {type: number, multipleOf: 0.01, description: Soma dos recebimentos consolidados dos caixas fechados no período.}
-            entradasAvulsas: {type: number, multipleOf: 0.01, description: Entradas manuais do período.}
+        totais: {$ref: '#/components/schemas/FinanceiroTotais'}
+    FinanceiroTotais:
+      type: object
+      required: [entradas, saidas, saldo, recebimentosCaixas, entradasAvulsas]
+      properties:
+        entradas: {type: number, multipleOf: 0.01, description: Recebimentos de caixas fechados mais entradas avulsas que atendem aos filtros.}
+        saidas: {type: number, multipleOf: 0.01}
+        saldo: {type: number, multipleOf: 0.01, description: Pode ser negativo quando as saídas superam as entradas.}
+        recebimentosCaixas: {type: number, multipleOf: 0.01, description: Soma dos recebimentos consolidados dos caixas fechados no período.}
+        entradasAvulsas: {type: number, multipleOf: 0.01, description: Entradas manuais do período.}
     QuitacaoEntrada:
       type: object
       required: [forma]

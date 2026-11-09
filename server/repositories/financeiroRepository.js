@@ -4,8 +4,20 @@ import MovimentacaoFinanceiraEntity from '../entities/movimentacaoFinanceiraEnti
 const CONSULTA = `select m.*, u.nome as nome_usuario from movimentacao_financeira m
     inner join usuario u on u.id_usuario = m.id_usuario`;
 
+const RECEBIMENTOS_CAIXA = `select p.id_caixa, pg.valor, pg.forma_pagamento as forma
+    from pagamento pg inner join pedido p on p.id_pedido = pg.id_pedido
+    where pg.status = 'PAGO' and p.status <> 'CANCELADO'
+        and pg.forma_pagamento in ('DINHEIRO', 'PIX', 'DEBITO', 'CREDITO')
+    union all
+    select pg.id_caixa_quitacao, pg.valor, pg.forma_quitacao
+    from pagamento pg inner join pedido p on p.id_pedido = pg.id_pedido
+    where pg.status = 'PAGO' and p.status <> 'CANCELADO' and pg.forma_pagamento = 'FIADO'
+        and pg.data_quitacao is not null and pg.id_caixa_quitacao is not null
+        and pg.id_usuario_quitacao is not null
+        and pg.forma_quitacao in ('DINHEIRO', 'PIX', 'DEBITO', 'CREDITO')`;
+
 export default class FinanceiroRepository extends Repository {
-    async listar({ dataInicio, dataFim, tipo, categoria }) {
+    #consultaMovimentacoes({ dataInicio, dataFim, tipo, categoria }, fonteRecebimentos = `(${RECEBIMENTOS_CAIXA})`) {
         let sql = `select f.*, u.nome as nome_usuario from (
             select m.id_movimentacao_financeira, m.id_usuario, m.id_pedido, m.id_movimentacao_estoque,
                 m.tipo, m.categoria, m.descricao, m.valor, m.data_hora, m.recorrente, m.quantidade_meses,
@@ -15,19 +27,7 @@ export default class FinanceiroRepository extends Repository {
             select null, coalesce(c.id_usuario_fechamento, c.id_usuario_abertura), null, null,
                 'ENTRADA', 'Fechamento de caixa', concat('Recebimentos do caixa #', c.id_caixa),
                 sum(r.valor), c.data_fechamento, 0, null, c.id_caixa
-            from caixa c inner join (
-                select p.id_caixa, pg.valor
-                from pagamento pg inner join pedido p on p.id_pedido = pg.id_pedido
-                where pg.status = 'PAGO' and p.status <> 'CANCELADO'
-                    and pg.forma_pagamento in ('DINHEIRO', 'PIX', 'DEBITO', 'CREDITO')
-                union all
-                select pg.id_caixa_quitacao, pg.valor
-                from pagamento pg inner join pedido p on p.id_pedido = pg.id_pedido
-                where pg.status = 'PAGO' and p.status <> 'CANCELADO' and pg.forma_pagamento = 'FIADO'
-                    and pg.data_quitacao is not null and pg.id_caixa_quitacao is not null
-                    and pg.id_usuario_quitacao is not null
-                    and pg.forma_quitacao in ('DINHEIRO', 'PIX', 'DEBITO', 'CREDITO')
-            ) r on r.id_caixa = c.id_caixa
+            from caixa c inner join ${fonteRecebimentos} r on r.id_caixa = c.id_caixa
             where c.status = 'FECHADO' and c.data_fechamento is not null
             group by c.id_caixa, c.id_usuario_fechamento, c.id_usuario_abertura, c.data_fechamento
             having sum(r.valor) > 0
@@ -36,9 +36,33 @@ export default class FinanceiroRepository extends Repository {
         if (dataFim !== undefined) { sql += ' and f.data_hora < date_add(?, interval 1 day)'; valores.push(dataFim); }
         if (tipo !== undefined) { sql += ' and f.tipo = ?'; valores.push(tipo); }
         if (categoria !== undefined) { sql += ' and f.categoria = ?'; valores.push(categoria); }
+        return { sql, valores };
+    }
+
+    async listar(filtros) {
+        let { sql, valores } = this.#consultaMovimentacoes(filtros);
         sql += ' order by f.data_hora desc, f.id_caixa desc, f.id_movimentacao_financeira desc';
         let rows = await this.banco.ExecutaComando(sql, valores);
         return rows.map(row => MovimentacaoFinanceiraEntity.toMap(row));
+    }
+
+    async resumir(periodo) {
+        let { sql, valores } = this.#consultaMovimentacoes(periodo, 'recebimentos');
+        let rows = await this.banco.ExecutaComando(`with recebimentos as (${RECEBIMENTOS_CAIXA}),
+            movimentacoes as (${sql})
+            select 'categoria' as grupo, categoria as chave, tipo, sum(valor) as valor
+            from movimentacoes group by categoria, tipo
+            union all
+            select 'forma', r.forma, null, sum(r.valor)
+            from recebimentos r inner join movimentacoes m on m.id_caixa = r.id_caixa
+            group by r.forma
+            union all
+            select 'fiado', '', null, coalesce(sum(pg.valor), 0)
+            from pagamento pg inner join pedido p on p.id_pedido = pg.id_pedido
+            where pg.forma_pagamento = 'FIADO' and pg.status = 'PENDENTE' and p.status <> 'CANCELADO'
+            order by grupo, chave, tipo`, valores);
+
+        return rows.map(MovimentacaoFinanceiraEntity.toMapResumo);
     }
 
     async obter(id, consultar, bloquear = false) {

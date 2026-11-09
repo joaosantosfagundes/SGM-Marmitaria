@@ -1,16 +1,21 @@
 import { useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../context/AuthContext.jsx';
 import useConsulta from '../pedidos/useConsulta.js';
 import RelatorioVendas from './RelatorioVendas.jsx';
 import RelatorioEstoque from './RelatorioEstoque.jsx';
+import RelatorioFinanceiro from './RelatorioFinanceiro.jsx';
 import RelatorioProdutos from './RelatorioProdutos.jsx';
+import RelatorioFiado from './RelatorioFiado.jsx';
 import { formatarDia, periodoHoje } from './relatorioUtils.js';
 import './relatorios.scss';
 
 const ABAS = [
     { id: 'vendas', titulo: 'Vendas e pedidos', componente: RelatorioVendas },
     { id: 'estoque', titulo: 'Estoque', componente: RelatorioEstoque },
-    { id: 'produtos-mais-vendidos', titulo: 'Produtos mais vendidos', componente: RelatorioProdutos }
+    { id: 'financeiro', titulo: 'Financeiro', componente: RelatorioFinanceiro, apenasAdmin: true },
+    { id: 'produtos-mais-vendidos', titulo: 'Produtos mais vendidos', componente: RelatorioProdutos },
+    { id: 'fiado', titulo: 'Fiado por cliente', componente: RelatorioFiado }
 ];
 
 function ResultadoRelatorio({ aba, periodo }) {
@@ -40,9 +45,12 @@ function ResultadoRelatorio({ aba, periodo }) {
 }
 
 export default function RelatoriosPage() {
-    const [abaAtiva, setAbaAtiva] = useState(0);
+    const { usuario } = useAuth();
+    const [abaAtiva, setAbaAtiva] = useState(ABAS[0].id);
     const [consulta, setConsulta] = useState(() => ({ ...periodoHoje(), revisao: 0 }));
     const botoes = useRef([]);
+    const abas = ABAS.filter(aba => !aba.apenasAdmin || usuario?.perfil === 'ADMIN');
+    const abaVisivel = abas.some(aba => aba.id === abaAtiva) ? abaAtiva : abas[0].id;
 
     function aplicarPeriodo(event) {
         event.preventDefault();
@@ -60,30 +68,30 @@ export default function RelatoriosPage() {
 
     function navegarAbas(event, indice) {
         let destinos = {
-            ArrowRight: (indice + 1) % ABAS.length,
-            ArrowLeft: (indice - 1 + ABAS.length) % ABAS.length,
+            ArrowRight: (indice + 1) % abas.length,
+            ArrowLeft: (indice - 1 + abas.length) % abas.length,
             Home: 0,
-            End: ABAS.length - 1
+            End: abas.length - 1
         };
         let destino = destinos[event.key];
         if (destino === undefined) return;
 
         event.preventDefault();
-        setAbaAtiva(destino);
+        setAbaAtiva(abas[destino].id);
         botoes.current[destino]?.focus();
     }
 
     return <div className="relatorios-page">
         <header className="relatorio-controles mb-3">
             <h1 className="fs-3 mb-1">Relatórios</h1>
-            <p className="text-secondary mb-0">Consulte vendas, estoque e os itens mais vendidos da operação.</p>
+            <p className="text-secondary mb-0">Consulte os relatórios da operação por período.</p>
         </header>
         <div className="nav nav-tabs relatorio-controles mb-3" role="tablist" aria-label="Relatórios de operação">
-            {ABAS.map((aba, indice) => <button key={aba.id} type="button" role="tab"
-                className={`nav-link ${abaAtiva === indice ? 'active' : ''}`} id={`aba-relatorio-${aba.id}`}
-                aria-selected={abaAtiva === indice} aria-controls={`painel-relatorio-${aba.id}`}
-                tabIndex={abaAtiva === indice ? 0 : -1} ref={elemento => { botoes.current[indice] = elemento; }}
-                onClick={() => setAbaAtiva(indice)} onKeyDown={event => navegarAbas(event, indice)}>
+            {abas.map((aba, indice) => <button key={aba.id} type="button" role="tab"
+                className={`nav-link ${abaVisivel === aba.id ? 'active' : ''}`} id={`aba-relatorio-${aba.id}`}
+                aria-selected={abaVisivel === aba.id} aria-controls={`painel-relatorio-${aba.id}`}
+                tabIndex={abaVisivel === aba.id ? 0 : -1} ref={elemento => { botoes.current[indice] = elemento; }}
+                onClick={() => setAbaAtiva(aba.id)} onKeyDown={event => navegarAbas(event, indice)}>
                 {aba.titulo}
             </button>)}
         </div>
@@ -102,9 +110,9 @@ export default function RelatoriosPage() {
                 <div className="col-auto"><button type="submit" className="btn btn-primary">Consultar</button></div>
             </div>
         </form>
-        {ABAS.map((aba, indice) => <section key={aba.id} role="tabpanel" id={`painel-relatorio-${aba.id}`}
-            aria-labelledby={`aba-relatorio-${aba.id}`} tabIndex={0} hidden={abaAtiva !== indice}>
-            {abaAtiva === indice && <ResultadoRelatorio key={consulta.revisao} aba={aba} periodo={consulta} />}
+        {abas.map(aba => <section key={aba.id} role="tabpanel" id={`painel-relatorio-${aba.id}`}
+            aria-labelledby={`aba-relatorio-${aba.id}`} tabIndex={0} hidden={abaVisivel !== aba.id}>
+            {abaVisivel === aba.id && <ResultadoRelatorio key={consulta.revisao} aba={aba} periodo={consulta} />}
         </section>)}
     </div>;
 }

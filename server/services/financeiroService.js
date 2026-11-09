@@ -3,6 +3,17 @@ import MovimentacaoFinanceiraEntity from '../entities/movimentacaoFinanceiraEnti
 import { validarData } from './cardapioService.js';
 import { centavos, lerInteiro } from '../utils/pedidoUtils.js';
 
+export function calcularTotaisFinanceiro(entradas, saidas, recebimentosCaixas) {
+    let saldo = entradas - saidas;
+    let entradasAvulsas = entradas - recebimentosCaixas;
+    if (![entradas, saidas, saldo, recebimentosCaixas, entradasAvulsas].every(Number.isSafeInteger)) {
+        throw { status: 409, msg: 'Os totais ultrapassam a precisão monetária suportada.' };
+    }
+
+    return { entradas: entradas / 100, saidas: saidas / 100, saldo: saldo / 100,
+        recebimentosCaixas: recebimentosCaixas / 100, entradasAvulsas: entradasAvulsas / 100 };
+}
+
 export default class FinanceiroService {
     #repo = new FinanceiroRepository();
 
@@ -12,18 +23,15 @@ export default class FinanceiroService {
         if (tipo !== undefined && !['ENTRADA', 'SAIDA'].includes(tipo)) throw { status: 400, msg: 'Informe o tipo ENTRADA ou SAIDA.' };
         if (categoria !== undefined && (typeof categoria !== 'string' || !categoria.trim() || categoria.length > 100)) throw { status: 400, msg: 'Informe uma categoria com até 100 caracteres.' };
         let movimentacoes = await this.#repo.listar({ dataInicio, dataFim, tipo, categoria: categoria?.trim() });
-        let entradas = 0, saidas = 0, recebimentosCaixas = 0, entradasAvulsas = 0;
+        let entradas = 0, saidas = 0, recebimentosCaixas = 0;
         for (let movimentacao of movimentacoes) {
             let valor = centavos(movimentacao.valor);
             if (movimentacao.tipo === 'ENTRADA') {
                 entradas += valor;
                 if (movimentacao.origem === 'CAIXA') recebimentosCaixas += valor;
-                else entradasAvulsas += valor;
             } else saidas += valor;
         }
-        if (![entradas, saidas, entradas - saidas, recebimentosCaixas, entradasAvulsas].every(Number.isSafeInteger)) throw { status: 409, msg: 'Os totais ultrapassam a precisão monetária suportada.' };
-        return { movimentacoes, totais: { entradas: entradas / 100, saidas: saidas / 100, saldo: (entradas - saidas) / 100,
-            recebimentosCaixas: recebimentosCaixas / 100, entradasAvulsas: entradasAvulsas / 100 } };
+        return { movimentacoes, totais: calcularTotaisFinanceiro(entradas, saidas, recebimentosCaixas) };
     }
 
     #preparar(dados, idUsuario) {
