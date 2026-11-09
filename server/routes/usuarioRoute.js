@@ -6,7 +6,6 @@ const router = express.Router();
 const auth = new AuthMiddleware();
 const controller = new UsuarioController();
 
-// Só ADMIN mexe em cadastro de usuário
 router.get("/", auth.validar.bind(auth), auth.permitir('ADMIN'), (req, res) => {
     controller.listar(req, res);
 });

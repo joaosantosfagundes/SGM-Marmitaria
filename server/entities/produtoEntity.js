@@ -41,7 +41,6 @@ export default class ProdutoEntity extends Entity {
         this.#usaCardapio = usaCardapio;
     }
 
-    // Mapeia uma linha da tabela `produto` pra Entity
     static toMap(row) {
         return new ProdutoEntity(
             row["id_produto"],

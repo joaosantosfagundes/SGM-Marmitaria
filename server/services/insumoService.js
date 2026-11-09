@@ -57,7 +57,6 @@ export default class InsumoService {
             throw { status: 404, msg: "Insumo não encontrado" };
         }
 
-        // se o nome mudou, confere que o novo nome não colide com outro insumo
         if (nome && nome !== atual.nome) {
             let existente = await this.#repo.obterPorNome(nome);
             if (existente) {
