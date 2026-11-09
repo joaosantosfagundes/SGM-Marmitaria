@@ -1,6 +1,6 @@
 import Entity from "./entity.js";
 
-export const CLASSIFICACOES_VALIDAS = ["INSUMO", "VENDA_DIRETA"];
+const CLASSIFICACOES_VALIDAS = ["INSUMO", "VENDA_DIRETA"];
 
 export default class InsumoEntity extends Entity {
 
@@ -59,7 +59,6 @@ export default class InsumoEntity extends Entity {
         this.#criadoEm = criadoEm;
     }
 
-    // Mapeia uma linha da tabela `insumo` pra Entity
     static toMap(row) {
         return new InsumoEntity(
             row["id_insumo"],

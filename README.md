@@ -1,6 +1,6 @@
 # SGM — Sistema de Gestão para Marmitaria
 
-Estágio curricular — FIPP. Deploy alvo: **14/11**.
+Estágio curricular — FIPP. Prazo final para código e deploy em **30/11**.
 
 ## Arquitetura
 
@@ -101,22 +101,27 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 - [x] RF_F3 — Status do Pedido, cancelamento com motivo e comanda da cozinha
 - [x] RF_F4 — Movimentação de Estoque (entradas, perdas e ajustes manuais, saldo não negativo, transação com bloqueio por insumo, saldos e histórico)
 
-### Sprint 5 (19/10–14/11) — restante + deploy
+### Sprint 5 — Operação e relatórios
 - [x] RF_F5 — Consulta de pagamentos por data, forma, status e caixa; pagamento criado no lançamento do pedido
 - [x] RF_F6 — Fiado por cliente e quitação individual ou em lote, vinculada ao caixa do recebimento
 - [x] RF_F7 — Entradas e saídas manuais, recebimentos consolidados por caixa fechado, filtros e totais, recorrência informativa e compra de estoque com despesa atômica
-- [x] RF_F9 — Caixa: Abrir/Fechar, histórico, resumo por forma de pagamento e conferência do dinheiro físico com falta/sobra
+- [x] RF_F9 — Caixa: abertura, fechamento, histórico, tabela única de recebimentos por forma e conferência da gaveta
 - [x] RF_S1 — Vendas e pedidos por data do pedido, com ticket médio e fiado a receber
 - [x] RF_S2 — Saldos atuais e resumo das movimentações de estoque
 - [x] RF_S3 — Relatório financeiro por categoria e forma de pagamento, com recebimentos de caixas fechados
 - [x] RF_S4 — Ranking de produtos e adicionais por quantidade ou valor
 - [x] RF_S5 — Fiado por cliente, com pendências atuais e quitações do período
-- [ ] Deploy
 
 ### Ajustes de interface
 
 - [x] Confirmações em diálogo próprio com suporte a teclado, foco controlado e notificações no padrão visual do sistema
 - [x] Formulário de adicionais em card acima da lista, no padrão dos demais cadastros
+- [ ] Dashboard com indicadores e pedidos recentes baseados em dados reais
+
+### Entrega final até 30/11
+
+- [x] Limpeza de código e revisão de dependências com build e testes do servidor antes e depois
+- [ ] Deploy final
 
 ## Relatórios (RF_S1–RF_S5)
 

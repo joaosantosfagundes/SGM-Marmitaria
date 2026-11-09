@@ -16,7 +16,7 @@ export default class ClienteService{
         return await this.#repo.obter(id);
     }
 
-    async criar({ nome, telefone, ativo }) {
+    async criar({ nome, telefone }) {
         if (telefone) {
             let existente = await this.#repo.obterPorTelefone(telefone);
             if (existente) {

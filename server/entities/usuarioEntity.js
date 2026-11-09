@@ -1,7 +1,7 @@
 import Entity from "./entity.js";
 
 // Perfis válidos conforme schema (usuario.perfil ENUM)
-export const PERFIS_VALIDOS = ["ADMIN", "ATENDENTE", "COZINHA"];
+const PERFIS_VALIDOS = ["ADMIN", "ATENDENTE", "COZINHA"];
 
 export default class UsuarioEntity extends Entity {
 
@@ -45,7 +45,6 @@ export default class UsuarioEntity extends Entity {
         this.#criadoEm = criadoEm;
     }
 
-    // Mapeia uma linha do banco
     static toMap(row) {
         return new UsuarioEntity(
             row["id_usuario"],
