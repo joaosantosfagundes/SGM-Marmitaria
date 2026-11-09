@@ -43,6 +43,10 @@ export default class MovimentacaoFinanceiraEntity extends Entity {
             recorrente: Boolean(row.recorrente), quantidadeMeses: row.quantidade_meses == null ? null : Number(row.quantidade_meses) });
     }
 
+    static toMapResumo(row) {
+        return { grupo: row.grupo, chave: row.chave, tipo: row.tipo, valor: Number(row.valor) };
+    }
+
     static validarValor(valor) { return validarDinheiro(valor) && valor > 0; }
 
     static normalizarDataHora(valor) {

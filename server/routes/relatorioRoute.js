@@ -10,6 +10,8 @@ router.use(auth.validar.bind(auth), auth.permitir('ADMIN', 'ATENDENTE'));
 
 router.get('/vendas', (req, res) => controller.vendas(req, res));
 router.get('/estoque', (req, res) => controller.estoque(req, res));
+router.get('/financeiro', auth.permitir('ADMIN'), (req, res) => controller.financeiro(req, res));
 router.get('/produtos-mais-vendidos', (req, res) => controller.produtosMaisVendidos(req, res));
+router.get('/fiado', (req, res) => controller.fiado(req, res));
 
 export default router;

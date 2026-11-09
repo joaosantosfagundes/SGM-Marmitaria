@@ -34,4 +34,24 @@ export default class RelatorioEntity {
             totalVendido: Number(row.total_vendido)
         };
     }
+
+    static toMapFiado(row) {
+        return {
+            idCliente: row.id_cliente,
+            nome: row.nome,
+            totalEmAberto: Number(row.total_em_aberto),
+            quantidadePendentes: Number(row.quantidade_pendentes),
+            fiadoMaisAntigo: row.fiado_mais_antigo,
+            totalQuitadoNoPeriodo: Number(row.total_quitado),
+            pedido: {
+                idPagamento: row.id_pagamento,
+                idPedido: row.id_pedido,
+                status: row.status,
+                dataHora: row.data_hora,
+                valor: Number(row.valor),
+                dataQuitacao: row.data_quitacao,
+                formaQuitacao: row.forma_quitacao
+            }
+        };
+    }
 }

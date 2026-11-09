@@ -13,7 +13,9 @@ const pool = new Database().conexao;
 const queryOriginal = pool.query;
 const fixtures = readFileSync(new URL('./fixtures/relatorio.sql', import.meta.url), 'utf8');
 const periodo = 'dataInicio=2026-11-05&dataFim=2026-11-06';
-const relatorios = ['vendas', 'estoque', 'produtos-mais-vendidos'];
+const periodoFinanceiro = 'dataInicio=2026-11-14&dataFim=2026-11-15';
+const relatoriosComuns = ['vendas', 'estoque', 'produtos-mais-vendidos', 'fiado'];
+const relatorios = [...relatoriosComuns, 'financeiro'];
 const consultas = [];
 let servidor, executar, encerrarBanco;
 
@@ -45,7 +47,7 @@ before(async () => {
         const banco = new DatabaseSync(':memory:');
         encerrarBanco = () => banco.close();
         banco.exec(fixtures);
-        executar = async (sql, valores) => banco.prepare(sql).all(...valores);
+        executar = async (sql, valores) => banco.prepare(sql.replaceAll('date_add(?, interval 1 day)', "date(?, '+1 day')")).all(...valores);
     }
 
     pool.query = (sql, valores, callback) => {
@@ -75,11 +77,15 @@ after(async () => {
     }
 });
 
-async function consultar(relatorio, filtro = periodo, perfil = 1) {
+async function consultarRota(rota, filtro, perfil) {
     const headers = {};
     if (perfil !== null) headers.cookie = `token=${jwt.sign({ id: perfil }, process.env.JWT_SECRET)}`;
-    const resposta = await fetch(`http://127.0.0.1:${servidor.address().port}/api/relatorio/${relatorio}?${filtro}`, { headers });
+    const resposta = await fetch(`http://127.0.0.1:${servidor.address().port}/api/${rota}?${filtro}`, { headers });
     return { status: resposta.status, dados: await resposta.json() };
+}
+
+function consultar(relatorio, filtro = periodo, perfil = 1) {
+    return consultarRota(`relatorio/${relatorio}`, filtro, perfil);
 }
 
 test('Vendas usam a data do pedido e separam cancelados nos quatro agrupamentos', async () => {
@@ -149,7 +155,7 @@ test('Estoque mostra saldo atual e agrega apenas movimentos dentro do período i
     assert.equal(insumos.Sal.entradas, 0);
 });
 
-test('Hoje vira à meia-noite da operação em UTC−3 para os três relatórios', async t => {
+test('Hoje vira à meia-noite da operação em UTC−3 para os cinco relatórios', async t => {
     const agora = t.mock.method(Date, 'now', () => Date.parse('2026-11-06T02:59:59Z'));
     for (const relatorio of relatorios) {
         const { status, dados } = await consultar(relatorio, '');
@@ -195,8 +201,8 @@ test('Períodos vazios e só com cancelados têm ticket médio zero', async () =
     assert.deepEqual(ranking.dados.adicionais, []);
 });
 
-test('Apenas ADMIN e ATENDENTE consultam os três relatórios', async () => {
-    for (const relatorio of relatorios) {
+test('ADMIN e ATENDENTE consultam vendas, estoque, ranking e fiado', async () => {
+    for (const relatorio of relatoriosComuns) {
         assert.equal((await consultar(relatorio, periodo, 1)).status, 200);
         assert.equal((await consultar(relatorio, periodo, 2)).status, 200);
         const quantidade = consultas.length;
@@ -205,4 +211,79 @@ test('Apenas ADMIN e ATENDENTE consultam os três relatórios', async () => {
         assert.equal(consultas.length, quantidade + 1);
         assert.match(consultas.at(-1), /^select \* from usuario/i);
     }
+});
+
+test('Relatório financeiro usa o fechamento do caixa que recebeu a quitação e concilia com o Financeiro', async () => {
+    const { status, dados } = await consultar('financeiro', periodoFinanceiro);
+    assert.equal(status, 200);
+    assert.deepEqual(dados.totais, {
+        entradas: 189.51, saidas: 85.26, saldo: 104.25, recebimentosCaixas: 176.25, entradasAvulsas: 13.26
+    });
+    assert.deepEqual(dados.porFormaPagamento, [
+        { forma: 'CREDITO', valor: 10 }, { forma: 'DEBITO', valor: 14.25 },
+        { forma: 'DINHEIRO', valor: 76 }, { forma: 'PIX', valor: 76 }
+    ]);
+    assert.deepEqual(dados.porCategoria, [
+        { categoria: 'Aluguel', tipo: 'SAIDA', valor: 70.01 },
+        { categoria: 'Compra de insumos', tipo: 'SAIDA', valor: 15.25 },
+        { categoria: 'Fechamento de caixa', tipo: 'ENTRADA', valor: 179.5 },
+        { categoria: 'Outras receitas', tipo: 'ENTRADA', valor: 10.01 }
+    ]);
+    assert.equal(dados.fiadoAReceber, 44.75);
+
+    const financeiro = await consultarRota('financeiro', periodoFinanceiro, 2);
+    assert.equal(financeiro.status, 200);
+    assert.deepEqual(financeiro.dados.totais, dados.totais);
+    assert.deepEqual(financeiro.dados.movimentacoes.filter(m => m.origem === 'CAIXA').map(m => [m.idCaixa, m.valor]),
+        [[4, 25.25], [2, 151]]);
+});
+
+test('Quitações em caixa ainda aberto ficam fora do relatório financeiro', async () => {
+    const { status, dados } = await consultar('financeiro', 'dataInicio=2026-11-16');
+    assert.equal(status, 200);
+    assert.deepEqual(dados.porFormaPagamento, []);
+    assert.deepEqual(dados.totais, { entradas: 100, saidas: 0, saldo: 100, recebimentosCaixas: 0, entradasAvulsas: 100 });
+    assert.equal(dados.fiadoAReceber, 44.75);
+});
+
+test('Fiado agrupa pendências atuais e quitações do período, excluindo cancelamentos', async () => {
+    const { status, dados } = await consultar('fiado', periodoFinanceiro, 2);
+    assert.equal(status, 200);
+    assert.deepEqual(dados.clientes.map(c => c.nome), ['Ana', 'Bruno']);
+    const [ana, bruno] = dados.clientes;
+    assert.equal(ana.totalEmAberto, 44.75);
+    assert.equal(ana.quantidadePendentes, 2);
+    assert.equal(ana.fiadoMaisAntigo, '2026-11-05 18:00:00');
+    assert.equal(ana.totalQuitadoNoPeriodo, 17.75);
+    assert.deepEqual(ana.pendentes.map(p => [p.idPedido, p.valor, p.status, p.dataQuitacao]),
+        [[4, 32.5, 'PENDENTE', null], [17, 12.25, 'PENDENTE', null]]);
+    assert.deepEqual(ana.quitados.map(p => [p.idPedido, p.dataQuitacao, p.formaQuitacao]),
+        [[16, '2026-11-15 23:59:59', 'CREDITO']]);
+    assert.deepEqual(bruno, {
+        idCliente: 2, nome: 'Bruno', totalEmAberto: 0, quantidadePendentes: 0, fiadoMaisAntigo: null,
+        totalQuitadoNoPeriodo: 35.75, pendentes: [], quitados: [{
+            idPagamento: 14, idPedido: 14, status: 'PAGO', dataHora: '2026-11-08 15:10:00', valor: 35.75,
+            dataQuitacao: '2026-11-14 00:00:00', formaQuitacao: 'DINHEIRO'
+        }]
+    });
+});
+
+test('Sem quitações no período, o relatório continua mostrando as pendências atuais', async () => {
+    const { status, dados } = await consultar('fiado', 'dataInicio=2026-11-12');
+    assert.equal(status, 200);
+    assert.equal(dados.clientes.length, 1);
+    assert.equal(dados.clientes[0].totalEmAberto, 44.75);
+    assert.equal(dados.clientes[0].totalQuitadoNoPeriodo, 0);
+    assert.deepEqual(dados.clientes[0].quitados, []);
+});
+
+test('Apenas ADMIN consulta o relatório financeiro', async () => {
+    assert.equal((await consultar('financeiro', periodoFinanceiro, 1)).status, 200);
+    for (const perfil of [2, 3]) {
+        const quantidade = consultas.length;
+        assert.equal((await consultar('financeiro', periodoFinanceiro, perfil)).status, 403);
+        assert.equal(consultas.length, quantidade + 1);
+        assert.match(consultas.at(-1), /^select \* from usuario/i);
+    }
+    assert.equal((await consultar('financeiro', periodoFinanceiro, null)).status, 401);
 });

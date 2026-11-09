@@ -85,4 +85,29 @@ export default class RelatorioRepository extends Repository {
 
         return rows.map(RelatorioEntity.toMapRanking);
     }
+
+    async fiado(limites) {
+        let rows = await this.banco.ExecutaComando(`with fiados as (
+            select c.id_cliente, c.nome, pg.id_pagamento, p.id_pedido, pg.status,
+                pg.data_hora, pg.valor, pg.data_quitacao, pg.forma_quitacao
+            from pagamento pg
+            inner join pedido p on p.id_pedido = pg.id_pedido
+            inner join cliente c on c.id_cliente = p.id_cliente
+            where pg.forma_pagamento = 'FIADO' and p.status <> 'CANCELADO'
+                and (pg.status = 'PENDENTE' or (pg.status = 'PAGO'
+                    and pg.data_quitacao >= ? and pg.data_quitacao <= ?))
+        ), resumo as (
+            select id_cliente,
+                sum(case when status = 'PENDENTE' then valor else 0 end) as total_em_aberto,
+                count(distinct case when status = 'PENDENTE' then id_pedido end) as quantidade_pendentes,
+                min(case when status = 'PENDENTE' then data_hora end) as fiado_mais_antigo,
+                sum(case when status = 'PAGO' then valor else 0 end) as total_quitado
+            from fiados group by id_cliente
+        )
+        select f.*, r.total_em_aberto, r.quantidade_pendentes, r.fiado_mais_antigo, r.total_quitado
+        from fiados f inner join resumo r on r.id_cliente = f.id_cliente
+        order by f.nome, f.id_cliente, f.data_hora, f.id_pagamento`, limites);
+
+        return rows.map(RelatorioEntity.toMapFiado);
+    }
 }
