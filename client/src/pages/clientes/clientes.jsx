@@ -110,7 +110,7 @@ export default function ClientesPage() {
             <div className="page-header d-flex justify-content-between align-items-center mb-4">
                 <div>
                     <h1 className="fs-3 mb-1">Clientes</h1>
-                    <p className="text-secondary mb-0">Cadastro de clientes (usado no fiado).</p>
+                    <p className="text-secondary mb-0">Cadastro de clientes (usado nos devedores).</p>
                 </div>
                 {!mostrarForm && (
                     <button className="btn btn-primary" onClick={abrirNovo}>

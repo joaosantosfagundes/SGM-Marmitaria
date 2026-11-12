@@ -49,16 +49,16 @@ export default class PagamentoService {
         if (dados.forma !== 'DINHEIRO' && dados.valorRecebido !== undefined) throw { status: 400, msg: 'Valor recebido só é permitido em DINHEIRO.' };
         if (recebido !== null && !validarDinheiro(recebido)) throw { status: 400, msg: 'Informe um valor recebido numérico, com até duas casas decimais e no máximo R$ 99.999.999,99.' };
         return this.#repo.quitar(alvo, async (pagamentos, pedidos, consultar) => {
-            if (!pagamentos.length) throw { status: alvo.id === undefined ? 409 : 404, msg: alvo.id === undefined ? 'Não há fiados pendentes para quitar deste cliente.' : 'Pagamento não encontrado.' };
+            if (!pagamentos.length) throw { status: alvo.id === undefined ? 409 : 404, msg: alvo.id === undefined ? 'Este cliente não tem pagamentos pendentes para quitar.' : 'Pagamento não encontrado.' };
             if (pagamentos.some(pg => pg.forma !== 'FIADO' || pg.status !== 'PENDENTE'
                 || !pedidos.some(p => p.id_pedido === pg.idPedido && p.status !== 'CANCELADO' && (alvo.idCliente === undefined || p.id_cliente === alvo.idCliente)))) {
-                throw { status: 409, msg: 'Só é possível quitar fiado pendente de pedido não cancelado. Atualize a lista.' };
+                throw { status: 409, msg: 'Só é possível quitar pagamentos pendentes de devedores vinculados a pedidos sem cancelamento. Atualize a lista.' };
             }
             let total = pagamentos.reduce((soma, pg) => soma + centavos(pg.valor), 0);
             if (!Number.isSafeInteger(total)) throw { status: 409, msg: 'O total da quitação ultrapassa a precisão monetária suportada.' };
             if (recebido !== null && centavos(recebido) < total) throw { status: 400, msg: 'O valor recebido é menor que o total da quitação.' };
             let caixa = await this.#caixaRepo.obterAtual(consultar);
-            if (!caixa) throw { status: 409, msg: 'Abra o caixa antes de quitar fiados.' };
+            if (!caixa) throw { status: 409, msg: 'Abra o caixa antes de quitar pagamentos de devedores.' };
             let troco = recebido === null ? null : (centavos(recebido) - total) / 100;
             // No lote, o troco fica no último pagamento, sem repetir o valor entregue pelo cliente.
             let valoresRecebidos = pagamentos.map((pg, indice) => recebido === null ? null

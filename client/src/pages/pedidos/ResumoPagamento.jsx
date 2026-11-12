@@ -7,7 +7,7 @@ export default function ResumoPagamento({ pagamento }) {
         <div>
             <div className="d-flex align-items-center flex-wrap gap-2 mb-2">
                 <strong>{FORMAS_PAGAMENTO[pagamento.forma] || pagamento.forma}</strong>
-                <StatusPagamento status={pagamento.status} />
+                <StatusPagamento status={pagamento.status} forma={pagamento.forma} />
             </div>
             <p className="mb-2">Valor: <strong>{formatarValor(pagamento.valor)}</strong></p>
             {pagamento.forma === 'DINHEIRO' && <>

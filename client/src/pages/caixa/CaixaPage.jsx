@@ -7,6 +7,7 @@ import { calcularDiferenca, converterValor, formatarDataHora, formatarValor, sit
 import ConferenciaCaixa from './ConferenciaCaixa.jsx';
 import ResumoFinanceiro from './ResumoFinanceiro.jsx';
 import ResumoCaixaHistorico from './ResumoCaixaHistorico.jsx';
+import './caixa.scss';
 
 function tratarErro(error) {
     console.error(error);
@@ -153,28 +154,35 @@ export default function CaixaPage() {
 
             {erroCarga && <div className="alert alert-danger" role="alert"><p>{erroCarga}</p><button type="button" className="btn btn-outline-danger" disabled={carregando || salvando} onClick={carregar}>Tentar novamente</button></div>}
             {carregando ? <section className="page-card p-4 mb-4 text-secondary">Carregando caixa...</section> : !erroCarga && (
-                caixaAtual ? <section className="page-card p-4 mb-4">
-                    <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
-                        <h2 className="h5 mb-0">Caixa aberto</h2>
-                        <span className="badge text-bg-success">Aberto</span>
+                caixaAtual ? <section className="caixa-painel mb-4">
+                    <div className="page-card caixa-status p-3 p-sm-4">
+                        <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
+                            <h2 className="h4 mb-0">Caixa aberto</h2>
+                            <span className="badge text-bg-success">Aberto</span>
+                        </div>
+                        <p className="small mb-3">
+                            Aberto por <strong>{caixaAtual.nomeUsuarioAbertura}</strong> em{' '}
+                            <time dateTime={caixaAtual.dataAbertura}>{formatarDataHora(caixaAtual.dataAbertura)}</time>
+                        </p>
+                        <dl className="mb-0">
+                            <dt className="small">Valor de abertura</dt>
+                            <dd className="fs-3 fw-bold mb-0">{formatarValor(caixaAtual.valorAbertura)}</dd>
+                        </dl>
                     </div>
-                    <dl className="row mb-0">
-                        <div className="col-md-4 mb-2"><dt className="small text-secondary">Aberto por</dt><dd className="mb-0">{caixaAtual.nomeUsuarioAbertura}</dd></div>
-                        <div className="col-md-4 mb-2"><dt className="small text-secondary">Data e hora de abertura</dt><dd className="mb-0">{formatarDataHora(caixaAtual.dataAbertura)}</dd></div>
-                        <div className="col-md-4 mb-2"><dt className="small text-secondary">Valor de abertura</dt><dd className="mb-0">{formatarValor(caixaAtual.valorAbertura)}</dd></div>
-                    </dl>
-                    {erroResumo && <div className="alert alert-danger mt-3" role="alert"><p>{erroResumo}</p><button type="button" className="btn btn-outline-danger" disabled={salvando} onClick={carregar}>Tentar novamente</button></div>}
-                    {resumo && <ResumoFinanceiro resumo={resumo} />}
-                    <form onSubmit={fecharCaixa} className="mt-4 pt-4 border-top" noValidate>
+                    {(erroResumo || resumo) && <div className="page-card caixa-resumo px-3 px-sm-4 pb-3 pb-sm-4">
+                        {erroResumo && <div className="alert alert-danger mt-3" role="alert"><p>{erroResumo}</p><button type="button" className="btn btn-outline-danger" disabled={salvando} onClick={carregar}>Tentar novamente</button></div>}
+                        {resumo && <ResumoFinanceiro resumo={resumo} />}
+                    </div>}
+                    <form onSubmit={fecharCaixa} className="page-card caixa-fechamento p-3 p-sm-4" noValidate>
                         <div className="row g-3 align-items-end">
-                            <div className="col-md-5">
+                            <div className="col-12">
                                 <label htmlFor="valor-fechamento" className="form-label small">Valor contado na gaveta (R$)</label>
                                 <input id="valor-fechamento" type="text" inputMode="decimal" min="0" className="form-control"
                                     required disabled={salvando} value={valorFechamento} placeholder="0,00" aria-describedby="ajuda-valor-fechamento"
                                     onChange={event => setValorFechamento(event.target.value)} />
                                 <div id="ajuda-valor-fechamento" className="form-text">Zero é permitido. Use vírgula ou ponto e até duas casas decimais.</div>
                             </div>
-                            <div className="col-md-auto">
+                            <div className="col-12 d-grid">
                                 <button type="submit" className="btn btn-primary" disabled={salvando || !resumo || Boolean(erroResumo)}>
                                     <i className="ti ti-lock me-1" />{salvando ? 'Conferindo fechamento...' : 'Fechar caixa'}
                                 </button>

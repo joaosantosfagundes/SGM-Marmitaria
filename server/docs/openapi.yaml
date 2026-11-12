@@ -50,9 +50,9 @@ tags:
   - name: Pedidos
     description: Criação de pedido com pagamento e consulta; sem baixa de estoque
   - name: Pagamentos
-    description: Consulta e quitação de fiado, somente ADMIN e ATENDENTE
+    description: Consulta de pagamentos e quitação de devedores para ADMIN e ATENDENTE.
   - name: Relatórios
-    description: Vendas, estoque, ranking e fiado para ADMIN e ATENDENTE. Financeiro exclusivo de ADMIN.
+    description: Vendas, estoque, ranking e devedores para ADMIN e ATENDENTE. Financeiro exclusivo de ADMIN.
   - name: Dashboard
     description: Indicadores da operação e contagens de pedidos para a cozinha.
 paths:
@@ -1153,8 +1153,8 @@ paths:
         Pedidos CANCELADO e pagamentos CANCELADO são excluídos.
 
         DINHEIRO, PIX, DEBITO e CREDITO somam somente pagamentos PAGO.
-        totalFiado soma somente FIADO PENDENTE e não entra no totalRecebido.
-        fiadoRecebido separa FIADO PAGO por forma_quitacao, usando id_caixa_quitacao,
+        totalFiado mostra o valor a receber de devedores com forma FIADO e status PENDENTE.
+        fiadoRecebido separa o valor recebido de devedores com forma FIADO e status PAGO por forma_quitacao, usando id_caixa_quitacao,
         mesmo que a venda seja de outro caixa. totalRecebido inclui essas quitações.
         totalVendido mantém somente as vendas originadas neste caixa: pagamentos diretos
         + totalFiado pendente + totalFiadoQuitado, sem contar a quitação como nova venda.
@@ -1554,7 +1554,7 @@ paths:
         Os preços são preservados no histórico. Subtotais e total têm limite de 99999999.99.
 
         DELIVERY exige endereço com 5 a 255 caracteres. MESA e BALCAO exigem endereço null.
-        Cliente informado deve estar ativo. FIADO exige cliente e gera pagamento PENDENTE;
+        Cliente informado deve estar ativo. A opção Devedor (FIADO) exige cliente cadastrado e gera pagamento PENDENTE;
         demais formas geram PAGO. Para DINHEIRO, valorRecebido é opcional; omitido ou null,
         grava-se null e o troco fica null. Se informado, deve ser numérico, com até duas casas,
         entre o total e 99999999.99. Outras formas não aceitam o campo valorRecebido,
@@ -1788,7 +1788,7 @@ paths:
         - name: forma
           in: query
           schema: {type: string, enum: [DINHEIRO, PIX, DEBITO, CREDITO, FIADO]}
-          description: Forma efetiva; FIADO seleciona pagamentos sem forma de quitação.
+          description: Forma efetiva. FIADO seleciona pagamentos na opção Devedor sem forma de quitação.
         - name: status
           in: query
           schema: {type: string, enum: [PENDENTE, PAGO, CANCELADO]}
@@ -1819,9 +1819,11 @@ paths:
     get:
       tags: [Pagamentos]
       operationId: listarFiados
-      summary: Consultar fiados pendentes por cliente
+      summary: Consultar pagamentos pendentes de devedores por cliente
       description: >-
-        Perfis ADMIN e ATENDENTE. Retorna todos os pagamentos FIADO PENDENTE de pedidos não cancelados, agrupados por cliente, com telefone, quantidade, total em aberto e detalhes dos pedidos. Inclui dívidas antigas e de clientes inativos; não filtra por hoje nem limita a 200.
+        Perfis ADMIN e ATENDENTE. Retorna os pagamentos na opção Devedor (FIADO) com status PENDENTE
+        de pedidos sem cancelamento, agrupados por cliente, com telefone, quantidade, total em aberto
+        e detalhes dos pedidos. Inclui dívidas antigas e de clientes inativos, sem limite de data ou quantidade.
       responses:
         '200':
           description: Consulta ou quitação concluída.
@@ -1842,9 +1844,15 @@ paths:
     post:
       tags: [Pagamentos]
       operationId: quitarPagamento
-      summary: Quitar um pagamento fiado
+      summary: Quitar um pagamento pendente de devedor
       description: >-
-        Perfis ADMIN e ATENDENTE. Exige FIADO PENDENTE de pedido não cancelado e caixa aberto. Na mesma conexão de ExecutaTransacao bloqueia primeiro o pedido e depois o pagamento (for update), lê o caixa aberto com for share e confere o update condicional. Registra usuário do JWT, data, forma e caixa da quitação; mantém forma original FIADO. Não cria outro pagamento nem altera estoque. Duas tentativas não quitam duas vezes. O fechamento aguarda a quitação já em andamento, ou a quitação é recusada se o caixa tiver sido fechado.
+        Perfis ADMIN e ATENDENTE. Exige pagamento na opção Devedor (FIADO) com status PENDENTE,
+        pedido sem cancelamento e caixa aberto. Na mesma conexão de ExecutaTransacao bloqueia
+        primeiro o pedido e depois o pagamento (for update), lê o caixa aberto com for share e confere
+        o update condicional. Registra usuário do JWT, data, forma e caixa da quitação e mantém a forma
+        original FIADO. Atualiza o próprio pagamento e preserva o estoque. Cada pagamento admite uma
+        única quitação. O fechamento aguarda a quitação em andamento. Se o caixa fechar primeiro,
+        a quitação é recusada.
       parameters:
         - $ref: '#/components/parameters/Id'
       requestBody:
@@ -1875,14 +1883,14 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Erro'}
-              example: {msg: Abra o caixa antes de quitar fiados.}
+              example: {msg: Abra o caixa antes de quitar pagamentos de devedores.}
         '500':
           $ref: '#/components/responses/ErroInterno'
   /pagamento/cliente/{idCliente}/quitar:
     post:
       tags: [Pagamentos]
       operationId: quitarFiadosCliente
-      summary: Quitar todos os fiados pendentes do cliente
+      summary: Quitar todos os pagamentos pendentes do cliente devedor
       description: >-
         Perfis ADMIN e ATENDENTE. Seleciona as pendências existentes ao iniciar a operação e quita em transação única; não inclui pedidos cancelados. Se uma pendência selecionada for alterada enquanto aguarda os bloqueios, retorna 409 e não grava nenhuma quitação. Novos pedidos após a seleção ficam para outra quitação. O valor recebido em dinheiro se refere ao lote inteiro; o troco fica no último pagamento para não duplicar o valor entregue. Todos usam a mesma forma, usuário e caixa aberto. Não aceita quitação parcial, desconto ou múltiplas formas no lote.
       parameters:
@@ -1916,7 +1924,7 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Erro'}
-              example: {msg: Abra o caixa antes de quitar fiados.}
+              example: {msg: Abra o caixa antes de quitar pagamentos de devedores.}
         '500':
           $ref: '#/components/responses/ErroInterno'
   /financeiro:
@@ -1927,7 +1935,9 @@ paths:
       description: >-
         ADMIN e ATENDENTE. Reúne lançamentos manuais, despesas de estoque e uma entrada consolidada por caixa FECHADO com recebimentos.
         Caixas abertos não entram. O período do consolidado usa data_fechamento; um caixa que atravessa dias continua como uma única entrada no fechamento.
-        Soma pagamento.valor dos pagamentos diretos PAGO em DINHEIRO, PIX, DEBITO ou CREDITO pelo caixa do pedido e FIADO PAGO pelo caixa da quitação, com metadados completos.
+        Soma pagamento.valor dos pagamentos diretos PAGO em DINHEIRO, PIX, DEBITO ou CREDITO pelo
+        caixa do pedido e dos recebimentos de devedores com forma FIADO e status PAGO pelo caixa da
+        quitação, com metadados completos.
         Exclui pedidos CANCELADO, pagamentos pendentes/cancelados e cópias legadas em movimentacao_financeira com id_pedido preenchido.
         Não usa valor_abertura, valor_fechamento, valor_recebido/troco nem diferença da gaveta como receita. Caixas sem recebimentos ou sem data de fechamento não geram entrada.
         Usa agregação SQL sem join com itens, sem gravar outra receita e sem alterar o fechamento. O saldo é entradas menos saídas do período, não o dinheiro físico da gaveta.
@@ -1976,7 +1986,7 @@ paths:
       operationId: criarFinanceiro
       summary: Criar lançamento manual
       description: >-
-        Somente ADMIN. Usuário vem do JWT; não aceita vínculos com caixa, pedido, pagamento ou estoque enviados no corpo. Registre somente despesas e entradas avulsas; vendas e fiados recebidos aparecem automaticamente no consolidado após o fechamento do caixa. Não exige caixa aberto e não gera recorrências futuras. Escrita com ExecutaTransacao.
+        Somente ADMIN. Usuário vem do JWT; não aceita vínculos com caixa, pedido, pagamento ou estoque enviados no corpo. Registre somente despesas e entradas avulsas; vendas e recebimentos de devedores aparecem automaticamente no consolidado após o fechamento do caixa. Não exige caixa aberto e não gera recorrências futuras. Escrita com ExecutaTransacao.
       requestBody:
         required: true
         content:
@@ -2073,7 +2083,7 @@ paths:
       description: >-
         ADMIN e ATENDENTE. Agrega pedidos pela data de lançamento em UTC−3, por dia, forma original
         de pagamento, tipo de atendimento e status. Cancelados têm contagem e valor separados.
-        O total vendido e o ticket médio incluem fiado pendente, apresentado também como valor a receber.
+        O total vendido e o ticket médio incluem os pagamentos pendentes de devedores, apresentados também como valor a receber.
         Pedidos sem pagamento ficam no grupo SEM_PAGAMENTO. Para registros legados com vários pagamentos,
         a forma vem do primeiro pagamento registrado.
       parameters:
@@ -2125,16 +2135,16 @@ paths:
       summary: Consultar entradas, saídas e recebimentos por forma de pagamento
       description: >-
         Apenas ADMIN. Usa os mesmos lançamentos da tela Financeiro, com uma entrada por caixa fechado
-        que recebeu vendas pagas ou quitações de fiado. A quitação pertence ao caixa que recebeu o valor.
+        que recebeu vendas pagas ou quitações de devedores. A quitação pertence ao caixa que recebeu o valor.
         O período usa a data de fechamento dos caixas e a data dos demais lançamentos, em UTC−3.
         A receita usa o valor do pagamento. Abertura, troco e diferenças de conferência ficam fora dos totais.
-        O fiado pendente atual é informativo e aparece à parte do saldo do período.
+        O valor a receber de devedores aparece à parte do saldo do período.
       parameters:
         - $ref: '#/components/parameters/RelatorioDataInicio'
         - $ref: '#/components/parameters/RelatorioDataFim'
       responses:
         '200':
-          description: Totais do período, lançamentos por categoria, recebimentos por forma e fiado em aberto.
+          description: Totais do período, lançamentos por categoria, recebimentos por forma e valores a receber de devedores.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/RelatorioFinanceiro'}
@@ -2180,9 +2190,9 @@ paths:
     get:
       tags: [Relatórios]
       operationId: relatorioFiado
-      summary: Consultar fiados pendentes e quitados por cliente
+      summary: Consultar devedores por cliente
       description: >-
-        ADMIN e ATENDENTE. Inclui pedidos válidos com fiado atualmente pendente ou quitado no período.
+        ADMIN e ATENDENTE. Inclui pedidos válidos com pagamento na opção Devedor pendente ou quitado no período.
         O filtro de período usa a data da quitação, em UTC−3. Clientes que quitaram no período aparecem
         mesmo com saldo em aberto zerado.
       parameters:
@@ -2209,7 +2219,7 @@ paths:
       summary: Consultar os indicadores do Dashboard
       description: >-
         ADMIN e ATENDENTE recebem o resumo completo. A contagem de hoje inclui cancelados e as vendas
-        somam apenas pedidos válidos, com a parcela de fiado pendente destacada. Os pedidos em preparo
+        somam apenas pedidos válidos, com a parcela a receber de devedores destacada. Os pedidos em preparo
         incluem dias anteriores. O gráfico usa a data do pedido para vendas e a data do lançamento
         para saídas do Financeiro. O período inclui o dia atual e os seis anteriores, em UTC−3.
         COZINHA recebe somente a contagem de pedidos de hoje por status.
@@ -2460,7 +2470,7 @@ components:
         data: {type: string, format: date, example: '2026-11-05'}
         pedidosHoje: {type: integer, minimum: 0, example: 3}
         vendasHoje: {type: number, minimum: 0, example: 96.75}
-        fiadoPendenteHoje: {type: number, minimum: 0, description: Parcela das vendas de hoje ainda a receber por fiado., example: 32.5}
+        fiadoPendenteHoje: {type: number, minimum: 0, description: Parcela das vendas de hoje a receber de devedores., example: 32.5}
         pedidosEmPreparo: {type: integer, minimum: 0, example: 1}
         caixa:
           type: object
@@ -2537,11 +2547,11 @@ components:
       required: [quantidadePedidos, quantidadeVendidos, quantidadeCancelados, totalVendido, totalCancelado, fiadoPendente, ticketMedio]
       properties:
         quantidadePedidos: {type: integer, description: Total de pedidos incluindo cancelados.}
-        quantidadeVendidos: {type: integer, description: Pedidos válidos incluindo fiado pendente.}
+        quantidadeVendidos: {type: integer, description: Pedidos válidos incluindo os de devedores com pagamento pendente.}
         quantidadeCancelados: {type: integer}
         totalVendido: {type: number, description: Soma do valor dos pedidos válidos em reais.}
         totalCancelado: {type: number, description: Valor original dos pedidos cancelados em reais.}
-        fiadoPendente: {type: number, description: Parcela do total vendido ainda a receber por fiado.}
+        fiadoPendente: {type: number, description: Parcela do total vendido a receber de devedores.}
         ticketMedio: {type: number, description: Valor médio dos pedidos válidos arredondado para centavos.}
     RelatorioGrupoVendas:
       allOf:
@@ -2607,7 +2617,7 @@ components:
             properties:
               forma: {type: string, enum: [DINHEIRO, PIX, DEBITO, CREDITO], example: PIX}
               valor: {type: number, multipleOf: 0.01, example: 76}
-        fiadoAReceber: {type: number, multipleOf: 0.01, description: Saldo atual do fiado pendente apresentado à parte dos totais., example: 44.75}
+        fiadoAReceber: {type: number, multipleOf: 0.01, description: Saldo atual a receber de devedores apresentado à parte dos totais., example: 44.75}
     RelatorioItemRanking:
       type: object
       required: [id, nome, quantidade, totalVendido]
@@ -2642,7 +2652,7 @@ components:
               nome: {type: string, example: Ana}
               totalEmAberto: {type: number, multipleOf: 0.01, example: 44.75}
               quantidadePendentes: {type: integer, example: 2}
-              fiadoMaisAntigo: {type: string, nullable: true, description: Data e hora do fiado pendente mais antigo em UTC−3., example: '2026-11-05 18:00:00'}
+              fiadoMaisAntigo: {type: string, nullable: true, description: Data e hora da pendência mais antiga do devedor em UTC−3., example: '2026-11-05 18:00:00'}
               totalQuitadoNoPeriodo: {type: number, multipleOf: 0.01, example: 17.75}
               pendentes:
                 type: array
@@ -2657,7 +2667,7 @@ components:
         idPagamento: {type: integer, example: 16}
         idPedido: {type: integer, example: 16}
         status: {type: string, enum: [PENDENTE, PAGO]}
-        dataHora: {type: string, description: Data e hora do lançamento do fiado em UTC−3., example: '2026-11-08 15:15:00'}
+        dataHora: {type: string, description: Data e hora do lançamento do pagamento na opção Devedor em UTC−3., example: '2026-11-08 15:15:00'}
         valor: {type: number, multipleOf: 0.01, example: 17.75}
         dataQuitacao: {type: string, nullable: true, example: '2026-11-15 23:59:59'}
         formaQuitacao: {type: string, nullable: true, enum: [DINHEIRO, PIX, DEBITO, CREDITO, null], example: CREDITO}
@@ -3097,7 +3107,7 @@ components:
       type: object
       required: [idCaixa, status, valorAbertura, totalDinheiro, totalPix, totalDebito, totalCredito, totalFiado, totalRecebido, totalVendido, saldoEsperadoDinheiro, valorFechamento, diferenca, quantidadePagamentos, totalFiadoQuitado, fiadoRecebido]
       properties:
-        totalFiadoQuitado: {type: number, minimum: 0, multipleOf: 0.01, description: Fiados vendidos neste caixa que já foram quitados em qualquer caixa. Preserva o total vendido, sem somar no recebido do caixa de origem.}
+        totalFiadoQuitado: {type: number, minimum: 0, multipleOf: 0.01, description: Pagamentos de devedores de vendas deste caixa quitados em qualquer caixa. Integram o total vendido do caixa de origem, sem somar no recebido do caixa de origem.}
         fiadoRecebido: {$ref: '#/components/schemas/FiadoRecebidoCaixa'}
         idCaixa: {type: integer, minimum: 1}
         status: {type: string, enum: [ABERTO, FECHADO]}
@@ -3106,9 +3116,9 @@ components:
         totalPix: {type: number, minimum: 0, multipleOf: 0.01}
         totalDebito: {type: number, minimum: 0, multipleOf: 0.01}
         totalCredito: {type: number, minimum: 0, multipleOf: 0.01}
-        totalFiado: {type: number, minimum: 0, multipleOf: 0.01, description: FIADO PENDENTE; não recebido.}
+        totalFiado: {type: number, minimum: 0, multipleOf: 0.01, description: Valor a receber de devedores com forma FIADO e status PENDENTE.}
         totalRecebido: {type: number, minimum: 0, multipleOf: 0.01}
-        totalVendido: {type: number, minimum: 0, multipleOf: 0.01, description: Vendas pagas diretamente + fiado pendente + fiado quitado originados neste caixa. Quitações não contam como novas vendas.}
+        totalVendido: {type: number, minimum: 0, multipleOf: 0.01, description: Vendas originadas neste caixa incluindo pagamentos diretos e pagamentos de devedores pendentes ou quitados.}
         saldoEsperadoDinheiro: {type: number, minimum: 0, multipleOf: 0.01, description: Abertura + vendas e quitações recebidas em dinheiro; não é faturamento.}
         valorFechamento: {type: number, minimum: 0, multipleOf: 0.01, nullable: true}
         diferenca: {type: number, multipleOf: 0.01, nullable: true, description: Valor contado menos saldo esperado; null em caixa aberto.}

@@ -197,7 +197,7 @@ for (let forma of ['DINHEIRO', 'PIX', 'DEBITO', 'CREDITO']) test(`Quitar em ${fo
 
 test('Sem caixa aberto: 409, sem gravar quitação', async () => {
     estado.caixas[1].status = 'FECHADO'; let antes = structuredClone(estado);
-    let r = await chamar(); assert.equal(r.status, 409); assert.equal(r.body.msg, 'Abra o caixa antes de quitar fiados.');
+    let r = await chamar(); assert.equal(r.status, 409); assert.equal(r.body.msg, 'Abra o caixa antes de quitar pagamentos de devedores.');
     assert.deepEqual(estado, antes); assert.equal(rollbacks, 1);
 });
 

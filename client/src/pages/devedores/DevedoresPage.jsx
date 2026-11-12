@@ -5,7 +5,7 @@ import useConsulta from '../pedidos/useConsulta.js';
 import { formatarDataHora, formatarValor } from '../caixa/caixaUtils.js';
 import QuitacaoDialog from './QuitacaoDialog.jsx';
 
-export default function FiadoPage() {
+export default function DevedoresPage() {
     const { usuario } = useAuth();
     const podeAcessar = ['ADMIN', 'ATENDENTE'].includes(usuario?.perfil);
     const consulta = useConsulta(podeAcessar ? 'pagamento/fiado' : null);
@@ -19,15 +19,15 @@ export default function FiadoPage() {
     function atualizar() { consulta.recarregar(); caixa.recarregar(); }
     function quitado(resultado) { setAlvo(null); setRecibo(resultado); atualizar(); }
 
-    if (!podeAcessar) return <div className="alert alert-warning">Fiado está disponível para administradores e atendentes.</div>;
+    if (!podeAcessar) return <div className="alert alert-warning">Devedores está disponível para administradores e atendentes.</div>;
     return <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
         <div className="page-header d-flex flex-wrap gap-3 align-items-center justify-content-between mb-4">
-            <div><h1 className="fs-3 mb-1">Fiado</h1><p className="text-secondary mb-0">Consulte os valores em aberto e registre os recebimentos.</p></div>
+            <div><h1 className="fs-3 mb-1">Devedores</h1><p className="text-secondary mb-0">Consulte os valores em aberto e registre os recebimentos.</p></div>
             <button type="button" className="btn btn-outline-primary" onClick={atualizar} disabled={consulta.carregando || caixa.carregando}>Atualizar</button>
         </div>
         {caixa.carregando && <p className="text-secondary" role="status">Consultando caixa...</p>}
         {caixa.erro && <div className="alert alert-danger" role="alert">{caixa.erro} <button type="button" className="btn btn-outline-danger btn-sm" onClick={caixa.recarregar}>Tentar novamente</button></div>}
-        {!caixa.carregando && !caixa.erro && !caixa.dados && <div className="alert alert-warning">Abra o caixa para quitar fiados. <Link to="/caixa" className="alert-link">Ir para Caixa</Link></div>}
+        {!caixa.carregando && !caixa.erro && !caixa.dados && <div className="alert alert-warning">Abra o caixa para quitar valores em aberto. <Link to="/caixa" className="alert-link">Ir para Caixa</Link></div>}
         {recibo && <section className="page-card p-3 p-sm-4 mb-4 border-success" role="status">
             <h2 className="h5">Quitação registrada</h2>
             <p>{recibo.quantidade} pagamento(s) · Total: <strong>{formatarValor(recibo.total)}</strong> · Caixa #{recibo.idCaixaQuitacao}</p>
@@ -40,17 +40,17 @@ export default function FiadoPage() {
         {consulta.erro && <div className="alert alert-danger" role="alert"><p>{consulta.erro}</p><button type="button" className="btn btn-outline-danger" onClick={consulta.recarregar}>Tentar novamente</button></div>}
         <section className="page-card">
             <h2 className="h6 px-3 px-sm-4 py-3 border-bottom mb-0">Clientes devedores</h2>
-            {consulta.carregando ? <p className="text-secondary p-4" role="status">Carregando fiados...</p>
-                : !consulta.erro && !consulta.dados?.length ? <p className="text-secondary p-4">Nenhum fiado pendente.</p>
+            {consulta.carregando ? <p className="text-secondary p-4" role="status">Carregando devedores...</p>
+                : !consulta.erro && !consulta.dados?.length ? <p className="text-secondary p-4">Nenhum valor a receber de devedores.</p>
                 : !consulta.erro && consulta.dados?.map(cliente => <div key={cliente.idCliente} className="p-3 p-sm-4 border-bottom">
                     <div className="d-flex flex-wrap gap-3 align-items-center justify-content-between">
                         <div style={{ minWidth: 0 }}><h3 className="h6 mb-1">{cliente.nome}</h3><p className="small text-secondary mb-1">{cliente.telefone || 'Telefone não informado'} · {cliente.quantidade} pagamento(s)</p><strong>{formatarValor(cliente.totalEmAberto)}</strong></div>
                         <div className="d-flex flex-wrap gap-2">
-                            <button type="button" className="btn btn-outline-primary" aria-expanded={expandido === cliente.idCliente} aria-controls={`fiado-cliente-${cliente.idCliente}`} onClick={() => setExpandido(atual => atual === cliente.idCliente ? null : cliente.idCliente)}>{expandido === cliente.idCliente ? 'Ocultar pedidos' : 'Ver pedidos'}</button>
+                            <button type="button" className="btn btn-outline-primary" aria-expanded={expandido === cliente.idCliente} aria-controls={`devedor-cliente-${cliente.idCliente}`} onClick={() => setExpandido(atual => atual === cliente.idCliente ? null : cliente.idCliente)}>{expandido === cliente.idCliente ? 'Ocultar pedidos' : 'Ver pedidos'}</button>
                             <button type="button" className="btn btn-primary" disabled={bloqueado} onClick={() => setAlvo({ cliente })}>Quitar todos</button>
                         </div>
                     </div>
-                    {expandido === cliente.idCliente && <div className="table-responsive mt-3" id={`fiado-cliente-${cliente.idCliente}`}>
+                    {expandido === cliente.idCliente && <div className="table-responsive mt-3" id={`devedor-cliente-${cliente.idCliente}`}>
                         <table className="table align-middle mb-0">
                             <thead className="text-nowrap"><tr><th>Pedido</th><th>Lançamento</th><th>Caixa da venda</th><th>Valor</th><th>Ação</th></tr></thead>
                             <tbody>{cliente.pedidos.map(pagamento => <tr key={pagamento.id}>

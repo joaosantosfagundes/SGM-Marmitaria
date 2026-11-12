@@ -3,7 +3,7 @@ import { FORMAS_PAGAMENTO } from '../pedidos/pedidoUtils.js';
 import { formatarQuantidade } from './relatorioUtils.js';
 import TabelaRelatorio from './TabelaRelatorio.jsx';
 
-export default function RelatorioFiado({ dados }) {
+export default function RelatorioDevedores({ dados }) {
     let { clientes } = dados;
 
     return <>
@@ -11,7 +11,7 @@ export default function RelatorioFiado({ dados }) {
             Em aberto mostra as pendências atuais. O período selecionado filtra os pedidos pela data da quitação.
         </p>
         <TabelaRelatorio titulo="Resumo por cliente"
-            colunas={['Cliente', 'Em aberto', 'Pedidos pendentes', 'Fiado mais antigo', 'Quitado no período']}
+            colunas={['Cliente', 'Em aberto', 'Pedidos pendentes', 'Pendência mais antiga', 'Quitado no período']}
             mensagemVazia="Nenhum cliente com pendências atuais ou quitações no período.">
             {clientes.map(cliente => <tr key={cliente.idCliente}>
                 <th scope="row">{cliente.nome} <small className="text-secondary">#{cliente.idCliente}</small></th>
@@ -28,7 +28,7 @@ export default function RelatorioFiado({ dados }) {
                 <th scope="row">#{pedido.idPedido}</th>
                 <td className="text-nowrap">{formatarDataHora(pedido.dataHora)}</td>
                 <td>{pedido.status === 'PENDENTE'
-                    ? <span className="badge text-bg-warning">Pendente</span>
+                    ? <span className="badge text-bg-warning">A receber</span>
                     : <span className="badge text-bg-success">Quitado</span>}</td>
                 <td className="text-nowrap">{formatarValor(pedido.valor)}</td>
                 <td className="text-nowrap">{formatarDataHora(pedido.dataQuitacao)}</td>

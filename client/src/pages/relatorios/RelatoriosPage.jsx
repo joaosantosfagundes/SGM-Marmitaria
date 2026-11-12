@@ -6,7 +6,7 @@ import RelatorioVendas from './RelatorioVendas.jsx';
 import RelatorioEstoque from './RelatorioEstoque.jsx';
 import RelatorioFinanceiro from './RelatorioFinanceiro.jsx';
 import RelatorioProdutos from './RelatorioProdutos.jsx';
-import RelatorioFiado from './RelatorioFiado.jsx';
+import RelatorioDevedores from './RelatorioDevedores.jsx';
 import { formatarDia, periodoHoje } from './relatorioUtils.js';
 import './relatorios.scss';
 
@@ -15,7 +15,7 @@ const ABAS = [
     { id: 'estoque', titulo: 'Estoque', componente: RelatorioEstoque },
     { id: 'financeiro', titulo: 'Financeiro', componente: RelatorioFinanceiro, apenasAdmin: true },
     { id: 'produtos-mais-vendidos', titulo: 'Produtos mais vendidos', componente: RelatorioProdutos },
-    { id: 'fiado', titulo: 'Fiado por cliente', componente: RelatorioFiado }
+    { id: 'fiado', titulo: 'Devedores por cliente', componente: RelatorioDevedores }
 ];
 
 function ResultadoRelatorio({ aba, periodo }) {

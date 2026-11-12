@@ -1,0 +1,31 @@
+.caixa-painel {
+  display: grid;
+  gap: 1rem;
+  align-items: start;
+
+  > * {
+    min-width: 0;
+  }
+}
+
+.page-card.caixa-status {
+  border-color: var(--marmitex-bordo-secundario);
+  color: #fff;
+  background:
+    linear-gradient(110deg, transparent 40%, rgba(38, 15, 22, .18)),
+    linear-gradient(110deg, var(--marmitex-bordo) 12%, var(--marmitex-bordo-secundario) 42%, var(--marmitex-primary));
+}
+
+@media (min-width: 1200px) {
+  .caixa-painel {
+    grid-template-columns: minmax(0, 4fr) minmax(0, 5fr);
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "status resumo"
+      "fechamento resumo";
+  }
+
+  .caixa-status { grid-area: status; }
+  .caixa-resumo { grid-area: resumo; }
+  .caixa-fechamento { grid-area: fechamento; }
+}

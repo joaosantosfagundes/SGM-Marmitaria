@@ -103,14 +103,14 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 
 ### Sprint 5 — Operação e relatórios
 - [x] RF_F5 — Consulta de pagamentos por data, forma, status e caixa; pagamento criado no lançamento do pedido
-- [x] RF_F6 — Fiado por cliente e quitação individual ou em lote, vinculada ao caixa do recebimento
+- [x] RF_F6 — Devedores por cliente e quitação individual ou em lote, vinculada ao caixa do recebimento
 - [x] RF_F7 — Entradas e saídas manuais, recebimentos consolidados por caixa fechado, filtros e totais, recorrência informativa e compra de estoque com despesa atômica
 - [x] RF_F9 — Caixa: abertura, fechamento, histórico, tabela única de recebimentos por forma e conferência da gaveta
-- [x] RF_S1 — Vendas e pedidos por data do pedido, com ticket médio e fiado a receber
+- [x] RF_S1 — Vendas e pedidos por data do pedido, com ticket médio e valores a receber de devedores
 - [x] RF_S2 — Saldos atuais e resumo das movimentações de estoque
 - [x] RF_S3 — Relatório financeiro por categoria e forma de pagamento, com recebimentos de caixas fechados
 - [x] RF_S4 — Ranking de produtos e adicionais por quantidade ou valor
-- [x] RF_S5 — Fiado por cliente, com pendências atuais e quitações do período
+- [x] RF_S5 — Devedores por cliente, com pendências atuais e quitações do período
 
 ### Ajustes de interface
 
@@ -127,8 +127,8 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 
 O Dashboard consulta `GET /dashboard/resumo` a cada 30 segundos com a tela ativa. Para ADMIN e
 ATENDENTE, **Pedidos hoje** conta os pedidos lançados no dia da operação (UTC−3), incluindo os
-cancelados. **Vendas hoje** soma os pedidos válidos pela data do pedido e destaca a parcela em fiado
-pendente. **Em preparo** conta os pedidos que continuam nesse status, inclusive de dias anteriores.
+cancelados. **Vendas hoje** soma os pedidos válidos pela data do pedido e destaca a parcela a receber
+de devedores. **Em preparo** conta os pedidos que continuam nesse status, inclusive de dias anteriores.
 
 O saldo esperado da gaveta vem do resumo do caixa aberto ou, na ausência dele, do último caixa
 fechado. O gráfico mostra hoje e os seis dias anteriores, com as vendas pela data do pedido e as
@@ -147,18 +147,18 @@ da aba ativa, o período consultado e as tabelas. A navegação e os controles f
 
 - **Vendas e pedidos** usa `pedido.data_hora` e apresenta quantidades e valores por dia, forma original
   de pagamento, tipo de atendimento e status. Cancelados têm contagem e valor separados. O ticket médio
-  divide o total vendido pelos pedidos válidos. O fiado pendente integra o vendido e aparece como valor
-  a receber. O Financeiro usa a data de fechamento do caixa para consolidar recebimentos.
+  divide o total vendido pelos pedidos válidos. O total vendido inclui os pagamentos de devedores e
+  destaca o valor a receber. O Financeiro usa a data de fechamento do caixa para consolidar recebimentos.
 - **Estoque** mostra o saldo atual, o mínimo e o destaque quando o saldo fica abaixo dele. O filtro de
   período afeta as quantidades de compra, perda e ajustes de entrada e saída por insumo.
 - **Financeiro** é exclusivo de ADMIN e usa os mesmos lançamentos da tela Financeiro. Consolida as
   vendas pagas e as quitações pela data de fechamento do caixa que recebeu o dinheiro. Mostra entradas,
   saídas e saldo do período, lançamentos por categoria e recebimentos pela forma efetiva de pagamento.
-  O fiado a receber é o saldo atual das pendências e aparece à parte do saldo financeiro.
+  **A receber de devedores** mostra o saldo atual das pendências à parte do saldo financeiro.
 - **Produtos mais vendidos** permite ordenar por quantidade ou valor vendido. Produtos e adicionais são
   agregados separadamente pelos subtotais históricos de pedidos válidos.
-- **Fiado por cliente** lista as pendências atuais e os pedidos quitados no período, com totais por
-  cliente, contagem de pedidos pendentes e data do fiado pendente mais antigo. O período usa a data
+- **Devedores por cliente** lista as pendências atuais e os pedidos quitados no período, com totais por
+  cliente, contagem de pedidos pendentes e data da pendência mais antiga. O período usa a data
   da quitação e inclui clientes que quitaram no período mesmo com saldo em aberto zerado.
 
 No Swagger, faça login como ADMIN ou ATENDENTE e abra as rotas GET `/relatorio/vendas`, `/relatorio/estoque`,
@@ -180,10 +180,11 @@ um esquema exclusivo de fixtures.
 abertos ou fechados. Usa `pedido.id_caixa` e `pagamento.id_pedido`, sem filtrar pelo dia:
 um caixa aberto ontem inclui todas as suas vendas de hoje até o fechamento.
 
-- **Recebido:** pagamentos diretos PAGO em Dinheiro, Pix, Débito e Crédito + fiados recebidos neste caixa,
-  com total e quantidade por forma. A seção `fiadoRecebido` usa a forma e o caixa da quitação.
-- **Fiado pendente:** somente FIADO PENDENTE; aparece separado e não representa recebimento.
-- **Total vendido:** vendas pagas diretamente + fiado pendente + fiado quitado originados neste caixa.
+- **Recebido** soma pagamentos diretos PAGO em Dinheiro, Pix, Débito e Crédito e o valor recebido de
+  devedores neste caixa, com total e quantidade por forma. O campo `fiadoRecebido` usa a forma e o caixa da quitação.
+- **A receber de devedores** mostra separadamente os pagamentos de forma `FIADO` e status `PENDENTE`.
+- **Total vendido** soma as vendas pagas diretamente e os pedidos de devedores originados neste caixa,
+  com pagamento pendente ou quitado.
   A venda permanece no caixa de origem, mesmo após quitar em outro caixa. Quitação não é nova venda.
 - **Saldo esperado na gaveta:** abertura + vendas e quitações recebidas em dinheiro. Usa `pagamento.valor`,
   não o valor recebido do cliente; o troco já está descontado. `valor_recebido` null equivale ao valor exato.
@@ -204,7 +205,8 @@ ou divisão da quitação em várias formas. A quitação individual ou de todos
 Pedidos CANCELADO e pagamentos CANCELADO não contam. O cancelamento de pedido exige caixa aberto e
 cancela todos os seus pagamentos; não registra estorno bancário nem retirada/devolução física de dinheiro.
 Alterar status diretamente no banco também muda o resumo calculado.
-FIADO PAGO sem metadados de quitação (registro legado/manual) não é inferido como dinheiro, Pix ou cartão.
+Pagamentos de devedores legados com forma `FIADO` e status `PAGO` exigem metadados de quitação para
+entrar como recebimentos em dinheiro, Pix ou cartão.
 Cada registro de pagamento válido é somado uma vez, sem join com itens; o fluxo atual
 cria um pagamento por pedido, mas duplicações manuais no banco não são conciliadas automaticamente.
 Não existe saldo acumulado nem snapshot financeiro gravado. A migration 007 adiciona somente os dados da quitação.
@@ -213,39 +215,43 @@ Testes: `node --test server/tests/pedido.test.js server/tests/caixa.test.js`. O 
 status, permissões, fechamento, rollback e as duas ordens de concorrência S/X; não substitui testes de
 SQL, isolamento e bloqueios em MySQL 8 real.
 
-## Consulta de pagamentos e quitação de fiado (RF_F5/RF_F6)
+## Consulta de pagamentos e quitação de devedores (RF_F5/RF_F6)
 
 Aplique uma única vez [`server/db/migrations/007-pagamento-quitacao.sql`](server/db/migrations/007-pagamento-quitacao.sql)
 no banco local **e no Railway**, depois das migrations anteriores. O schema não tinha nenhum dos quatro campos:
 `id_usuario_quitacao`, `data_quitacao`, `forma_quitacao` e `id_caixa_quitacao`; a migration adiciona esses campos
 e as FKs para usuário e caixa, sem alterar pagamentos antigos e sem linha `USE`. Não é executada automaticamente.
 
-- `/fiado`: ADMIN e ATENDENTE consultam clientes devedores, expandem os pedidos e quitam um pagamento ou
-  todos os pendentes do cliente. O diálogo pede a forma e a confirmação do recebimento. Dinheiro aceita
-  valor recebido opcional, com vírgula ou ponto, e mostra o troco.
+- Em `/devedores`, ADMIN e ATENDENTE consultam clientes devedores, expandem os pedidos e quitam um
+  pagamento ou todos os pendentes do cliente. O diálogo pede a forma e a confirmação do recebimento.
+  Dinheiro aceita valor recebido opcional, com vírgula ou ponto, e mostra o troco. Links antigos de
+  `/fiado` redirecionam para `/devedores`.
 - `/pagamento`: consulta somente leitura, até 200 registros por vez. Filtros `data`, `forma`, `status`,
   `idCaixa` e `limite` em `GET /pagamento`. Quando há quitação, data/forma/caixa se referem ao recebimento;
   caso contrário, ao lançamento. A tabela preserva também os dados originais da venda.
-- `GET /pagamento/fiado`: todos os FIADO PENDENTE de pedidos não cancelados, agrupados por cliente.
+- `GET /pagamento/fiado`: todos os pagamentos na opção Devedor (`FIADO`) com status `PENDENTE`
+  de pedidos sem cancelamento, agrupados por cliente.
   Inclui clientes inativos com dívida e não limita por dia.
 - `POST /pagamento/:id/quitar` e `POST /pagamento/cliente/:idCliente/quitar`: corpo `{ "forma": "PIX" }`
   ou `{ "forma": "DINHEIRO", "valorRecebido": 100 }`. Formas: DINHEIRO, PIX, DEBITO e CREDITO.
   Valor recebido omitido/null em dinheiro deixa recebido/troco null; nas outras formas, não enviar o campo.
-  Usuário e caixa são determinados pelo servidor, e a forma original permanece FIADO.
+  O servidor determina usuário e caixa. A forma original permanece `FIADO`.
 
 As quitações usam uma transação e bloqueiam pedidos e pagamentos em ordem consistente, antes de ler o
-caixa aberto com `for share`. O update exige FIADO PENDENTE e confere as linhas alteradas. O lote é
+caixa aberto com `for share`. O update exige forma `FIADO` e status `PENDENTE` e confere as linhas alteradas. O lote é
 integral: se uma pendência selecionada mudar durante a disputa, nenhuma quitação é gravada. Pedidos novos
 após a seleção ficam para outra quitação. No lote em dinheiro, o troco fica no último pagamento para não
 repetir o valor entregue. O saldo usa o valor da dívida, sem somar diretamente o valor recebido.
 
-Para testar pelo Swagger, faça login como ADMIN/ATENDENTE e crie um pedido FIADO com cliente:
+Para testar pelo Swagger, faça login como ADMIN ou ATENDENTE e crie um pedido com cliente cadastrado
+e forma `FIADO`, exibida como **Devedor** na interface.
 
 1. Consulte `GET /pagamento/fiado` e anote o ID do pagamento e do cliente.
 2. Feche o caixa da venda e, sem outro aberto, tente quitar: deve retornar 409. Abra um novo caixa e quite com PIX ou DINHEIRO.
 3. Consulte `GET /pagamento` e `GET /caixa/:id/resumo`: deve aparecer a quitação no caixa do recebimento.
-   Repetir a quitação retorna 409. Um fiado de caixa anterior mantém a venda na origem.
-4. Crie dois fiados do mesmo cliente e use a rota de quitação por cliente; os dois devem ficar PAGO juntos.
+   Repetir a quitação retorna 409. O pedido de um caixa anterior mantém a venda na origem.
+4. Crie dois pedidos com pagamento na opção Devedor para o mesmo cliente e use a rota de quitação
+   por cliente. Os dois pagamentos devem ficar com status `PAGO` juntos.
 5. Teste COZINHA: as quatro rotas de pagamento devem retornar 403.
 
 Testes automatizados com banco simulado: `node --test server/tests/pagamento.test.js server/tests/pedido.test.js server/tests/caixa.test.js`.
@@ -257,8 +263,8 @@ e a conferência do SQL/isolamento no MySQL real. Testes pelo Swagger escrevem n
 
 `/financeiro` mostra uma única ENTRADA por caixa FECHADO com recebimentos, junto das despesas (aluguel,
 salário, gás, insumos etc.) e entradas avulsas. Enquanto o caixa estiver aberto, seus recebimentos são
-acompanhados em Caixa e Pagamento. O detalhe de cada pagamento e a quitação de fiado continuam nessas telas.
-A entrada usa a data/hora do fechamento e soma vendas pagas e fiados recebidos naquele caixa, mesmo que
+acompanhados em Caixa e Pagamento. O detalhe de cada pagamento e as quitações de devedores aparecem nessas telas.
+A entrada usa a data/hora do fechamento e soma vendas pagas e recebimentos de devedores naquele caixa, mesmo que
 o caixa atravesse dias. Vendas e quitações continuam gravadas somente em `pagamento`; o consolidado é
 calculado na consulta, sem criar uma cópia em `movimentacao_financeira` ou mudar o fluxo de fechamento.
 O valor da entrada é o total recebido, não o dinheiro contado na gaveta: não inclui abertura, troco ou
@@ -274,9 +280,9 @@ O relatório RF_S3 reutiliza essa consulta e detalha os totais por categoria e f
   os registros filtrados, sem truncar a listagem. Registros legados com `id_pedido` preenchido são excluídos
   da consulta e dos totais para não duplicar os recebimentos lidos de `pagamento`; a coluna e os dados antigos são preservados.
 - Vendas diretas consideram apenas pagamentos PAGO em DINHEIRO, PIX, DEBITO ou CREDITO, pelo caixa do
-  pedido e valor efetivo da venda (`valor`, sem somar `valor_recebido`). Fiados só entram quando PAGO,
+  pedido e valor efetivo da venda (`valor`, sem somar `valor_recebido`). Pagamentos de devedores entram quando `PAGO`,
   no caixa da quitação, sem repetir a receita no caixa da venda. Pagamentos PENDENTE/CANCELADO e pedidos CANCELADO não entram.
-  FIADO PAGO legado sem dados completos de quitação não é considerado um recebimento presumido.
+  Pagamentos legados de forma `FIADO` e status `PAGO` exigem dados completos da quitação.
 - Os consolidados têm `origem: CAIXA`, `id: null`, `idCaixa`, categoria "Fechamento de caixa" e descrição
   "Recebimentos do caixa #N". São somente consulta; o responsável é quem fechou (ou quem abriu, para registro
   legado sem usuário de fechamento). Os lançamentos manuais têm `origem: MANUAL` e as despesas de compra,
@@ -316,7 +322,8 @@ where (recorrente = 0 and quantidade_meses is not null)
 Lance uma venda de R$ 40,00 em dinheiro com R$ 50,00 recebido: `GET /financeiro` ainda não deve incluir
 esse recebimento com o caixa aberto. Feche o caixa e consulte pela data do fechamento: deve aparecer uma
 entrada de R$ 40,00 em "Fechamento de caixa", sem abertura nem troco. Atualizar não deve duplicar a entrada.
-Crie um FIADO e quite em outro caixa: só deve integrar o financeiro no fechamento do caixa que recebeu.
+Crie um pedido com forma `FIADO` e quite em outro caixa. O recebimento deve integrar o Financeiro no
+fechamento do caixa que recebeu.
 Confira também um caixa aberto em um dia e fechado no seguinte: toda a entrada fica na data do fechamento.
 Tente valor zero e recorrência de 1 mês: devem retornar 400. Registre uma ENTRADA_COMPRA em
 `POST /estoque/movimentacoes` com `valorPago`, confira a saída em `GET /financeiro` e tente editá-la/excluí-la:

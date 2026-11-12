@@ -37,9 +37,9 @@ function GraficoVendas({ porDia }) {
     </section>;
 }
 
-function TabelaVendas({ titulo, coluna, linhas, rotulo, mostrarFiado = false }) {
+function TabelaVendas({ titulo, coluna, linhas, rotulo, mostrarAReceber = false }) {
     let colunas = [coluna, 'Pedidos válidos', 'Total vendido', 'Cancelados', 'Valor cancelado'];
-    if (mostrarFiado) colunas.push('Vendido, a receber');
+    if (mostrarAReceber) colunas.push('Vendido, a receber');
 
     return <TabelaRelatorio titulo={titulo} colunas={colunas}>
         {linhas.map(linha => <tr key={linha.chave}>
@@ -48,7 +48,7 @@ function TabelaVendas({ titulo, coluna, linhas, rotulo, mostrarFiado = false }) 
             <td className="text-nowrap">{formatarValor(linha.totalVendido)}</td>
             <td>{formatarQuantidade(linha.quantidadeCancelados)}</td>
             <td className="text-nowrap">{formatarValor(linha.totalCancelado)}</td>
-            {mostrarFiado && <td className="text-nowrap">
+            {mostrarAReceber && <td className="text-nowrap">
                 {linha.chave === 'FIADO' ? formatarValor(linha.fiadoPendente) : '—'}
             </td>}
         </tr>)}
@@ -61,7 +61,7 @@ export default function RelatorioVendas({ dados }) {
         { titulo: 'Pedidos válidos', valor: formatarQuantidade(resumo.quantidadeVendidos) },
         { titulo: 'Total vendido', valor: formatarValor(resumo.totalVendido) },
         { titulo: 'Ticket médio', valor: formatarValor(resumo.ticketMedio) },
-        { titulo: 'Fiado pendente', valor: formatarValor(resumo.fiadoPendente), detalhe: 'Vendido, a receber' },
+        { titulo: 'A receber', valor: formatarValor(resumo.fiadoPendente), detalhe: 'Vendido para clientes devedores' },
         { titulo: 'Pedidos cancelados', valor: formatarQuantidade(resumo.quantidadeCancelados), detalhe: `${formatarValor(resumo.totalCancelado)} em pedidos cancelados` }
     ];
 
@@ -81,7 +81,7 @@ export default function RelatorioVendas({ dados }) {
         {porDia.length > 0 && <GraficoVendas porDia={porDia} />}
         <TabelaVendas titulo="Por dia do pedido" coluna="Dia" linhas={porDia} rotulo={formatarDia} />
         <TabelaVendas titulo="Por forma de pagamento" coluna="Forma original" linhas={porFormaPagamento}
-            rotulo={forma => FORMAS_PAGAMENTO[forma] || 'Sem pagamento registrado'} mostrarFiado />
+            rotulo={forma => FORMAS_PAGAMENTO[forma] || 'Sem pagamento registrado'} mostrarAReceber />
         <TabelaVendas titulo="Por tipo de atendimento" coluna="Atendimento" linhas={porTipoAtendimento}
             rotulo={tipo => TIPOS_ATENDIMENTO[tipo] || tipo} />
         <TabelaVendas titulo="Por status do pedido" coluna="Status" linhas={porStatus}

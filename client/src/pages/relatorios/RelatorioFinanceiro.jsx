@@ -39,9 +39,9 @@ export default function RelatorioFinanceiro({ dados }) {
             </tr>)}
         </TabelaRelatorio>
         <section className="page-card p-3 p-sm-4 mb-3">
-            <h3 className="h5 mb-2">Fiado a receber</h3>
+            <h3 className="h5 mb-2">A receber de devedores</h3>
             <strong className="fs-5">{formatarValor(fiadoAReceber)}</strong>
-            <p className="text-secondary mb-0">Saldo atual dos fiados pendentes, apresentado à parte do saldo do período.</p>
+            <p className="text-secondary mb-0">Saldo atual das pendências dos clientes, apresentado à parte do saldo do período.</p>
         </section>
     </>;
 }
