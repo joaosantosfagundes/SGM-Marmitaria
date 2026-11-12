@@ -1,24 +1,14 @@
-import { Resend } from 'resend';
-
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
-const EMAIL_FROM = process.env.EMAIL_FROM || 'SGM <onboarding@resend.dev>';
-
 export default class EmailService {
 
     async enviarRedefinicaoSenha(email, nome, link) {
-        // Sem RESEND_API_KEY configurada (ex: ambiente de dev sem conta ainda),
-        // não quebra o fluxo — só mostra o link no console pra você conseguir testar.
-        if (!resend) {
-            console.warn('⚠️  RESEND_API_KEY não configurada. Link de redefinição (só pra debug local):');
+        const chave = process.env.BREVO_API_KEY;
+        if (!chave) {
+            console.warn('⚠️  BREVO_API_KEY não configurada. Link de redefinição (só pra debug local):');
             console.warn(link);
             return { modoDebug: true };
         }
 
-        let resultado = await resend.emails.send({
-            from: EMAIL_FROM,
-            to: email,
-            subject: 'Redefinição de senha — SGM',
-            html: `
+        const htmlContent = `
                 <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
                     <h2 style="color: #D85A30;">Redefinição de senha</h2>
                     <p>Olá, ${nome}.</p>
@@ -34,13 +24,40 @@ export default class EmailService {
                         sua senha continua a mesma.
                     </p>
                 </div>
-            `,
-        });
+            `;
 
-        if (resultado.error) {
-            throw { status: 500, msg: 'Falha ao enviar e-mail de redefinição' };
+        const sinal = AbortSignal.timeout(10000);
+        try {
+            const resposta = await fetch('https://api.brevo.com/v3/smtp/email', {
+                method: 'POST',
+                redirect: 'manual',
+                headers: {
+                    'api-key': chave,
+                    'content-type': 'application/json',
+                    accept: 'application/json',
+                },
+                body: JSON.stringify({
+                    sender: {
+                        name: process.env.EMAIL_FROM_NAME || 'SGM',
+                        email: process.env.EMAIL_FROM,
+                    },
+                    to: [{ email, name: nome }],
+                    subject: 'Redefinição de senha — SGM',
+                    htmlContent,
+                }),
+                signal: sinal,
+            });
+
+            const corpo = await resposta.text().catch(() => 'Corpo da resposta indisponível.');
+            if (resposta.ok) return;
+
+            console.error('Erro no envio de e-mail pelo Brevo', resposta.status, corpo.replaceAll(chave, '[oculta]'));
+        } catch {
+            console.error(sinal.aborted
+                ? 'Tempo limite excedido no envio de e-mail pelo Brevo.'
+                : 'Falha de comunicação com a API do Brevo.');
         }
 
-        return resultado;
+        throw { status: 500, msg: 'Falha ao enviar e-mail de redefinição' };
     }
 }

@@ -39,6 +39,19 @@ npm run dev             # http://localhost:5000
 
 Cada conexão MySQL usa o deslocamento fixo `time_zone = '-03:00'`, inclusive em transações, mantendo `dateStrings: true`; os registros antigos não são convertidos.
 
+### E-mail de redefinição de senha no Railway
+
+Gere uma chave de API no Brevo e verifique o endereço do remetente. Em **Variables** do serviço backend
+no Railway, configure `BREVO_API_KEY` com a chave, `EMAIL_FROM` com apenas o endereço verificado e
+`EMAIL_FROM_NAME` com o nome exibido (opcional, padrão `SGM`). Confira se `FRONTEND_URL` aponta para o
+endereço público do frontend e publique a atualização do serviço.
+
+O backend usa a [API HTTPS do Brevo](https://developers.brevo.com/reference/send-transac-email), pois o
+[Railway bloqueia SMTP nos planos Free, Trial e Hobby](https://docs.railway.com/networking/outbound-networking).
+Sem `BREVO_API_KEY`, o link de redefinição sai no console para testes locais.
+Para conferir pelo Swagger, execute `POST /senha/esqueci-senha` com o e-mail de uma conta de teste e
+abra o link recebido por e-mail ou registrado no console local.
+
 ### Frontend
 ```bash
 cd client
@@ -84,6 +97,7 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 ## Checklist de implementação (por Sprint)
 
 - [x] Documentação das rotas da API com Swagger/OpenAPI, habilitada somente com `SWAGGER_ATIVO=true`.
+- [x] Envio de e-mail de redefinição de senha pela API do Brevo.
 
 ### Sprint 2 (24/08–12/09) — RF_B1–B3
 - [x] RF_B1 — Usuários (feito: entity, repository, service, controller, route, login/JWT)
