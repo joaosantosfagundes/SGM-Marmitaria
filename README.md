@@ -105,7 +105,7 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 - [x] RF_F5 — Consulta de pagamentos por data, forma, status e caixa; pagamento criado no lançamento do pedido
 - [x] RF_F6 — Devedores por cliente e quitação individual ou em lote, vinculada ao caixa do recebimento
 - [x] RF_F7 — Entradas e saídas manuais, recebimentos consolidados por caixa fechado, filtros e totais, recorrência informativa e compra de estoque com despesa atômica
-- [x] RF_F9 — Caixa: abertura, fechamento, histórico, tabela única de recebimentos por forma e conferência da gaveta
+- [x] RF_F9 — Caixa: abertura, fechamento com validação de pedidos pendentes, histórico, recebimentos e conferência da gaveta
 - [x] RF_S1 — Vendas e pedidos por data do pedido, com ticket médio e valores a receber de devedores
 - [x] RF_S2 — Saldos atuais e resumo das movimentações de estoque
 - [x] RF_S3 — Relatório financeiro por categoria e forma de pagamento, com recebimentos de caixas fechados
@@ -197,6 +197,9 @@ mudarem durante a confirmação, pede nova conferência. O fechamento aceita `id
 proteger a identidade do caixa conferido; clientes antigos podem continuar enviando somente `valorFechamento`.
 O update condicional e a leitura do caixa fechado usam uma única `ExecutaTransacao`. O bloqueio exclusivo
 aguarda o FOR SHARE dos pedidos e quitações já em andamento; recebimentos posteriores não entram no caixa fechado.
+Após adquirir o bloqueio, a transação verifica os pedidos desse caixa. Se houver pedidos em `RECEBIDO`
+ou `EM_PREPARO`, retorna 409 e desfaz o fechamento. A mensagem informa até dez números e a quantidade
+restante. Marque esses pedidos como prontos ou cancele-os antes de tentar fechar de novo.
 O resumo final é consultado depois do fechamento e inclui essas últimas vendas; a confirmação da tela
 não reserva o caixa nem mantém uma transação aberta enquanto o usuário decide.
 
@@ -319,7 +322,7 @@ where (recorrente = 0 and quantidade_meses is not null)
 ```
 
 **Swagger:** faça login como ADMIN, crie um lançamento manual, consulte por período, edite a data e exclua.
-Lance uma venda de R$ 40,00 em dinheiro com R$ 50,00 recebido: `GET /financeiro` ainda não deve incluir
+Lance uma venda de R$ 40,00 em dinheiro com R$ 50,00 recebido e finalize o pedido: `GET /financeiro` ainda não deve incluir
 esse recebimento com o caixa aberto. Feche o caixa e consulte pela data do fechamento: deve aparecer uma
 entrada de R$ 40,00 em "Fechamento de caixa", sem abertura nem troco. Atualizar não deve duplicar a entrada.
 Crie um pedido com forma `FIADO` e quite em outro caixa. O recebimento deve integrar o Financeiro no

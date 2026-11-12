@@ -5,6 +5,20 @@ import { centavos, lerInteiro, validarId } from "../utils/pedidoUtils.js";
 const MENSAGEM_CAIXA_ABERTO = "Já existe um caixa aberto. Feche-o antes de abrir outro.";
 const MENSAGEM_SEM_CAIXA_ABERTO = "Não há caixa aberto para fechar.";
 
+function validarPedidosPendentes(pedidos) {
+    if (!pedidos.length) return;
+
+    let total = pedidos.length;
+    let rotulos = { RECEBIDO: 'recebido', EM_PREPARO: 'em preparo' };
+    let lista = pedidos.slice(0, 10).map(pedido => `#${pedido.id_pedido} ${rotulos[pedido.status]}`).join(', ');
+    if (total > 10) lista += ` e mais ${total - 10}`;
+    let descricao = total === 1 ? 'pedido não finalizado' : 'pedidos não finalizados';
+    throw {
+        status: 409,
+        msg: `Não é possível fechar o caixa: há ${total} ${descricao} (${lista}). Marque como pronto ou cancele antes de fechar.`
+    };
+}
+
 export default class CaixaService {
     #repo;
 
@@ -77,7 +91,7 @@ export default class CaixaService {
 
         caixa.idUsuarioFechamento = idUsuarioLogado;
         caixa.valorFechamento = dados.valorFechamento;
-        let fechado = await this.#repo.fechar(caixa);
+        let fechado = await this.#repo.fechar(caixa, validarPedidosPendentes);
         if (!fechado) throw { status: 409, msg: MENSAGEM_SEM_CAIXA_ABERTO };
         return fechado;
     }

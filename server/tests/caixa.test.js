@@ -86,6 +86,15 @@ async function executar(sql, valores = [], transacao) {
     consultas.push({ q, valores, transacao: transacao?.id ?? null });
     if (q.startsWith('select * from usuario')) return estado.usuarios.filter(usuario => usuario.id_usuario === valores[0]);
     if (q.includes('sum(case')) return resumir(valores[0], q);
+    if (q.startsWith('select id_pedido, status from pedido')) {
+        assert.equal(q, "select id_pedido, status from pedido where id_caixa = ? and status in ('recebido', 'em_preparo') order by id_pedido");
+        assert.equal(transacao?.caixas.get(valores[0])?.status, 'FECHADO');
+        assert.equal(travas.get(valores[0])?.titulares.get(transacao.id), 'X');
+        return pedidosVisiveis(transacao)
+            .filter(pedido => pedido.id_caixa === valores[0] && ['RECEBIDO', 'EM_PREPARO'].includes(pedido.status))
+            .sort((a, b) => a.id_pedido - b.id_pedido)
+            .map(({ id_pedido, status }) => ({ id_pedido, status }));
+    }
     if (q.startsWith('select * from pedido where')) {
         await bloquear(`pedido:${valores[0]}`, transacao, 'X');
         await interceptar?.(q, transacao);
@@ -139,7 +148,10 @@ async function executar(sql, valores = [], transacao) {
         estado.caixas.push({ id_caixa: id, status: 'ABERTO', id_usuario_abertura: valores[0], valor_abertura: valores[1].toFixed(2), valor_fechamento: null });
         return { insertId: id };
     }
-    if (q.startsWith('select * from produto')) return [{ id_produto: 1, nome: 'PF', ativo: 1, usa_cardapio: 0, preco_padrao: '40.00' }];
+    if (q.startsWith('select * from produto')) return [{ id_produto: 1, nome: 'PF', ativo: 1, usa_cardapio: estado.produtoUsaCardapio ? 1 : 0, preco_padrao: '40.00' }];
+    if (q.startsWith('select id_cardapio,')) return [{ id_cardapio: 1, data_cardapio: valores[0] }];
+    if (q.includes('from cardapio_preparacao')) return [{ nome: 'Arroz', grupo: null }];
+    if (q.includes('from cardapio_adicional')) return [];
     if (q.startsWith('insert into pedido ')) {
         let [id_caixa, id_usuario, id_cliente, status, statusHoraPronto, tipo_atendimento, endereco_entrega, observacao, valor_total] = valores;
         let id = proximoPedido++;
@@ -182,7 +194,7 @@ beforeEach(() => {
         usuarios: [1, 2, 3].map((id, indice) => ({ id_usuario: id, nome: `Pessoa ${id}`, perfil: ['ADMIN', 'ATENDENTE', 'COZINHA'][indice], ativo: 1 })),
         caixas: [{ id_caixa: 1, status: 'ABERTO', valor_abertura: '150.00', valor_fechamento: null, id_usuario_abertura: 1, data_abertura: '2026-10-22 08:00:00' },
             { id_caixa: 2, status: 'FECHADO', valor_abertura: '20.00', valor_fechamento: '20.00', id_usuario_abertura: 1 }],
-        pedidos: [], pagamentos: [],
+        pedidos: [], pagamentos: [], produtoUsaCardapio: false,
     };
     consultas = []; travas = new Map(); proximaTransacao = 0; proximoPedido = 1; proximoCaixa = 3;
     interceptar = aoEsperar = null; falharLeitura = false; commits = rollbacks = 0;
@@ -255,13 +267,49 @@ test('Centavos exatos nos totais e na diferença', async () => {
     assert.equal(resumo.totalDinheiro, 0.3); assert.equal(resumo.totalRecebido, 0.6); assert.equal(resumo.saldoEsperadoDinheiro, 150.3); assert.equal(resumo.diferenca, -0.05);
 });
 for (let [valor, diferenca] of [[190, 0], [185, -5], [195, 5], [0, -190]]) test(`Fecha com contado ${valor}, diferença ${diferenca}, e consulta o histórico`, async () => {
-    venda();
+    venda({ statusPedido: 'PRONTO' });
     let r = await chamar('/fechar', { metodo: 'post', body: { valorFechamento: valor, idCaixa: 1, id_usuario: 3 }, perfil: 2 });
     assert.equal(r.status, 200); assert.equal(r.body.status, 'FECHADO'); assert.equal(r.body.valorFechamento, valor); assert.equal(r.body.idUsuarioFechamento, 2);
     assert.equal(r.body.nomeUsuarioFechamento, 'Pessoa 2'); assert.ok(r.body.dataFechamento);
     let resumo = await chamar('/:id/resumo'); assert.equal(resumo.status, 200); assert.equal(resumo.body.diferenca, diferenca); assert.equal(resumo.body.valorFechamento, valor);
     assert.ok(consultas.filter(consulta => consulta.q.startsWith('update caixa')).every(consulta => consulta.transacao !== null));
 });
+for (let [status, rotulo] of [['RECEBIDO', 'recebido'], ['EM_PREPARO', 'em preparo']]) test(`Fechamento com pedido ${status} retorna 409 e reverte a transação`, async () => {
+    proximoPedido = 28;
+    venda({ statusPedido: status });
+    let antes = structuredClone(estado);
+    let r = await chamar('/fechar', { metodo: 'post', body: { valorFechamento: 190, idCaixa: 1 } });
+    assert.equal(r.status, 409);
+    assert.equal(r.body.msg, `Não é possível fechar o caixa: há 1 pedido não finalizado (#28 ${rotulo}). Marque como pronto ou cancele antes de fechar.`);
+    assert.deepEqual(estado, antes);
+    assert.equal(rollbacks, 1);
+    assert.equal(commits, 0);
+});
+
+test('Fechamento informa o total de pedidos não finalizados e lista até 10 em ordem de ID', async () => {
+    for (let i = 0; i < 12; i++) venda({ statusPedido: i % 2 === 0 ? 'RECEBIDO' : 'EM_PREPARO' });
+    estado.pedidos.reverse();
+    let r = await chamar('/fechar', { metodo: 'post', body: { valorFechamento: 150, idCaixa: 1 } });
+    assert.equal(r.status, 409);
+    assert.match(r.body.msg, /há 12 pedidos não finalizados/);
+    assert.deepEqual(r.body.msg.match(/#\d+/g), Array.from({ length: 10 }, (_, i) => `#${i + 1}`));
+    assert.match(r.body.msg, /#1 recebido, #2 em preparo/);
+    assert.match(r.body.msg, /e mais 2\)\. Marque como pronto ou cancele antes de fechar\.$/);
+    assert.equal(estado.caixas[0].status, 'ABERTO');
+    assert.equal(rollbacks, 1);
+});
+
+test('Fechamento aceita pedidos finalizados e ignora pendências de outro caixa', async () => {
+    for (let statusPedido of ['PRONTO', 'SAIU_ENTREGA', 'CANCELADO']) venda({ statusPedido });
+    venda({ idCaixa: 2, statusPedido: 'RECEBIDO' });
+    venda({ idCaixa: 2, statusPedido: 'EM_PREPARO' });
+    let r = await chamar('/fechar', { metodo: 'post', body: { valorFechamento: 230, idCaixa: 1 } });
+    assert.equal(r.status, 200);
+    assert.equal(r.body.status, 'FECHADO');
+    assert.equal(commits, 1);
+    assert.equal(rollbacks, 0);
+});
+
 test('Contrato antigo de fechamento funciona; depois é possível abrir outro caixa', async () => {
     let r = await chamar('/fechar', { metodo: 'post', body: { valorFechamento: 150 } }); assert.equal(r.status, 200);
     let novo = await chamar('/abrir', { metodo: 'post', body: { valorAbertura: 20 } }); assert.equal(novo.status, 201);
@@ -323,6 +371,24 @@ test('Pedido obtém S antes: fechamento espera o commit e inclui a venda', { tim
     assert.equal(criado.idCaixa, 1); assert.equal(fechado.status, 'FECHADO');
     let resumo = await new CaixaService().obterResumo('1'); assert.equal(resumo.totalDinheiro, 40); assert.equal(resumo.diferenca, 0);
 });
+test('Pedido que exige preparo obtém S antes: fechamento aguarda e identifica o pedido recebido', { timeout: 2000 }, async () => {
+    estado.produtoUsaCardapio = true;
+    let entrou = sinal(), continuar = sinal(), esperando = sinal();
+    interceptar = async q => { if (q.endsWith('for share') && q.includes('from caixa c')) { entrou.resolver(); await continuar.promise; } };
+    aoEsperar = tipo => { if (tipo === 'X') esperando.resolver(); };
+    let criacao = new PedidoService().criar(pedido(), 1);
+    await entrou.promise;
+    let recusado = assert.rejects(new CaixaService().fechar({ valorFechamento: 190, idCaixa: 1 }, 2),
+        error => error.status === 409 && /#1 recebido/.test(error.msg));
+    await esperando.promise;
+    continuar.resolver();
+    let [criado] = await Promise.all([criacao, recusado]);
+    assert.equal(criado.status, 'RECEBIDO');
+    assert.equal(estado.caixas[0].status, 'ABERTO');
+    assert.equal(commits, 1);
+    assert.equal(rollbacks, 1);
+});
+
 test('Fechamento obtém X antes: novo pedido espera e é recusado após fechar', { timeout: 2000 }, async () => {
     let entrou = sinal(), continuar = sinal(), esperando = sinal();
     interceptar = async q => { if (q.startsWith('update caixa')) { entrou.resolver(); await continuar.promise; } };
@@ -370,14 +436,14 @@ test('Cancelamento obtém S antes: fechamento espera e o resumo exclui a venda',
 });
 
 test('Fechamento obtém X antes: cancelamento aguarda e é recusado com caixa fechado', { timeout: 2000 }, async () => {
-    venda(); let entrou = sinal(), continuar = sinal(), esperando = sinal();
+    venda({ statusPedido: 'PRONTO' }); let entrou = sinal(), continuar = sinal(), esperando = sinal();
     interceptar = async q => { if (q.startsWith('update caixa')) { entrou.resolver(); await continuar.promise; } };
     aoEsperar = tipo => { if (tipo === 'S') esperando.resolver(); };
     let fechamento = new CaixaService().fechar({ valorFechamento: 190, idCaixa: 1 }, 1);
     await entrou.promise;
     let recusado = assert.rejects(new PedidoService().cancelar('1', 'Cliente desistiu', 2), error => error.status === 409 && /já foi fechado/.test(error.msg));
     await esperando.promise; continuar.resolver(); await Promise.all([fechamento, recusado]);
-    assert.equal(estado.pedidos[0].status, 'RECEBIDO'); assert.equal(estado.pagamentos[0].status, 'PAGO');
+    assert.equal(estado.pedidos[0].status, 'PRONTO'); assert.equal(estado.pagamentos[0].status, 'PAGO');
     assert.equal((await new CaixaService().obterResumo('1')).totalDinheiro, 40);
 });
 

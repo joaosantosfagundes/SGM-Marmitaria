@@ -1315,6 +1315,9 @@ paths:
         com apenas valorFechamento continua fechando o caixa aberto.
         O update é condicional ao status ABERTO e executado em transação com leitura da
         resposta na mesma conexão. Seu bloqueio exclusivo aguarda pedidos que já têm FOR SHARE.
+        Após o update, a transação verifica pedidos desse caixa em RECEBIDO ou EM_PREPARO.
+        Se encontrar algum, desfaz o fechamento e retorna 409 com até dez números de pedidos
+        e a quantidade restante. PRONTO, SAIU_ENTREGA e CANCELADO permitem o fechamento.
         Pedidos posteriores ao fechamento não podem se vincular a esse caixa.
         Diferenças de dinheiro não bloqueiam o fechamento. Consulte o resumo após fechar
         para conferir os valores finais, incluindo pedidos concluídos enquanto se confirmava.
@@ -1358,13 +1361,17 @@ paths:
         '404':
           $ref: '#/components/responses/NaoEncontrado'
         '409':
-          description: Não existe caixa aberto ou outra tentativa já fechou o mesmo caixa.
+          description: Caixa indisponível para fechamento ou com pedidos ainda não finalizados.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Erro'
-              example:
-                msg: Não há caixa aberto para fechar.
+              examples:
+                caixaIndisponivel:
+                  value: {msg: Não há caixa aberto para fechar.}
+                pedidosPendentes:
+                  value:
+                    msg: 'Não é possível fechar o caixa: há 2 pedidos não finalizados (#28 em preparo, #29 recebido). Marque como pronto ou cancele antes de fechar.'
         '500':
           $ref: '#/components/responses/ErroInterno'
   /estoque:

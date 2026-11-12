@@ -66,6 +66,10 @@ function executar(sql, valores = [], banco, tx) {
         Object.assign(caixa, { status: 'FECHADO', data_fechamento: banco.agora, id_usuario_fechamento: idUsuario, valor_fechamento: valor.toFixed(2) });
         return { affectedRows: 1 };
     }
+    if (q === "select id_pedido, status from pedido where id_caixa = ? and status in ('recebido', 'em_preparo') order by id_pedido") {
+        return banco.pedidos.filter(p => p.id_caixa === valores[0] && ['RECEBIDO', 'EM_PREPARO'].includes(p.status))
+            .sort((a, b) => a.id_pedido - b.id_pedido).map(({ id_pedido, status }) => ({ id_pedido, status }));
+    }
     if (q.startsWith('insert into movimentacao_financeira')) {
         let id = Math.max(0, ...banco.financeiro.map(m => m.id_movimentacao_financeira)) + 1;
         let [id_usuario, tipo, categoria, descricao, valor, data_hora, recorrente, quantidade_meses, id_movimentacao_estoque] = valores;
@@ -270,7 +274,7 @@ test('Edição inválida reverte e não altera lançamento existente', async () 
 test('Fechar caixa gera uma única entrada consolidada de R$ 300, sem copiar pagamentos', async () => {
     registrarCaixa({ status: 'ABERTO' });
     for (let [indice, forma] of ['DINHEIRO', 'PIX', 'DEBITO', 'CREDITO'].entries()) {
-        registrarVenda({ id: indice + 1, forma, valor: [40, 80, 70, 110][indice], valorRecebido: forma === 'DINHEIRO' ? '50.00' : null });
+        registrarVenda({ id: indice + 1, forma, valor: [40, 80, 70, 110][indice], statusPedido: 'PRONTO', valorRecebido: forma === 'DINHEIRO' ? '50.00' : null });
     }
     await chamar({ body: { ...corpo(), tipo: 'ENTRADA', categoria: 'Avulsa', valor: 10 } });
     await chamar({ body: { ...corpo(), valor: 30 } });
@@ -410,7 +414,7 @@ test('Consolidado pode superar o limite de um lançamento individual e mantém a
 });
 
 test('Falha após atualizar o caixa reverte o fechamento e não disponibiliza entrada financeira', async () => {
-    registrarCaixa({ status: 'ABERTO' }); registrarVenda();
+    registrarCaixa({ status: 'ABERTO' }); registrarVenda({ statusPedido: 'PRONTO' });
     let antes = structuredClone(estado); falharEm = 'resposta-fechamento';
     let original = console.error; console.error = () => {};
     try { assert.equal((await fecharCaixa()).status, 500); } finally { console.error = original; falharEm = null; }

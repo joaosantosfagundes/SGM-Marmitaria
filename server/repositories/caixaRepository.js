@@ -87,7 +87,7 @@ export default class CaixaRepository extends Repository {
         return true;
     }
 
-    async fechar(entidade) {
+    async fechar(entidade, validarPedidosPendentes) {
         return this.banco.ExecutaTransacao(async consultar => {
             // Aguarda os pedidos e quitações que mantêm for share neste caixa.
             let resultado = await consultar(
@@ -97,6 +97,14 @@ export default class CaixaRepository extends Repository {
                 [entidade.idUsuarioFechamento, entidade.valorFechamento, entidade.id]
             );
             if (resultado.affectedRows !== 1) return null;
+            // A leitura consistente após o update evita disputar bloqueios de pedido com o cancelamento.
+            let pendentes = await consultar(
+                `select id_pedido, status from pedido
+                 where id_caixa = ? and status in ('RECEBIDO', 'EM_PREPARO')
+                 order by id_pedido`,
+                [entidade.id]
+            );
+            validarPedidosPendentes(pendentes);
             return this.obter(entidade.id, consultar);
         });
     }

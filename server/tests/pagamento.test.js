@@ -82,6 +82,10 @@ async function executar(sql, valores = [], tx) {
         await bloquear(`pedido:${valores[0]}`, tx, 'X'); await interceptar?.(q, tx);
         return estado.pedidos.filter(p => p.id_pedido === valores[0]);
     }
+    if (q === "select id_pedido, status from pedido where id_caixa = ? and status in ('recebido', 'em_preparo') order by id_pedido") {
+        return estado.pedidos.filter(p => p.id_caixa === valores[0] && ['RECEBIDO', 'EM_PREPARO'].includes(p.status))
+            .sort((a, b) => a.id_pedido - b.id_pedido).map(({ id_pedido, status }) => ({ id_pedido, status }));
+    }
     if (q.startsWith('select * from pagamento where id_pagamento')) {
         await bloquear(`pagamento:${valores[0]}`, tx, 'X'); await interceptar?.(q, tx);
         return pagamentos(tx).filter(pg => pg.id_pagamento === valores[0]);
@@ -332,6 +336,7 @@ test('Individual concorrente com lote: conflito reverte o lote inteiro', { timeo
 });
 
 test('Quitação obtém S antes: fechamento aguarda e inclui o dinheiro', { timeout: 2000 }, async () => {
+    estado.pedidos.find(p => p.id_caixa === 2).status = 'PRONTO';
     let entrou = sinal(), seguir = sinal(), esperou = sinal();
     interceptar = async q => { if (q.includes('from caixa c') && q.endsWith('for share')) { entrou.resolver(); await seguir.promise; } };
     aoEsperar = (chave, tipo) => { if (tipo === 'X' && chave === 'caixa:2') esperou.resolver(); };
@@ -343,6 +348,7 @@ test('Quitação obtém S antes: fechamento aguarda e inclui o dinheiro', { time
 });
 
 test('Fechamento obtém X antes: quitação aguarda e não entra em caixa fechado', { timeout: 2000 }, async () => {
+    estado.pedidos.find(p => p.id_caixa === 2).status = 'PRONTO';
     let entrou = sinal(), seguir = sinal(), esperou = sinal();
     interceptar = async q => { if (q.startsWith('update caixa')) { entrou.resolver(); await seguir.promise; } };
     aoEsperar = (chave, tipo) => { if (tipo === 'S' && chave === 'caixa:2') esperou.resolver(); };
