@@ -20,7 +20,7 @@ export default function PagamentosPage() {
     if (!podeAcessar) return <div className="alert alert-warning">Pagamentos estão disponíveis para administradores e atendentes.</div>;
     return <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
         <div className="page-header d-flex flex-wrap gap-3 align-items-center justify-content-between mb-4">
-            <div><h1 className="fs-3 mb-1">Pagamento</h1><p className="text-secondary mb-0">Consulta dos pagamentos e das quitações de fiado.</p></div>
+            <div><h1 className="fs-3 mb-1">Pagamento</h1><p className="text-secondary mb-0">Consulta de pagamentos e quitações de devedores.</p></div>
             <button type="button" className="btn btn-outline-primary" disabled={consulta.carregando} onClick={consulta.recarregar}>Atualizar</button>
         </div>
         <form className="page-card p-3 p-sm-4 mb-4" onSubmit={consultar}>
@@ -44,7 +44,7 @@ export default function PagamentosPage() {
                         : !consulta.dados?.length ? <tr><td colSpan={11} className="text-secondary text-center p-4">Nenhum pagamento encontrado.</td></tr>
                         : consulta.dados.map(pg => <tr key={pg.id}>
                             <td>#{pg.id} / #{pg.idPedido}</td><td>{pg.nomeCliente || '—'}</td><td className="text-nowrap">{formatarDataHora(pg.dataHora)}</td><td className="text-nowrap">{formatarValor(pg.valor)}</td>
-                            <td>{FORMAS_PAGAMENTO[pg.forma]}</td><td><StatusPagamento status={pg.status} /></td><td>#{pg.idCaixa}</td><td className="text-nowrap">{formatarDataHora(pg.dataQuitacao)}</td>
+                            <td>{FORMAS_PAGAMENTO[pg.forma]}</td><td><StatusPagamento status={pg.status} forma={pg.forma} /></td><td>#{pg.idCaixa}</td><td className="text-nowrap">{formatarDataHora(pg.dataQuitacao)}</td>
                             <td>{FORMAS_PAGAMENTO[pg.formaQuitacao || pg.forma]}</td><td>#{pg.idCaixaQuitacao || pg.idCaixa}</td><td>{pg.nomeUsuarioQuitacao || '—'}</td>
                         </tr>)}</tbody>
                 </table>

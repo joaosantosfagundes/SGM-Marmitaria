@@ -1,7 +1,7 @@
 import toast from 'react-hot-toast';
 export { converterValor, formatarDataHora, formatarValor } from '../caixa/caixaUtils.js';
 
-export const FORMAS_PAGAMENTO = { DINHEIRO: 'Dinheiro', PIX: 'Pix', DEBITO: 'Débito', CREDITO: 'Crédito', FIADO: 'Fiado' };
+export const FORMAS_PAGAMENTO = { DINHEIRO: 'Dinheiro', PIX: 'Pix', DEBITO: 'Débito', CREDITO: 'Crédito', FIADO: 'Devedor' };
 export const TIPOS_ATENDIMENTO = { BALCAO: 'Balcão', MESA: 'Mesa', DELIVERY: 'Delivery' };
 export const MAX_CENTAVOS = 9999999999;
 

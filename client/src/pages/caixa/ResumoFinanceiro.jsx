@@ -9,8 +9,8 @@ const FORMAS = [
 
 export default function ResumoFinanceiro({ resumo }) {
     let { fiadoRecebido, quantidadePagamentos } = resumo;
-    let quantidadeFiadoRecebido = Object.values(fiadoRecebido.quantidadePagamentos).reduce((total, valor) => total + valor, 0);
-    let quantidadeFiadoPendente = quantidadePagamentos.fiado;
+    let quantidadeRecebida = Object.values(fiadoRecebido.quantidadePagamentos).reduce((total, valor) => total + valor, 0);
+    let quantidadePendente = quantidadePagamentos.fiado;
 
     return <div className="mt-3">
         <h3 className="h6">Recebido neste caixa</h3>
@@ -32,19 +32,19 @@ export default function ResumoFinanceiro({ resumo }) {
             </table>
         </div>
         {fiadoRecebido.total > 0 && <p className="small text-secondary mt-2 mb-0">
-            Fiado recebido: {quantidadeFiadoRecebido} {quantidadeFiadoRecebido === 1 ? 'pagamento' : 'pagamentos'} — {formatarValor(fiadoRecebido.total)} (já incluído nas formas acima)
+            Recebido de devedores: {quantidadeRecebida} {quantidadeRecebida === 1 ? 'pagamento' : 'pagamentos'} — {formatarValor(fiadoRecebido.total)} (já incluído nas formas acima)
         </p>}
         <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 my-3">
             <div>
-                <h3 className="h6 mb-1">Fiado a receber (pendente)</h3>
-                <div className="small text-secondary">Não recebido · {quantidadeFiadoPendente} {quantidadeFiadoPendente === 1 ? 'pagamento' : 'pagamentos'}</div>
+                <h3 className="h6 mb-1">A receber de devedores</h3>
+                <div className="small text-secondary">Não recebido · {quantidadePendente} {quantidadePendente === 1 ? 'pagamento' : 'pagamentos'}</div>
             </div>
             <strong className="text-nowrap">{formatarValor(resumo.totalFiado)}</strong>
         </div>
         <div className="bg-primary-subtle border border-primary-subtle rounded p-3">
             <div className="fw-semibold">Saldo esperado em dinheiro na gaveta</div>
             <strong className="fs-3 text-primary">{formatarValor(resumo.saldoEsperadoDinheiro)}</strong>
-            <p className="small mb-0">Abertura + dinheiro recebido (vendas e fiado).</p>
+            <p className="small mb-0">Abertura + dinheiro recebido de vendas e devedores.</p>
         </div>
         <p className="small text-secondary mt-2 mb-0">Não inclui sangrias, despesas, taxas ou estornos.</p>
         {resumo.status === 'FECHADO' && <div className="mt-3">

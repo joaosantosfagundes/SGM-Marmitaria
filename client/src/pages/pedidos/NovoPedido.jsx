@@ -81,7 +81,7 @@ export default function NovoPedido({ bloqueado, onCancelar, onSucesso, onCaixaFe
         if (!itens.length) return toast.error('Adicione ao menos um item ao pedido.');
         if (!FORMAS_PAGAMENTO[forma]) return toast.error('Selecione uma forma de pagamento.');
         if (tipo === 'DELIVERY' && (endereco.trim().length < 5 || endereco.trim().length > 255)) return toast.error('Informe um endereço de entrega com 5 a 255 caracteres.');
-        if (forma === 'FIADO' && !idCliente) return toast.error('Selecione um cliente para o pagamento fiado.');
+        if (forma === 'FIADO' && !idCliente) return toast.error('Selecione um cliente para a opção Devedor.');
         if (dinheiroInvalido) return toast.error('O valor recebido deve ser válido, ter até duas casas decimais e ser maior ou igual ao total do pedido.');
         let pagamento = { forma };
         if (forma === 'DINHEIRO' && recebido !== null) pagamento.valorRecebido = recebido;
@@ -142,7 +142,7 @@ export default function NovoPedido({ bloqueado, onCancelar, onSucesso, onCaixaFe
                                 <label htmlFor="pedido-endereco" className="form-label">Endereço de entrega (obrigatório)</label>
                                 <textarea id="pedido-endereco" className="form-control" rows="2" required minLength={5} maxLength={255} value={endereco} onChange={event => setEndereco(event.target.value)} />
                             </div>}
-                            <label htmlFor="pedido-busca-cliente" className="form-label">Cliente {forma === 'FIADO' ? '(obrigatório para fiado)' : '(opcional)'}</label>
+                            <label htmlFor="pedido-busca-cliente" className="form-label">Cliente {forma === 'FIADO' ? '(obrigatório para Devedor)' : '(opcional)'}</label>
                             <input id="pedido-busca-cliente" type="search" className="form-control mb-2" placeholder="Buscar cliente por nome" value={buscaCliente} onChange={event => setBuscaCliente(event.target.value)} aria-label="Buscar cliente por nome" />
                             <label htmlFor="pedido-cliente" className="visually-hidden">Selecione o cliente</label>
                             <select id="pedido-cliente" className="form-select" value={idCliente} required={forma === 'FIADO'} onChange={event => setIdCliente(event.target.value)}>

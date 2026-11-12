@@ -52,7 +52,7 @@ export default function ListaPedidos({ consulta, data, onData, onHoje, status, o
                                         <td>{pedido.nomeCliente || '—'}</td>
                                         <td className="text-nowrap">{formatarValor(pedido.valorTotal)}</td>
                                         <td>{FORMAS_PAGAMENTO[pedido.formaPagamento] || '—'}</td>
-                                        <td><StatusPagamento status={pedido.statusPagamento} /></td>
+                                        <td><StatusPagamento status={pedido.statusPagamento} forma={pedido.formaPagamento} /></td>
                                         <td><StatusPedido status={pedido.status} /></td>
                                         <td className="pe-4">{pedido.nomeUsuario}</td>
                                     </tr>)}

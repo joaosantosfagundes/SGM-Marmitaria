@@ -31,7 +31,7 @@ function ResumoOperacao({ dados }) {
         </div>
         <div className="col">
           <StatCard icon="ti-cash" title="Vendas hoje" value={formatarValor(vendasHoje)}
-            helper={`${formatarValor(fiadoPendenteHoje)} em fiado pendente`} tone="success" />
+            helper={`A receber de devedores: ${formatarValor(fiadoPendenteHoje)}`} tone="success" />
         </div>
         <div className="col">
           <StatCard icon="ti-chef-hat" title="Em preparo" value={pedidosEmPreparo} tone="warning" />

@@ -26,7 +26,7 @@ export const menu = [
     items: [
       { href: "/caixa", label: "Caixa", icon: "ti-cash-register" },          // RF_F9
       { href: "/financeiro", label: "Financeiro", icon: "ti-wallet" },       // RF_F7
-      { href: "/fiado", label: "Fiado", icon: "ti-credit-card-pay" },        // RF_F6
+      { href: "/devedores", label: "Devedores", icon: "ti-credit-card-pay" }, // RF_F6
       { href: "/pagamento", label: "Pagamento", icon: "ti-cash" },           // RF_F5
     ],
   },
@@ -54,7 +54,7 @@ export const pages = {
   "/estoque": { title: "Estoque", description: "Controle manual de entradas e saídas de insumos." },
   "/caixa": { title: "Caixa", description: "Abertura, fechamento e histórico do caixa." },
   "/financeiro": { title: "Financeiro", description: "Entradas, despesas e movimentações financeiras." },
-  "/fiado": { title: "Fiado", description: "Consulta e quitação de valores em aberto." },
+  "/devedores": { title: "Devedores", description: "Consulta e quitação de valores em aberto." },
   "/pagamento": { title: "Pagamento", description: "Registro de pagamentos dos pedidos." },
   "/relatorios": { title: "Relatórios", description: "Relatórios de operação.", perfis: ["ADMIN", "ATENDENTE"] },
   "/usuarios": { title: "Usuários", description: "Cadastro e gerenciamento de usuários do sistema." },

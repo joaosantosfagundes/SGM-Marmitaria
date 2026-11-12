@@ -18,7 +18,7 @@ import CardapioPage from './pages/cardapio/CardapioPage.jsx';
 import CaixaPage from './pages/caixa/CaixaPage.jsx';
 import EstoquePage from './pages/estoque/EstoquePage.jsx';
 import PedidosPage from './pages/pedidos/PedidosPage.jsx';
-import FiadoPage from './pages/fiado/FiadoPage.jsx';
+import DevedoresPage from './pages/devedores/DevedoresPage.jsx';
 import PagamentosPage from './pages/pagamento/PagamentosPage.jsx';
 import FinanceiroPage from './pages/financeiro/FinanceiroPage.jsx';
 import RelatoriosPage from './pages/relatorios/RelatoriosPage.jsx';
@@ -37,7 +37,7 @@ const TELAS_PRONTAS = {
     '/caixa': CaixaPage,
     '/estoque': EstoquePage,
     '/pedidos': PedidosPage,
-    '/fiado': FiadoPage,
+    '/devedores': DevedoresPage,
     '/pagamento': PagamentosPage,
     '/financeiro': FinanceiroPage,
     '/relatorios': RelatoriosPage,
@@ -62,6 +62,7 @@ export default function App() {
 
             <Route path="/caixa/abrir" element={<Navigate to="/caixa" replace />} />
             <Route path="/caixa/fechar" element={<Navigate to="/caixa" replace />} />
+            <Route path="/fiado" element={<Navigate to="/devedores" replace />} />
 
             {Object.entries(pages).map(([path, { title, description, perfis }]) => {
                 const TelaPronta = TELAS_PRONTAS[path];

@@ -69,7 +69,7 @@ export default function FinanceiroPage() {
             <div><h1 className="fs-3 mb-1">Financeiro</h1><p className="text-secondary mb-0">Recebimentos de caixas fechados, entradas avulsas e despesas.</p></div>
             <div className="d-flex flex-wrap gap-2"><button type="button" className="btn btn-outline-primary" disabled={consulta.carregando || salvando} onClick={consulta.recarregar}>Atualizar</button>{podeEditar && !mostrarForm && <button type="button" className="btn btn-primary" disabled={salvando} onClick={abrirNovo}>Novo lançamento</button>}</div>
         </div>
-        <div className="alert alert-info">Ao fechar o caixa, o total de vendas pagas e fiados recebidos aparece em uma única entrada, na data do fechamento. Enquanto o caixa estiver aberto, acompanhe os recebimentos em Caixa e Pagamento.</div>
+        <div className="alert alert-info">Ao fechar o caixa, o total de vendas pagas e recebimentos de devedores aparece em uma única entrada, na data do fechamento. Enquanto o caixa estiver aberto, acompanhe os recebimentos em Caixa e Pagamento.</div>
         {podeEditar && mostrarForm && <FormFinanceiro form={form} setForm={setForm} editandoId={editandoId} salvando={salvando} onSalvar={salvar} onCancelar={fecharForm} />}
         <form className="page-card p-3 p-sm-4 mb-4" onSubmit={event => {
             event.preventDefault();

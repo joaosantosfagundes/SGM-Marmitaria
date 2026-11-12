@@ -22,7 +22,7 @@ export default function PagamentoPedido({ forma, valorRecebido, total, onForma, 
                             : recebido !== null && <p className="fw-semibold text-success">Troco: {formatarValor((centavos(recebido) - total) / 100)}</p>}
                 </div>
             </div>}
-            {forma === 'FIADO' && <p className="alert alert-warning mt-3 mb-0">Ficará em aberto: <strong>{formatarValor(total / 100)}</strong>. Selecione um cliente para registrar o fiado.</p>}
+            {forma === 'FIADO' && <p className="alert alert-warning mt-3 mb-0">Ficará em aberto: <strong>{formatarValor(total / 100)}</strong>. Cliente paga depois (exige cliente cadastrado).</p>}
         </section>
     );
 }

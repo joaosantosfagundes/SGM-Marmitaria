@@ -101,8 +101,8 @@ export default class PedidoService {
             return item;
         });
         pedido.pagamento = new PagamentoEntity({ forma: dados.pagamento?.forma, valorRecebido: dados.pagamento?.valorRecebido ?? null });
-        if (!pedido.pagamento.validar()) throw { status: 400, msg: 'Informe pagamento com forma DINHEIRO, PIX, DEBITO, CREDITO ou FIADO.' };
-        if (pedido.pagamento.forma === 'FIADO' && pedido.idCliente === null) throw { status: 400, msg: 'Pagamento FIADO exige um cliente vinculado.' };
+        if (!pedido.pagamento.validar()) throw { status: 400, msg: 'Escolha Dinheiro, Pix, Débito, Crédito ou Devedor como forma de pagamento.' };
+        if (pedido.pagamento.forma === 'FIADO' && pedido.idCliente === null) throw { status: 400, msg: 'A opção Devedor exige um cliente cadastrado.' };
         if (pedido.pagamento.forma === 'DINHEIRO') {
             if (pedido.pagamento.valorRecebido !== null && !validarDinheiro(pedido.pagamento.valorRecebido)) throw { status: 400, msg: 'Quando informado para DINHEIRO, valorRecebido deve ser numérico, com até duas casas decimais e no máximo R$ 99.999.999,99.' };
         } else if (dados.pagamento.valorRecebido !== undefined) throw { status: 400, msg: 'valorRecebido só é aceito para pagamento em DINHEIRO.' };

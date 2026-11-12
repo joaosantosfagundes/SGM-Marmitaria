@@ -40,7 +40,7 @@ export default function ComandaPedido({ pedido, disabled = false }) {
             {pedido.observacao && <><hr /><p><strong>Observação do pedido:</strong> {pedido.observacao}</p></>}
             <hr />
             {pedido.pagamento && <>
-                <p><strong>Pagamento:</strong> {pedido.pagamento.forma === 'FIADO' ? `FIADO — ${pedido.nomeCliente}` : FORMAS_PAGAMENTO[pedido.pagamento.forma]}</p>
+                <p><strong>Pagamento:</strong> {FORMAS_PAGAMENTO[pedido.pagamento.forma]}{pedido.pagamento.forma === 'FIADO' && ` — ${pedido.nomeCliente}`}</p>
                 {pedido.pagamento.forma === 'DINHEIRO' && pedido.pagamento.valorRecebido !== null && <p>Troco para {formatarValor(pedido.pagamento.valorRecebido)}<br />Troco: {formatarValor(pedido.pagamento.troco)}</p>}
             </>}
             <p className="comanda-total">Total: {formatarValor(pedido.valorTotal)}</p>
