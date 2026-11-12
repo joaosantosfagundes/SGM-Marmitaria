@@ -116,12 +116,28 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 
 - [x] Confirmações em diálogo próprio com suporte a teclado, foco controlado e notificações no padrão visual do sistema
 - [x] Formulário de adicionais em card acima da lista, no padrão dos demais cadastros
-- [ ] Dashboard com indicadores e pedidos recentes baseados em dados reais
+- [x] Dashboard com indicadores, gráfico, pedidos recentes e alertas de estoque baseados em dados reais
 
 ### Entrega final até 30/11
 
 - [x] Limpeza de código e revisão de dependências com build e testes do servidor antes e depois
 - [ ] Deploy final
+
+## Dashboard
+
+O Dashboard consulta `GET /dashboard/resumo` a cada 30 segundos com a tela ativa. Para ADMIN e
+ATENDENTE, **Pedidos hoje** conta os pedidos lançados no dia da operação (UTC−3), incluindo os
+cancelados. **Vendas hoje** soma os pedidos válidos pela data do pedido e destaca a parcela em fiado
+pendente. **Em preparo** conta os pedidos que continuam nesse status, inclusive de dias anteriores.
+
+O saldo esperado da gaveta vem do resumo do caixa aberto ou, na ausência dele, do último caixa
+fechado. O gráfico mostra hoje e os seis dias anteriores, com as vendas pela data do pedido e as
+despesas pela data das saídas registradas no Financeiro, inclusive compras vinculadas ao estoque.
+O Dashboard também lista os cinco pedidos mais recentes e os insumos com saldo abaixo do mínimo.
+COZINHA recebe e vê somente as contagens de pedidos de hoje por status.
+
+No Swagger, faça login com cada perfil e execute **Dashboard → GET /dashboard/resumo**. Compare as
+vendas com o relatório de vendas do mesmo dia e o saldo da gaveta com `GET /caixa/{id}/resumo`.
 
 ## Relatórios (RF_S1–RF_S5)
 

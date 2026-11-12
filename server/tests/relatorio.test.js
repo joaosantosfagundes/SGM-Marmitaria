@@ -287,3 +287,87 @@ test('Apenas ADMIN consulta o relatório financeiro', async () => {
     }
     assert.equal((await consultar('financeiro', periodoFinanceiro, null)).status, 401);
 });
+
+test('Dashboard soma as vendas válidas, destaca o fiado pendente e muda de dia em UTC−3', async t => {
+    const agora = t.mock.method(Date, 'now', () => Date.parse('2026-11-06T02:59:59Z'));
+    const { status, dados } = await consultarRota('dashboard/resumo', '', 1);
+    assert.equal(status, 200);
+    assert.equal(dados.data, '2026-11-05');
+    assert.equal(dados.pedidosHoje, 3);
+    assert.equal(dados.vendasHoje, 96.75);
+    assert.equal(dados.fiadoPendenteHoje, 32.5);
+    assert.equal(dados.pedidosEmPreparo, 1);
+    assert.equal(dados.movimentacao.length, 7);
+    assert.deepEqual(dados.movimentacao[0], { data: '2026-10-30', vendas: 0, despesas: 0 });
+    assert.deepEqual(dados.movimentacao.at(-1), { data: '2026-11-05', vendas: 96.75, despesas: 0 });
+
+    agora.mock.mockImplementation(() => Date.parse('2026-11-06T03:00:00Z'));
+    const diaSeguinte = await consultarRota('dashboard/resumo', '', 1);
+    assert.equal(diaSeguinte.status, 200);
+    assert.equal(diaSeguinte.dados.data, '2026-11-06');
+    assert.equal(diaSeguinte.dados.pedidosHoje, 2);
+    assert.equal(diaSeguinte.dados.vendasHoje, 35.25);
+    assert.equal(diaSeguinte.dados.fiadoPendenteHoje, 0);
+    assert.equal(diaSeguinte.dados.pedidosEmPreparo, 1);
+});
+
+test('Dashboard completo é de ADMIN e ATENDENTE e COZINHA consulta apenas as contagens', async t => {
+    t.mock.method(Date, 'now', () => Date.parse('2026-11-05T16:00:00Z'));
+    const admin = await consultarRota('dashboard/resumo', '', 1);
+    const atendente = await consultarRota('dashboard/resumo', '', 2);
+    assert.equal(admin.status, 200);
+    assert.equal(atendente.status, 200);
+    assert.equal(admin.dados.vendasHoje, 96.75);
+    assert.deepEqual(atendente.dados, admin.dados);
+
+    const quantidade = consultas.length;
+    const cozinha = await consultarRota('dashboard/resumo', '', 3);
+    assert.equal(cozinha.status, 200);
+    assert.deepEqual(cozinha.dados, { pedidosPorStatus: { RECEBIDO: 1, PRONTO: 1, CANCELADO: 1 } });
+    assert.equal(consultas.length, quantidade + 2);
+    assert.match(consultas[quantidade], /^select \* from usuario/i);
+    assert.match(consultas.at(-1), /^select status, count\(\*\) as quantidade from pedido/i);
+
+    assert.equal((await consultarRota('dashboard/resumo', '', 4)).status, 403);
+    assert.equal((await consultarRota('dashboard/resumo', '', null)).status, 401);
+});
+
+test('Dashboard reúne sete dias, saídas financeiras, últimos pedidos, estoque baixo e caixa aberto', async t => {
+    t.mock.method(Date, 'now', () => Date.parse('2026-11-16T02:59:59Z'));
+    const { status, dados } = await consultarRota('dashboard/resumo', '', 1);
+    assert.equal(status, 200);
+    assert.deepEqual(dados.movimentacao, [
+        { data: '2026-11-09', vendas: 0, despesas: 0 },
+        { data: '2026-11-10', vendas: 0, despesas: 0 },
+        { data: '2026-11-11', vendas: 0, despesas: 0 },
+        { data: '2026-11-12', vendas: 0, despesas: 0 },
+        { data: '2026-11-13', vendas: 157.25, despesas: 100 },
+        { data: '2026-11-14', vendas: 0, despesas: 70.01 },
+        { data: '2026-11-15', vendas: 225.25, despesas: 15.25 }
+    ]);
+    assert.deepEqual(dados.pedidosRecentes, [
+        { id: 15, nomeCliente: null, status: 'RECEBIDO', valorTotal: 200 },
+        { id: 22, nomeCliente: null, status: 'PRONTO', valorTotal: 25.25 },
+        { id: 20, nomeCliente: 'Carla', status: 'PRONTO', valorTotal: 60 },
+        { id: 18, nomeCliente: 'Carla', status: 'CANCELADO', valorTotal: 75 },
+        { id: 17, nomeCliente: 'Ana', status: 'PRONTO', valorTotal: 12.25 }
+    ]);
+    assert.deepEqual(dados.estoqueAbaixoDoMinimo, { quantidade: 2, insumos: [
+        { id: 1, nome: 'Arroz', quantidade: 3.25, estoqueMinimo: 5, siglaUnidade: 'kg' },
+        { id: 3, nome: 'Sal', quantidade: 0, estoqueMinimo: 0.25, siglaUnidade: 'kg' }
+    ] });
+    assert.deepEqual(dados.caixa, { idCaixa: 3, status: 'ABERTO', saldoEsperadoDinheiro: 300 });
+});
+
+test('Dashboard usa o último caixa fechado quando nenhum está aberto', async () => {
+    await executar(`update caixa set status = 'FECHADO', data_fechamento = '2026-11-16 10:00:00',
+        id_usuario_fechamento = 2, valor_fechamento = 295 where id_caixa = 3`, []);
+    try {
+        const { status, dados } = await consultarRota('dashboard/resumo', '', 1);
+        assert.equal(status, 200);
+        assert.deepEqual(dados.caixa, { idCaixa: 3, status: 'FECHADO', saldoEsperadoDinheiro: 300 });
+    } finally {
+        await executar(`update caixa set status = 'ABERTO', data_fechamento = null,
+            id_usuario_fechamento = null, valor_fechamento = null where id_caixa = 3`, []);
+    }
+});

@@ -1,7 +1,7 @@
 create table usuario (id_usuario int primary key, nome varchar(100), email varchar(100), perfil varchar(20), ativo int);
 create table cliente (id_cliente int primary key, nome varchar(100));
 create table caixa (id_caixa int primary key, id_usuario_abertura int, id_usuario_fechamento int,
-    status varchar(20), data_fechamento datetime, valor_abertura decimal(10,2), valor_fechamento decimal(10,2));
+    status varchar(20), data_abertura datetime, data_fechamento datetime, valor_abertura decimal(10,2), valor_fechamento decimal(10,2));
 create table pedido (id_pedido int primary key, data_hora datetime, status varchar(20), tipo_atendimento varchar(20),
     valor_total decimal(10,2), id_caixa int, id_cliente int);
 create table pagamento (id_pagamento int primary key, id_pedido int, forma_pagamento varchar(20), status varchar(20),
@@ -22,16 +22,17 @@ create table estoque (id_insumo int primary key, quantidade decimal(10,3));
 create table movimentacao_estoque (id_movimentacao int primary key, id_insumo int, tipo varchar(20), quantidade decimal(10,3), data_hora datetime);
 
 insert into usuario values (1, 'Admin', 'admin@teste.local', 'ADMIN', 1),
-    (2, 'Atendente', 'atendente@teste.local', 'ATENDENTE', 1), (3, 'Cozinha', 'cozinha@teste.local', 'COZINHA', 1);
+    (2, 'Atendente', 'atendente@teste.local', 'ATENDENTE', 1), (3, 'Cozinha', 'cozinha@teste.local', 'COZINHA', 1),
+    (4, 'Visitante', 'visitante@teste.local', 'VISITANTE', 1);
 insert into cliente values (1, 'Ana'), (2, 'Bruno'), (3, 'Carla'), (4, 'Diego');
 insert into caixa values
-    (1, 1, 1, 'FECHADO', '2026-11-10 09:00:00', 150.00, 500.00),
-    (2, 1, 2, 'FECHADO', '2026-11-14 00:00:00', 150.00, 680.00),
-    (3, 2, null, 'ABERTO', null, 100.00, null),
-    (4, 2, 1, 'FECHADO', '2026-11-15 23:59:59', 120.00, 0.00);
+    (1, 1, 1, 'FECHADO', '2026-11-04 08:00:00', '2026-11-10 09:00:00', 150.00, 500.00),
+    (2, 1, 2, 'FECHADO', '2026-11-10 09:00:01', '2026-11-14 00:00:00', 150.00, 680.00),
+    (3, 2, null, 'ABERTO', '2026-11-15 23:59:59', null, 100.00, null),
+    (4, 2, 1, 'FECHADO', '2026-11-14 00:00:01', '2026-11-15 23:59:59', 120.00, 0.00);
 
 insert into pedido values
-    (1, '2026-11-04 23:59:59', 'PRONTO', 'BALCAO', 100.00, 1, null),
+    (1, '2026-11-04 23:59:59', 'EM_PREPARO', 'BALCAO', 100.00, 1, null),
     (2, '2026-11-05 00:00:00', 'PRONTO', 'MESA', 64.25, 1, null),
     (3, '2026-11-05 12:00:00', 'CANCELADO', 'DELIVERY', 100.00, 1, null),
     (4, '2026-11-05 18:00:00', 'RECEBIDO', 'DELIVERY', 32.50, 1, 1),

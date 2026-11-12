@@ -43,6 +43,25 @@ export default class PedidoRepository extends Repository {
         });
     }
 
+    async contarPorStatus({ data, status }) {
+        let sql = "select status, count(*) as quantidade from pedido where 1 = 1";
+        let valores = [];
+        if (data !== undefined) {
+            sql += " and data_hora >= ? and data_hora < date_add(?, interval 1 day)";
+            valores.push(data, data);
+        }
+        if (status !== undefined) { sql += " and status = ?"; valores.push(status); }
+        let rows = await this.banco.ExecutaComando(sql + " group by status", valores);
+        return Object.fromEntries(rows.map(({ status, quantidade }) => [status, Number(quantidade)]));
+    }
+
+    async listarRecentes() {
+        let rows = await this.banco.ExecutaComando(`select p.id_pedido, p.status, p.valor_total, c.nome as nome_cliente
+            from pedido p left join cliente c on c.id_cliente = p.id_cliente
+            order by p.data_hora desc, p.id_pedido desc limit 5`);
+        return rows.map(PedidoEntity.toMap);
+    }
+
     async obter(id, consultar) {
         let carregar = async consultar => {
             let rows = await consultar(`${CONSULTA_PEDIDOS} where p.id_pedido = ?`, [id]);

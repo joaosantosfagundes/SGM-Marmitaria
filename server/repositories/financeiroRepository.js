@@ -4,6 +4,8 @@ import MovimentacaoFinanceiraEntity from '../entities/movimentacaoFinanceiraEnti
 const CONSULTA = `select m.*, u.nome as nome_usuario from movimentacao_financeira m
     inner join usuario u on u.id_usuario = m.id_usuario`;
 
+const LANCAMENTO_SEM_PEDIDO = 'm.id_pedido is null';
+
 const RECEBIMENTOS_CAIXA = `select p.id_caixa, pg.valor, pg.forma_pagamento as forma
     from pagamento pg inner join pedido p on p.id_pedido = pg.id_pedido
     where pg.status = 'PAGO' and p.status <> 'CANCELADO'
@@ -22,7 +24,7 @@ export default class FinanceiroRepository extends Repository {
             select m.id_movimentacao_financeira, m.id_usuario, m.id_pedido, m.id_movimentacao_estoque,
                 m.tipo, m.categoria, m.descricao, m.valor, m.data_hora, m.recorrente, m.quantidade_meses,
                 null as id_caixa
-            from movimentacao_financeira m where m.id_pedido is null
+            from movimentacao_financeira m where ${LANCAMENTO_SEM_PEDIDO}
             union all
             select null, coalesce(c.id_usuario_fechamento, c.id_usuario_abertura), null, null,
                 'ENTRADA', 'Fechamento de caixa', concat('Recebimentos do caixa #', c.id_caixa),
@@ -44,6 +46,14 @@ export default class FinanceiroRepository extends Repository {
         sql += ' order by f.data_hora desc, f.id_caixa desc, f.id_movimentacao_financeira desc';
         let rows = await this.banco.ExecutaComando(sql, valores);
         return rows.map(row => MovimentacaoFinanceiraEntity.toMap(row));
+    }
+
+    async despesasPorDia(limites) {
+        let rows = await this.banco.ExecutaComando(`select date(m.data_hora) as dia, sum(m.valor) as valor
+            from movimentacao_financeira m inner join usuario u on u.id_usuario = m.id_usuario
+            where ${LANCAMENTO_SEM_PEDIDO} and m.tipo = 'SAIDA' and m.data_hora >= ? and m.data_hora <= ?
+            group by dia order by dia`, limites);
+        return rows.map(MovimentacaoFinanceiraEntity.toMapTotalDia);
     }
 
     async resumir(periodo) {

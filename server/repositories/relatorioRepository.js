@@ -10,18 +10,20 @@ const TOTAIS_VENDAS = `count(*) as quantidade_pedidos,
         and status_pagamento = 'PENDENTE' then valor_total else 0 end), 0) as fiado_pendente,
     round(coalesce(avg(case when status <> 'CANCELADO' then valor_total end), 0), 2) as ticket_medio`;
 
+const PEDIDOS_PERIODO = `with pedidos_periodo as (
+    select date(p.data_hora) as dia, p.tipo_atendimento, p.status, p.valor_total,
+        coalesce(pg.forma_pagamento, 'SEM_PAGAMENTO') as forma_pagamento,
+        pg.status as status_pagamento
+    from pedido p
+    left join pagamento pg on pg.id_pagamento = (
+        select min(pg2.id_pagamento) from pagamento pg2 where pg2.id_pedido = p.id_pedido
+    )
+    where p.data_hora >= ? and p.data_hora <= ?
+)`;
+
 export default class RelatorioRepository extends Repository {
     async vendas(limites) {
-        let rows = await this.banco.ExecutaComando(`with pedidos_periodo as (
-            select date(p.data_hora) as dia, p.tipo_atendimento, p.status, p.valor_total,
-                coalesce(pg.forma_pagamento, 'SEM_PAGAMENTO') as forma_pagamento,
-                pg.status as status_pagamento
-            from pedido p
-            left join pagamento pg on pg.id_pagamento = (
-                select min(pg2.id_pagamento) from pagamento pg2 where pg2.id_pedido = p.id_pedido
-            )
-            where p.data_hora >= ? and p.data_hora <= ?
-        )
+        let rows = await this.banco.ExecutaComando(`${PEDIDOS_PERIODO}
         select 'resumo' as grupo, '' as chave, ${TOTAIS_VENDAS} from pedidos_periodo
         union all
         select 'porDia', dia, ${TOTAIS_VENDAS} from pedidos_periodo group by dia
@@ -35,6 +37,13 @@ export default class RelatorioRepository extends Repository {
         select 'porStatus', status, ${TOTAIS_VENDAS} from pedidos_periodo group by status
         order by grupo, chave`, limites);
 
+        return rows.map(RelatorioEntity.toMapVendas);
+    }
+
+    async vendasPorDia(limites) {
+        let rows = await this.banco.ExecutaComando(`${PEDIDOS_PERIODO}
+            select 'porDia' as grupo, dia as chave, ${TOTAIS_VENDAS}
+            from pedidos_periodo group by dia order by dia`, limites);
         return rows.map(RelatorioEntity.toMapVendas);
     }
 

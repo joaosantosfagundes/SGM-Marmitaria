@@ -1,7 +1,9 @@
-import { useEffect, useRef } from "react";
-import ApexCharts from "apexcharts";
+import { useEffect, useRef } from 'react';
+import ApexCharts from 'apexcharts';
+import { formatarValor } from '../pages/caixa/caixaUtils.js';
+import { formatarDia } from '../pages/relatorios/relatorioUtils.js';
 
-export default function DashboardChart() {
+export default function DashboardChart({ movimentacao }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -9,13 +11,14 @@ export default function DashboardChart() {
 
     const chart = new ApexCharts(ref.current, {
       series: [
-        { name: "Vendas", data: [32, 45, 38, 52, 44, 61, 55] },
-        { name: "Despesas", data: [18, 24, 21, 29, 26, 31, 28] },
+        { name: 'Vendas', data: movimentacao.map(dia => dia.vendas) },
+        { name: 'Despesas', data: movimentacao.map(dia => dia.despesas) },
       ],
       chart: {
         type: "area",
         height: 280,
         toolbar: { show: false },
+        animations: { enabled: false },
         fontFamily: "Poppins, sans-serif",
       },
       colors: ["#D85A30", "#198754"],
@@ -23,14 +26,17 @@ export default function DashboardChart() {
       dataLabels: { enabled: false },
       grid: { borderColor: "#e5e5e5" },
       xaxis: {
-        categories: ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"],
+        categories: movimentacao.map(dia => formatarDia(dia.data).slice(0, 5)),
+        labels: { hideOverlappingLabels: true },
       },
+      yaxis: { min: 0, labels: { formatter: formatarValor } },
+      tooltip: { y: { formatter: formatarValor } },
       legend: { position: "top" },
     });
 
-    chart.render();
+    chart.render().catch(error => console.error('Não foi possível desenhar o gráfico do Dashboard.', error));
     return () => chart.destroy();
-  }, []);
+  }, [movimentacao]);
 
   return <div ref={ref} className="chart-box" />;
 }

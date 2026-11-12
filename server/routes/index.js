@@ -16,6 +16,7 @@ import pedidoRouter from './pedidoRoute.js';
 import pagamentoRouter from './pagamentoRoute.js';
 import financeiroRouter from './financeiroRoute.js';
 import relatorioRouter from './relatorioRoute.js';
+import dashboardRouter from './dashboardRoute.js';
 
 const router = express.Router();
 
@@ -35,5 +36,6 @@ router.use('/pedido', pedidoRouter);
 router.use('/pagamento', pagamentoRouter);
 router.use('/financeiro', financeiroRouter);
 router.use('/relatorio', relatorioRouter);
+router.use('/dashboard', dashboardRouter);
 
 export default router;

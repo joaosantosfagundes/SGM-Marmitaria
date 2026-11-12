@@ -47,6 +47,10 @@ export default class MovimentacaoFinanceiraEntity extends Entity {
         return { grupo: row.grupo, chave: row.chave, tipo: row.tipo, valor: Number(row.valor) };
     }
 
+    static toMapTotalDia(row) {
+        return { data: row.dia, valor: Number(row.valor) };
+    }
+
     static validarValor(valor) { return validarDinheiro(valor) && valor > 0; }
 
     static normalizarDataHora(valor) {

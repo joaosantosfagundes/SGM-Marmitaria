@@ -53,6 +53,8 @@ tags:
     description: Consulta e quitação de fiado, somente ADMIN e ATENDENTE
   - name: Relatórios
     description: Vendas, estoque, ranking e fiado para ADMIN e ATENDENTE. Financeiro exclusivo de ADMIN.
+  - name: Dashboard
+    description: Indicadores da operação e contagens de pedidos para a cozinha.
 paths:
   /login:
     post:
@@ -2200,6 +2202,39 @@ paths:
           $ref: '#/components/responses/SemPermissao'
         '500':
           $ref: '#/components/responses/ErroInterno'
+  /dashboard/resumo:
+    get:
+      tags: [Dashboard]
+      operationId: dashboardResumo
+      summary: Consultar os indicadores do Dashboard
+      description: >-
+        ADMIN e ATENDENTE recebem o resumo completo. A contagem de hoje inclui cancelados e as vendas
+        somam apenas pedidos válidos, com a parcela de fiado pendente destacada. Os pedidos em preparo
+        incluem dias anteriores. O gráfico usa a data do pedido para vendas e a data do lançamento
+        para saídas do Financeiro. O período inclui o dia atual e os seis anteriores, em UTC−3.
+        COZINHA recebe somente a contagem de pedidos de hoje por status.
+      responses:
+        '200':
+          description: Resumo da operação conforme o perfil autenticado.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/DashboardOperacao'
+                  - $ref: '#/components/schemas/DashboardCozinha'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          description: Totais do caixa acima da precisão monetária suportada.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Erro'}
+        '500':
+          $ref: '#/components/responses/ErroInterno'
 components:
   securitySchemes:
     cookieAuth:
@@ -2418,6 +2453,79 @@ components:
               - {nome: Ovo, grupo: Mistura}
             adicionais: [3, 5]
   schemas:
+    DashboardOperacao:
+      type: object
+      required: [data, pedidosHoje, vendasHoje, fiadoPendenteHoje, pedidosEmPreparo, caixa, movimentacao, pedidosRecentes, estoqueAbaixoDoMinimo]
+      properties:
+        data: {type: string, format: date, example: '2026-11-05'}
+        pedidosHoje: {type: integer, minimum: 0, example: 3}
+        vendasHoje: {type: number, minimum: 0, example: 96.75}
+        fiadoPendenteHoje: {type: number, minimum: 0, description: Parcela das vendas de hoje ainda a receber por fiado., example: 32.5}
+        pedidosEmPreparo: {type: integer, minimum: 0, example: 1}
+        caixa:
+          type: object
+          nullable: true
+          description: Caixa aberto ou último fechado. Null quando ainda não há registros de caixa.
+          required: [idCaixa, status, saldoEsperadoDinheiro]
+          properties:
+            idCaixa: {type: integer, example: 3}
+            status: {type: string, enum: [ABERTO, FECHADO]}
+            saldoEsperadoDinheiro: {type: number, example: 300}
+        movimentacao:
+          type: array
+          minItems: 7
+          maxItems: 7
+          description: Totais diários em ordem cronológica, com zeros nos dias sem movimentação.
+          items:
+            type: object
+            required: [data, vendas, despesas]
+            properties:
+              data: {type: string, format: date}
+              vendas: {type: number, example: 96.75}
+              despesas: {type: number, example: 70.01}
+        pedidosRecentes:
+          type: array
+          maxItems: 5
+          items:
+            type: object
+            required: [id, nomeCliente, status, valorTotal]
+            properties:
+              id: {type: integer, example: 4}
+              nomeCliente: {type: string, nullable: true, example: Ana}
+              status: {$ref: '#/components/schemas/StatusPedido'}
+              valorTotal: {type: number, example: 32.5}
+        estoqueAbaixoDoMinimo:
+          type: object
+          required: [quantidade, insumos]
+          properties:
+            quantidade: {type: integer, minimum: 0, example: 2}
+            insumos:
+              type: array
+              items:
+                type: object
+                required: [id, nome, quantidade, estoqueMinimo, siglaUnidade]
+                properties:
+                  id: {type: integer, example: 1}
+                  nome: {type: string, example: Arroz}
+                  quantidade: {type: number, example: 3.25}
+                  estoqueMinimo: {type: number, example: 5}
+                  siglaUnidade: {type: string, example: kg}
+    DashboardCozinha:
+      type: object
+      required: [pedidosPorStatus]
+      additionalProperties: false
+      properties:
+        pedidosPorStatus:
+          type: object
+          description: Contagem de hoje. Os status ausentes têm contagem zero.
+          additionalProperties: false
+          properties:
+            RECEBIDO: {type: integer, minimum: 0}
+            EM_PREPARO: {type: integer, minimum: 0}
+            PRONTO: {type: integer, minimum: 0}
+            SAIU_ENTREGA: {type: integer, minimum: 0}
+            CANCELADO: {type: integer, minimum: 0}
+          example: {RECEBIDO: 1, PRONTO: 1, CANCELADO: 1}
     RelatorioPeriodo:
       type: object
       required: [dataInicio, dataFim]
