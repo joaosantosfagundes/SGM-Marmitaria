@@ -116,6 +116,7 @@ export default class PedidoService {
                 if (!cliente || !cliente.ativo) throw { status: 400, msg: 'O cliente não existe ou está inativo.' };
             }
             let cardapio;
+            let precisaPreparo = false;
             let total = 0;
             for (let item of pedido.itens) {
                 let produto = await this.#produtoRepo.obter(item.idProduto, consultar);
@@ -123,6 +124,7 @@ export default class PedidoService {
                 if (!produto.usaCardapio) {
                     if (item.opcaoMistura !== null || item.adicionais.length) throw { status: 400, msg: 'Este produto não permite mistura nem adicionais do dia.' };
                 } else {
+                    precisaPreparo = true;
                     cardapio ??= await this.#cardapioRepo.obterPorData(dados.data, consultar);
                     if (!cardapio.existe || !cardapio.preparacoes.length) {
                         throw { status: 409, msg: 'Monte o cardápio do dia antes de lançar este produto.' };
@@ -149,6 +151,7 @@ export default class PedidoService {
                 }
                 if (total > MAX_CENTAVOS) throw { status: 400, msg: 'O total do pedido ultrapassa R$ 99.999.999,99.' };
             }
+            pedido.status = precisaPreparo ? 'RECEBIDO' : 'PRONTO';
             pedido.valorTotal = total / 100;
             pedido.pagamento.valor = pedido.valorTotal;
             pedido.pagamento.status = pedido.pagamento.forma === 'FIADO' ? 'PENDENTE' : 'PAGO';

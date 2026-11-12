@@ -1538,7 +1538,9 @@ paths:
       description: |
         Perfis ADMIN e ATENDENTE. COZINHA não pode criar. Exige caixa ABERTO;
         o caixa e o usuário são definidos pelo servidor, ignorando campos de responsável
-        ou preço no corpo. Status inicial RECEBIDO. Não há baixa de estoque.
+        ou preço no corpo. Pedidos só com produtos de usaCardapio false começam em PRONTO, com
+        horaPronto registrada no lançamento. Quando algum item usa cardápio, o status inicial
+        é RECEBIDO e horaPronto é null. Não há baixa de estoque.
         Tudo é consultado e gravado em uma transação com conexão dedicada e caixa FOR SHARE.
         Qualquer erro desfaz pedido, itens, adicionais e pagamento.
 

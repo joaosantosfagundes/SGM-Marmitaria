@@ -172,8 +172,9 @@ export default function ProdutosPage() {
                         </div>
 
                         <div className="form-check mt-3">
-                            <input id="produto-usa-cardapio" type="checkbox" className="form-check-input" checked={form.usaCardapio} onChange={event => setForm({ ...form, usaCardapio: event.target.checked })} />
+                            <input id="produto-usa-cardapio" type="checkbox" className="form-check-input" checked={form.usaCardapio} onChange={event => setForm({ ...form, usaCardapio: event.target.checked })} aria-describedby="produto-usa-cardapio-ajuda" />
                             <label htmlFor="produto-usa-cardapio" className="form-check-label">Escolhe mistura e adicionais do dia</label>
+                            <div id="produto-usa-cardapio-ajuda" className="form-text">Desmarcado: produto não passa pela cozinha. Pedidos só com produtos assim já ficam 'Pronto'.</div>
                         </div>
                         <div className="d-flex gap-2 mt-3">
                             <button type="submit" className="btn btn-primary" disabled={salvando}>

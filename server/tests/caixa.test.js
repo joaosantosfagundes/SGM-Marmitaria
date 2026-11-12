@@ -141,9 +141,9 @@ async function executar(sql, valores = [], transacao) {
     }
     if (q.startsWith('select * from produto')) return [{ id_produto: 1, nome: 'PF', ativo: 1, usa_cardapio: 0, preco_padrao: '40.00' }];
     if (q.startsWith('insert into pedido ')) {
-        let [id_caixa, id_usuario, id_cliente, tipo_atendimento, endereco_entrega, observacao, valor_total] = valores;
+        let [id_caixa, id_usuario, id_cliente, status, statusHoraPronto, tipo_atendimento, endereco_entrega, observacao, valor_total] = valores;
         let id = proximoPedido++;
-        transacao.pedidos.push({ id_pedido: id, id_caixa, id_usuario, id_cliente, tipo_atendimento, endereco_entrega, observacao, valor_total: valor_total.toFixed(2), status: 'RECEBIDO' });
+        transacao.pedidos.push({ id_pedido: id, id_caixa, id_usuario, id_cliente, tipo_atendimento, endereco_entrega, observacao, valor_total: valor_total.toFixed(2), status, hora_pronto: statusHoraPronto === 'PRONTO' ? '2026-10-25 12:00:00' : null });
         return { insertId: id };
     }
     if (q.startsWith('insert into item_pedido ')) return { insertId: 1 };

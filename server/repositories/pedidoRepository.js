@@ -96,9 +96,10 @@ export default class PedidoRepository extends Repository {
             // O Service consulta os catálogos e aplica as regras usando esta mesma conexão.
             await preparar(consultar);
             let resultado = await consultar(
-                `insert into pedido (id_caixa, id_usuario, id_cliente, status, tipo_atendimento,
-                 endereco_entrega, observacao, valor_total) values (?, ?, ?, 'RECEBIDO', ?, ?, ?, ?)`,
-                [pedido.idCaixa, pedido.idUsuario, pedido.idCliente, pedido.tipoAtendimento,
+                `insert into pedido (id_caixa, id_usuario, id_cliente, status, hora_pronto, tipo_atendimento,
+                 endereco_entrega, observacao, valor_total)
+                 values (?, ?, ?, ?, case when ? = 'PRONTO' then now() else null end, ?, ?, ?, ?)`,
+                [pedido.idCaixa, pedido.idUsuario, pedido.idCliente, pedido.status, pedido.status, pedido.tipoAtendimento,
                     pedido.enderecoEntrega, pedido.observacao, pedido.valorTotal]
             );
             pedido.id = resultado.insertId;

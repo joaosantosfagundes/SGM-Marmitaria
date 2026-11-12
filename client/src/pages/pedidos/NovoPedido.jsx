@@ -96,7 +96,8 @@ export default function NovoPedido({ bloqueado, onCancelar, onSucesso, onCaixaFe
         envioRef.current = true; setEnviando(true); setErroEnvio('');
         try {
             let pedido = await ApiClient.post('pedido', corpo);
-            toast.success('Pedido lançado com sucesso!');
+            let aviso = pedido.status === 'PRONTO' ? ' Pedido sem preparo: já está pronto.' : '';
+            toast.success(`Pedido lançado com sucesso!${aviso}`);
             onSucesso(pedido);
         } catch (error) {
             setErroEnvio(tratarErro(error));

@@ -98,7 +98,7 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 
 ### Sprint 4 (28/09–17/10) — RF_F2–F4
 - [x] RF_F2 — Backend e frontend concluídos: lançamento com itens, mistura, adicionais e pagamento; tela Pedidos com lista recente, detalhes e troco
-- [x] RF_F3 — Status do Pedido, cancelamento com motivo e comanda da cozinha
+- [x] RF_F3 — Status do Pedido, pedidos sem preparo já prontos, cancelamento com motivo e comanda da cozinha
 - [x] RF_F4 — Movimentação de Estoque (entradas, perdas e ajustes manuais, saldo não negativo, transação com bloqueio por insumo, saldos e histórico)
 
 ### Sprint 5 — Operação e relatórios
@@ -358,6 +358,8 @@ Aplique uma única vez [`server/db/migrations/006-pedido-status.sql`](server/db/
 no banco já atualizado com a migration 005. Adiciona motivo, horário e usuário do cancelamento em `pedido`;
 os horários de pronto e saída já existem. Nenhuma migration é aplicada automaticamente.
 
+- Pedidos compostos só por produtos sem cardápio começam em `PRONTO`, com o horário de pronto
+  registrado no lançamento. Um item que usa cardápio faz o pedido começar em `RECEBIDO`.
 - `PUT /pedido/:id/status`: RECEBIDO → EM_PREPARO → PRONTO, com SAIU_ENTREGA somente em DELIVERY.
   ADMIN e ATENDENTE avançam todas as etapas; COZINHA somente EM_PREPARO e PRONTO. Não permite pular ou voltar.
 - `POST /pedido/:id/cancelar`: ADMIN e ATENDENTE informam motivo de 3 a 255 caracteres. Bloqueia o pedido

@@ -45,8 +45,10 @@ function executar(sql, valores = [], banco, transacao) {
     if (q.includes('from cardapio_adicional')) return banco.adicionais.filter(row => banco.vinculos.includes(row.id_adicional)).map(row => ({ id_adicional: row.id_adicional, nome: row.nome, preco: row.preco }));
     if (q.startsWith('insert into pedido ')) {
         let id = banco.pedidos.length + 1;
-        let [id_caixa, id_usuario, id_cliente, tipo_atendimento, endereco_entrega, observacao, total] = valores;
-        banco.pedidos.push({ id_pedido: id, id_caixa, id_usuario, id_cliente, tipo_atendimento, endereco_entrega, observacao, valor_total: total.toFixed(2), status: 'RECEBIDO', data_hora: `2026-10-22 12:00:0${id}`, hora_pronto: null, hora_saiu_entrega: null, motivo_cancelamento: null, hora_cancelamento: null, id_usuario_cancelamento: null });
+        let [id_caixa, id_usuario, id_cliente, status, statusHoraPronto, tipo_atendimento, endereco_entrega, observacao, total] = valores;
+        let data_hora = `2026-10-22 12:00:0${id}`;
+        assert.match(q, /case when \? = 'pronto' then now\(\) else null end/);
+        banco.pedidos.push({ id_pedido: id, id_caixa, id_usuario, id_cliente, tipo_atendimento, endereco_entrega, observacao, valor_total: total.toFixed(2), status, data_hora, hora_pronto: statusHoraPronto === 'PRONTO' ? data_hora : null, hora_saiu_entrega: null, motivo_cancelamento: null, hora_cancelamento: null, id_usuario_cancelamento: null });
         return { insertId: id };
     }
     if (q.startsWith('insert into item_pedido ')) {
@@ -141,6 +143,10 @@ after(() => { pool.query = consultaOriginal; pool.getConnection = conexaoOrigina
 
 function corpo() {
     return { data: '2026-10-22', tipoAtendimento: 'BALCAO', itens: [{ idProduto: 1, quantidade: 2, opcaoMistura: ' FRANGO ao MOLHO ', adicionais: [{ idAdicional: 3, quantidade: 1 }] }], pagamento: { forma: 'DINHEIRO', valorRecebido: 50 } };
+}
+
+function corpoBebida() {
+    return { ...corpo(), itens: [{ idProduto: 2, quantidade: 1 }] };
 }
 
 async function chamar(body, { metodo = 'post', caminho = '/', perfil = 1, query = {}, params = {} } = {}) {
@@ -257,10 +263,22 @@ for (let cenario of ['ausente', 'sem preparações']) test(`Produto usa cardápi
 });
 test('Produto sem usaCardapio continua livre sem cardápio ou preparações', async () => {
     estado.cardapios = []; estado.preparacoes = [];
-    let b = corpo(); b.itens = [{ idProduto: 2, quantidade: 1 }];
-    let r = await chamar(b); assert.equal(r.status, 201); assert.equal(r.body.valorTotal, 5);
+    let r = await chamar(corpoBebida()); assert.equal(r.status, 201); assert.equal(r.body.valorTotal, 5);
+    assert.equal(r.body.status, 'PRONTO');
+    assert.equal(r.body.horaPronto, '2026-10-22 12:00:01');
+    assert.equal(estado.pedidos[0].status, 'PRONTO');
+    assert.equal(estado.pedidos[0].hora_pronto, r.body.horaPronto);
     assert.equal(r.body.itens[0].opcaoMistura, null); assert.deepEqual(r.body.itens[0].adicionais, []);
     assert.ok(!consultas.some(consulta => consulta.sql.includes('from cardapio')));
+});
+test('Pedido de bebida e marmita nasce RECEBIDO com horaPronto nula', async () => {
+    let dados = corpo();
+    dados.itens.unshift(...corpoBebida().itens);
+    let r = await chamar(dados);
+    assert.equal(r.status, 201);
+    assert.equal(r.body.status, 'RECEBIDO');
+    assert.equal(r.body.horaPronto, null);
+    assert.equal(estado.pedidos[0].hora_pronto, null);
 });
 test('Pedido misto também exige cardápio para o item que o utiliza', async () => {
     estado.cardapios = [];
@@ -393,6 +411,39 @@ function mudarStatus(status, perfil = 1, id = '1') {
 function cancelar(motivo = 'Cliente desistiu do pedido', perfil = 1, id = '1', extras = {}) {
     return chamar({ motivo, ...extras }, { caminho: '/:id/cancelar', params: { id }, perfil });
 }
+
+test('Delivery só de bebida sai para entrega a partir de PRONTO', async () => {
+    let criado = await chamar({ ...corpoBebida(), tipoAtendimento: 'DELIVERY', enderecoEntrega: 'Rua A, 123' });
+    assert.equal(criado.status, 201);
+    assert.equal(criado.body.status, 'PRONTO');
+    assert.equal(criado.body.horaPronto, '2026-10-22 12:00:01');
+    let entrega = await mudarStatus('SAIU_ENTREGA', 2);
+    assert.equal(entrega.status, 200);
+    assert.equal(entrega.body.status, 'SAIU_ENTREGA');
+    assert.equal(entrega.body.horaPronto, criado.body.horaPronto);
+    assert.equal(entrega.body.horaSaiuEntrega, '2026-10-22 13:10:00');
+});
+
+test('Pedido de balcão só de bebida termina o fluxo de status em PRONTO', async () => {
+    let criado = await chamar(corpoBebida());
+    assert.equal(criado.status, 201);
+    assert.equal(criado.body.status, 'PRONTO');
+    let antes = structuredClone(estado.pedidos[0]);
+    assert.equal((await mudarStatus('EM_PREPARO', 2)).status, 409);
+    assert.equal((await mudarStatus('SAIU_ENTREGA', 2)).status, 409);
+    assert.deepEqual(estado.pedidos[0], antes);
+});
+
+test('Pedido só de bebida pode ser cancelado depois de nascer PRONTO', async () => {
+    let criado = await chamar(corpoBebida());
+    assert.equal(criado.status, 201);
+    assert.equal(criado.body.status, 'PRONTO');
+    let cancelado = await cancelar();
+    assert.equal(cancelado.status, 200);
+    assert.equal(cancelado.body.status, 'CANCELADO');
+    assert.equal(cancelado.body.horaPronto, criado.body.horaPronto);
+    assert.equal(cancelado.body.pagamento.status, 'CANCELADO');
+});
 
 for (let tipo of ['BALCAO', 'MESA', 'DELIVERY']) test(`Fluxo completo ${tipo}, horários e resposta completa`, async () => {
     let b = corpo(); b.tipoAtendimento = tipo;
