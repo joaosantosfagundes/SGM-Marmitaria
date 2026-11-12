@@ -6,6 +6,9 @@ export default function Topbar() {
   const [profileOpen, setProfileOpen] = useState(false);
   const { usuario, logout } = useAuth();
   const navigate = useNavigate();
+  const nome = usuario?.nome?.trim() || "Usuário";
+  const partesNome = nome.split(/\s+/);
+  const iniciais = (partesNome[0][0] + (partesNome.length > 1 ? partesNome.at(-1)[0] : "")).toLocaleUpperCase("pt-BR");
 
   function toggleSidebar() {
     const sidebar = document.getElementById("sidebar");
@@ -28,7 +31,7 @@ export default function Topbar() {
   }
 
   return (
-    <nav id="topbar" className="navbar bg-white border-bottom fixed-top topbar px-3">
+    <nav id="topbar" className="navbar border-bottom fixed-top topbar px-3">
       <button
         type="button"
         className="btn btn-light btn-icon btn-sm"
@@ -41,11 +44,13 @@ export default function Topbar() {
       <div className="ms-auto position-relative">
         <button
           type="button"
-          className="btn btn-light btn-icon btn-sm rounded-circle"
+          className="btn topbar-perfil d-inline-flex align-items-center gap-2"
           onClick={() => setProfileOpen((value) => !value)}
           aria-label="Perfil"
+          aria-expanded={profileOpen}
         >
-          <i className="ti ti-user" />
+          <span className="topbar-nome text-truncate">{nome}</span>
+          <span className="topbar-avatar" aria-hidden="true">{iniciais}</span>
         </button>
 
         {profileOpen && (

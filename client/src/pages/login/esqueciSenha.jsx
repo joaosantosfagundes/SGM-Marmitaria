@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import ApiClient from '../../services/apiClient.js';
+import AuthLayout from './AuthLayout.jsx';
 
 export default function EsqueciSenha() {
     const [email, setEmail] = useState('');
@@ -23,15 +24,12 @@ export default function EsqueciSenha() {
     }
 
     return (
-        <div className="login-container">
-            <div className="login-form page-card p-4">
+        <AuthLayout>
+            <div>
                 {!enviado ? (
                     <>
-                        <div className="text-center mb-4">
-                            <span className="icon-shape bg-primary text-white rounded-2 mx-auto mb-2" style={{ width: 48, height: 48 }}>
-                                <i className="ti ti-lock-question fs-4" />
-                            </span>
-                            <h1 className="fs-4 mb-0">Esqueci minha senha</h1>
+                        <div className="auth-form-heading">
+                            <h1>Esqueci minha senha</h1>
                             <p className="text-secondary small mb-0">
                                 Informe seu e-mail e enviaremos um link de redefinição.
                             </p>
@@ -65,12 +63,12 @@ export default function EsqueciSenha() {
                     </div>
                 )}
 
-                <div className="text-center mt-3">
-                    <Link to="/login" className="small text-secondary">
+                <div className="mt-3">
+                    <Link to="/login" className="small">
                         <i className="ti ti-arrow-left me-1" /> Voltar pro login
                     </Link>
                 </div>
             </div>
-        </div>
+        </AuthLayout>
     );
 }

@@ -31,23 +31,26 @@ export default function Sidebar() {
     <aside id="sidebar" className={`sidebar ${open ? "mobile-show" : ""}`}>
       <div className="logo-area">
         <Link to="/" className="d-inline-flex align-items-center" onClick={closeMobile}>
-          <span className="icon-shape bg-primary text-white rounded-2">M</span>
-          <strong className="ms-2 text-dark">SGM</strong>
+          <span className="sidebar-marca">M</span>
+          <strong className="ms-2">SGM</strong>
         </Link>
       </div>
 
       <nav className="pt-3" ref={navRef}>
         {gruposVisiveis.map((group) => (
           <div key={group.label} className="mb-3">
-            <div className="px-4 py-2 text-secondary small">{group.label}</div>
+            <div className="sidebar-grupo">{group.label}</div>
             {group.items.map((item) => (
               <Link
                 key={item.href}
                 to={item.href}
                 onClick={closeMobile}
+                aria-label={item.label}
+                aria-current={activePath === item.href ? "page" : undefined}
+                title={item.label}
                 className={`nav-link ${activePath === item.href ? "active" : ""}`}
               >
-                <i className={`ti ${item.icon}`} />
+                <i className={`ti ${item.icon}`} aria-hidden="true" />
                 <span>{item.label}</span>
               </Link>
             ))}

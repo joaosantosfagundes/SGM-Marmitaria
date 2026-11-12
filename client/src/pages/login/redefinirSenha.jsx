@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import ApiClient from '../../services/apiClient.js';
+import AuthLayout from './AuthLayout.jsx';
 
 export default function RedefinirSenha() {
     const [searchParams] = useSearchParams();
@@ -35,8 +36,8 @@ export default function RedefinirSenha() {
     // Sem token na URL — alguém abriu essa página direto, sem vir do e-mail
     if (!token) {
         return (
-            <div className="login-container">
-                <div className="login-form page-card p-4 text-center">
+            <AuthLayout>
+                <div className="text-center">
                     <i className="ti ti-alert-triangle fs-1 text-warning" />
                     <h2 className="h5 mt-3 mb-2">Link inválido</h2>
                     <p className="text-secondary small">
@@ -46,18 +47,15 @@ export default function RedefinirSenha() {
                         Solicitar novo link
                     </Link>
                 </div>
-            </div>
+            </AuthLayout>
         );
     }
 
     return (
-        <div className="login-container">
-            <div className="login-form page-card p-4">
-                <div className="text-center mb-4">
-                    <span className="icon-shape bg-primary text-white rounded-2 mx-auto mb-2" style={{ width: 48, height: 48 }}>
-                        <i className="ti ti-lock fs-4" />
-                    </span>
-                    <h1 className="fs-4 mb-0">Nova senha</h1>
+        <AuthLayout>
+            <div>
+                <div className="auth-form-heading">
+                    <h1>Nova senha</h1>
                     <p className="text-secondary small mb-0">Escolha uma senha nova pra sua conta.</p>
                 </div>
 
@@ -91,6 +89,6 @@ export default function RedefinirSenha() {
                     </button>
                 </form>
             </div>
-        </div>
+        </AuthLayout>
     );
 }

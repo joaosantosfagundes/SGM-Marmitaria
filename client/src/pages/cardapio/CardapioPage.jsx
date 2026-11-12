@@ -140,8 +140,8 @@ export default function CardapioPage() {
     function renderizarPreparacoes(grupo, titulo, exemplo) {
         let itens = preparacoes.map((item, indice) => ({ ...item, indice })).filter(item => item.grupo === grupo);
         return (
-            <section className="page-card mb-4">
-                <div className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom flex-wrap gap-2">
+            <section className="page-card">
+                <div className="d-flex justify-content-between align-items-center px-3 px-sm-4 py-3 border-bottom flex-wrap gap-2">
                     <div>
                         <h2 className="h6 mb-1">{titulo}</h2>
                         <p className="small text-secondary mb-0">{exemplo}</p>
@@ -150,17 +150,17 @@ export default function CardapioPage() {
                         <i className="ti ti-plus me-1" />{grupo ? 'Adicionar opção' : 'Adicionar item fixo'}
                     </button>
                 </div>
-                {itens.length === 0 ? <div className="text-secondary p-4">{grupo ? 'Ainda não há opções de mistura.' : 'Ainda não há itens fixos.'}</div> : (
-                    <div className="p-4 d-flex flex-column gap-3">
+                {itens.length === 0 ? <div className="text-secondary p-3 px-sm-4">{grupo ? 'Ainda não há opções de mistura.' : 'Ainda não há itens fixos.'}</div> : (
+                    <div className="p-3 px-sm-4 d-flex flex-column gap-2">
                         {itens.map((item, posicao) => (
-                            <div key={item.indice}>
+                            <div key={item.indice} className="border rounded-3 p-2 p-sm-3">
                                 <label htmlFor={`preparacao-${item.indice}`} className="form-label small text-secondary">{grupo ? `${posicao + 1}ª opção` : `${posicao + 1}. Item fixo`}</label>
                                 <div className="preparacao-linha d-flex gap-2 flex-wrap">
-                                    <input id={`preparacao-${item.indice}`} className="form-control flex-grow-1 w-auto" maxLength={150} value={item.nome} disabled={bloqueado} placeholder="Nome da preparação" onChange={event => editarPreparacao(item.indice, event.target.value)} />
+                                    <input id={`preparacao-${item.indice}`} className="form-control flex-grow-1 w-auto mw-100" maxLength={150} value={item.nome} disabled={bloqueado} placeholder="Nome da preparação" onChange={event => editarPreparacao(item.indice, event.target.value)} />
                                     <div className="d-flex gap-1 flex-shrink-0">
-                                        <button className="btn btn-light" disabled={bloqueado || posicao === 0} title="Mover para cima" aria-label={`Mover ${item.nome || 'preparação'} para cima`} onClick={() => moverPreparacao(item.indice, itens[posicao - 1].indice)}><i className="ti ti-arrow-up" /></button>
-                                        <button className="btn btn-light" disabled={bloqueado || posicao === itens.length - 1} title="Mover para baixo" aria-label={`Mover ${item.nome || 'preparação'} para baixo`} onClick={() => moverPreparacao(item.indice, itens[posicao + 1].indice)}><i className="ti ti-arrow-down" /></button>
-                                        <button className="btn btn-light text-danger" disabled={bloqueado} title="Remover preparação" aria-label={`Remover ${item.nome || 'preparação'}`} onClick={() => removerPreparacao(item.indice)}><i className="ti ti-trash" /></button>
+                                        <button className="btn btn-light btn-icon" disabled={bloqueado || posicao === 0} title="Mover para cima" aria-label={`Mover ${item.nome || 'preparação'} para cima`} onClick={() => moverPreparacao(item.indice, itens[posicao - 1].indice)}><i className="ti ti-arrow-up" /></button>
+                                        <button className="btn btn-light btn-icon" disabled={bloqueado || posicao === itens.length - 1} title="Mover para baixo" aria-label={`Mover ${item.nome || 'preparação'} para baixo`} onClick={() => moverPreparacao(item.indice, itens[posicao + 1].indice)}><i className="ti ti-arrow-down" /></button>
+                                        <button className="btn btn-light btn-icon text-danger" disabled={bloqueado} title="Remover preparação" aria-label={`Remover ${item.nome || 'preparação'}`} onClick={() => removerPreparacao(item.indice)}><i className="ti ti-trash" /></button>
                                     </div>
                                 </div>
                             </div>
@@ -182,49 +182,59 @@ export default function CardapioPage() {
                 </div>
                 <button className="btn btn-primary" onClick={salvar} disabled={bloqueado}><i className="ti ti-device-floppy me-1" />{salvando ? 'Salvando...' : 'Salvar cardápio'}</button>
             </div>
-            <section className="page-card p-4 mb-4">
+            <section className="page-card p-3 p-sm-4 mb-3">
                 <div className="row g-3 align-items-end">
-                    <div className="col-md-4">
+                    <div className="col-md-4 col-xl-3">
                         <label htmlFor="data-cardapio" className="form-label small">Montar cardápio para</label>
                         <div className="input-group">
                             <input id="data-cardapio" type="date" className="form-control" value={data} disabled={salvando || copiando} onChange={event => setData(event.target.value)} />
-                            <button className="btn btn-light" onClick={() => setData(dataLocal())} disabled={salvando || copiando}>Hoje</button>
+                            <button className="btn btn-outline-primary" onClick={() => setData(dataLocal())} disabled={salvando || copiando}>Hoje</button>
                         </div>
                     </div>
-                    <div className="col-md-4">
+                    <div className="col-md-4 col-xl-3">
                         <label htmlFor="origem-cardapio" className="form-label small">Reutilizar cardápio de</label>
                         <input id="origem-cardapio" type="date" className="form-control" value={dataOrigem} disabled={ocupado} onChange={event => setDataOrigem(event.target.value)} />
                     </div>
                     <div className="col-md-auto">
                         <button className="btn btn-outline-primary" onClick={reutilizar} disabled={bloqueado}><i className="ti ti-copy me-1" />{copiando ? 'Aplicando...' : 'Reutilizar nesta data'}</button>
                     </div>
-                    <div className="col-12 small text-secondary">{carregando ? 'Carregando cardápio...' : erroCarga ? 'Não foi possível carregar esta data.' : existe ? 'Cardápio salvo para esta data' : 'Ainda não há cardápio salvo para esta data'}</div>
+                    <div className="col-12 col-xl small text-secondary text-xl-end pb-xl-2">{carregando ? 'Carregando cardápio...' : erroCarga ? 'Não foi possível carregar esta data.' : existe ? 'Cardápio salvo para esta data' : 'Ainda não há cardápio salvo para esta data'}</div>
                 </div>
             </section>
             {erroCarga && <div className="alert alert-danger">Não foi possível carregar o cardápio e os adicionais. <button className="btn btn-sm btn-outline-danger" disabled={ocupado} onClick={() => setTentativa(atual => atual + 1)}>Tentar novamente</button></div>}
             {!carregando && !erroCarga && dataCarregada === data && <>
-                {renderizarPreparacoes(null, 'Itens fixos do dia', 'Ex.: arroz, feijão e salada.')}
-                {renderizarPreparacoes('Mistura', 'Mistura (opções)', 'Cadastre as alternativas na ordem desejada. Ex.: carne, frango e ovo.')}
-                <section className="page-card p-4 mb-4">
-                    <h2 className="h6 mb-1">Adicionais do dia</h2>
-                    <p className="small text-secondary mb-3">Selecione os adicionais disponíveis nesta data. Os preços vêm do cadastro de adicionais.</p>
-                    {ativos.length === 0 && <p className="text-secondary mb-0">Nenhum adicional ativo cadastrado.</p>}
-                    <div className="row g-3">
-                        {ativos.map(item => <div className="col-md-6 col-lg-4" key={item.id}>
-                            <div className="form-check">
-                                <input id={`adicional-${item.id}`} type="checkbox" className="form-check-input" disabled={bloqueado} checked={selecionados.some(selecionado => selecionado.id === item.id)} onChange={event => selecionarAdicional(item, event.target.checked)} />
-                                <label className="form-check-label" htmlFor={`adicional-${item.id}`}>{item.nome} <span className="text-secondary">— {formatarPreco(item.preco)}</span></label>
-                            </div>
-                        </div>)}
+                <div className="row g-3 mb-4">
+                    <div className="col-12 col-lg-7 d-flex flex-column gap-3">
+                        {renderizarPreparacoes(null, 'Itens fixos do dia', 'Ex.: arroz, feijão e salada.')}
+                        {renderizarPreparacoes('Mistura', 'Mistura (opções)', 'Cadastre as alternativas na ordem desejada. Ex.: carne, frango e ovo.')}
                     </div>
-                    {indisponiveis.length > 0 && <div className="alert alert-warning mt-3 mb-0">
-                        <p>Há adicionais deste cardápio que estão inativos ou indisponíveis. Remova-os da seleção ou reative seus cadastros antes de salvar.</p>
-                        {indisponiveis.map(item => <div key={item.id} className="d-flex flex-wrap gap-3 align-items-center mt-2">
-                            <span>{item.nome} — {formatarPreco(item.preco)}</span>
-                            <button className="btn btn-sm btn-outline-danger" disabled={bloqueado} onClick={() => selecionarAdicional(item, false)}>Remover da seleção</button>
-                        </div>)}
-                    </div>}
-                </section>
+                    <div className="col-12 col-lg-5">
+                        <section className="page-card h-100">
+                            <div className="px-3 px-sm-4 py-3 border-bottom">
+                                <h2 className="h6 mb-1">Adicionais do dia</h2>
+                                <p className="small text-secondary mb-0">Selecione os adicionais disponíveis nesta data. Os preços vêm do cadastro de adicionais.</p>
+                            </div>
+                            <div className="p-3 px-sm-4">
+                                {ativos.length === 0 && <p className="text-secondary mb-0">Nenhum adicional ativo cadastrado.</p>}
+                                {ativos.map(item => (
+                                    <div className="form-check mb-0 py-2 border-bottom" key={item.id}>
+                                        <input id={`adicional-${item.id}`} type="checkbox" className="form-check-input" disabled={bloqueado} checked={selecionados.some(selecionado => selecionado.id === item.id)} onChange={event => selecionarAdicional(item, event.target.checked)} />
+                                        <label className="form-check-label d-flex justify-content-between flex-wrap gap-2" htmlFor={`adicional-${item.id}`}>
+                                            <span>{item.nome}</span> <span className="text-secondary fw-semibold text-nowrap">— {formatarPreco(item.preco)}</span>
+                                        </label>
+                                    </div>
+                                ))}
+                                {indisponiveis.length > 0 && <div className="alert alert-warning mt-3 mb-0">
+                                    <p>Há adicionais deste cardápio que estão inativos ou indisponíveis. Remova-os da seleção ou reative seus cadastros antes de salvar.</p>
+                                    {indisponiveis.map(item => <div key={item.id} className="d-flex flex-wrap gap-3 align-items-center mt-2">
+                                        <span>{item.nome} — {formatarPreco(item.preco)}</span>
+                                        <button className="btn btn-sm btn-outline-danger" disabled={bloqueado} onClick={() => selecionarAdicional(item, false)}>Remover da seleção</button>
+                                    </div>)}
+                                </div>}
+                            </div>
+                        </section>
+                    </div>
+                </div>
                 <div className="d-flex justify-content-end"><button className="btn btn-primary" onClick={salvar} disabled={bloqueado}>{salvando ? 'Salvando...' : 'Salvar cardápio'}</button></div>
             </>}
         </div>

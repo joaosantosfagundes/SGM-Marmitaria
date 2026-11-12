@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
+import AuthLayout from './AuthLayout.jsx';
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -19,13 +20,10 @@ export default function Login() {
     }
 
     return (
-        <div className="login-container">
-            <form onSubmit={handleSubmit} className="login-form page-card p-4">
-                <div className="text-center mb-4">
-                    <span className="icon-shape bg-primary text-white rounded-2 mx-auto mb-2" style={{ width: 48, height: 48 }}>
-                        <i className="ti ti-tools-kitchen-2 fs-4" />
-                    </span>
-                    <h1 className="fs-4 mb-0">SGM</h1>
+        <AuthLayout>
+            <form onSubmit={handleSubmit}>
+                <div className="auth-form-heading">
+                    <h1>Entrar no SGM</h1>
                     <p className="text-secondary small mb-0">Sistema de Gestão para Marmitaria</p>
                 </div>
 
@@ -40,7 +38,7 @@ export default function Login() {
                     />
                 </div>
 
-                <div className="mb-4">
+                <div className="mb-3">
                     <label className="form-label small">Senha</label>
                     <input
                         type="password"
@@ -51,14 +49,13 @@ export default function Login() {
                     />
                 </div>
 
-                <button type="submit" className="btn btn-primary w-100">Entrar</button>
-
-                <div className="text-center mt-3">
-                    <Link to="/esqueci-senha" className="small text-secondary">
+                <div className="text-end mb-3">
+                    <Link to="/esqueci-senha" className="small">
                         Esqueci minha senha
                     </Link>
                 </div>
+                <button type="submit" className="btn btn-primary w-100">Entrar</button>
             </form>
-        </div>
+        </AuthLayout>
     );
 }
