@@ -180,7 +180,7 @@ export default function CardapioPage() {
                     <h1 className="fs-3 mb-1">Cardápio do Dia</h1>
                     <p className="text-secondary mb-0">Monte os itens fixos, as opções de mistura e os adicionais para a data escolhida.</p>
                 </div>
-                <button className="btn btn-primary" onClick={salvar} disabled={bloqueado}><i className="ti ti-device-floppy me-1" />{salvando ? 'Salvando...' : 'Salvar cardápio'}</button>
+                <button className="btn btn-success" onClick={salvar} disabled={bloqueado}><i className="ti ti-device-floppy me-1" />{salvando ? 'Salvando...' : 'Salvar cardápio'}</button>
             </div>
             <section className="page-card p-3 p-sm-4 mb-3">
                 <div className="row g-3 align-items-end">
@@ -235,7 +235,7 @@ export default function CardapioPage() {
                         </section>
                     </div>
                 </div>
-                <div className="d-flex justify-content-end"><button className="btn btn-primary" onClick={salvar} disabled={bloqueado}>{salvando ? 'Salvando...' : 'Salvar cardápio'}</button></div>
+                <div className="d-flex justify-content-end"><button className="btn btn-success" onClick={salvar} disabled={bloqueado}>{salvando ? 'Salvando...' : 'Salvar cardápio'}</button></div>
             </>}
         </div>
     );

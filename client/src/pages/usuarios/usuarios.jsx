@@ -182,12 +182,12 @@ export default function UsuariosPage() {
                             </p>
                         )}
 
-                        <div className="d-flex gap-2 mt-3">
-                            <button type="submit" className="btn btn-primary" disabled={salvando}>
-                                {salvando ? 'Salvando...' : 'Salvar'}
-                            </button>
-                            <button type="button" className="btn btn-light" onClick={fecharForm}>
+                        <div className="d-flex justify-content-end gap-2 mt-3">
+                            <button type="button" className="btn btn-danger" onClick={fecharForm}>
                                 Cancelar
+                            </button>
+                            <button type="submit" className="btn btn-success" disabled={salvando}>
+                                {salvando ? 'Salvando...' : 'Salvar'}
                             </button>
                         </div>
                     </form>

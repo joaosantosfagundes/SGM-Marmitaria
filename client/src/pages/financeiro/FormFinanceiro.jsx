@@ -17,7 +17,10 @@ export default function FormFinanceiro({ form, setForm, editandoId, salvando, on
                     {form.recorrente && <div className="col-12 col-md-6"><label htmlFor="financeiro-meses" className="form-label">Quantidade de meses</label><input id="financeiro-meses" name="quantidadeMeses" type="number" min="2" max="2147483647" step="1" className="form-control" value={form.quantidadeMeses} onChange={alterar} /></div>}
                 </div>
             </fieldset>
-            <div className="d-flex flex-wrap gap-2 mt-3"><button type="submit" className="btn btn-primary" disabled={salvando}>{salvando ? 'Salvando...' : 'Salvar'}</button><button type="button" className="btn btn-light" disabled={salvando} onClick={onCancelar}>Cancelar</button></div>
+            <div className="d-flex flex-wrap justify-content-end gap-2 mt-3">
+                <button type="button" className="btn btn-danger" disabled={salvando} onClick={onCancelar}>Cancelar</button>
+                <button type="submit" className="btn btn-success" disabled={salvando}>{salvando ? 'Salvando...' : 'Salvar'}</button>
+            </div>
         </form>
     </section>;
 }

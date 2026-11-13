@@ -176,12 +176,12 @@ export default function ProdutosPage() {
                             <label htmlFor="produto-usa-cardapio" className="form-check-label">Escolhe mistura e adicionais do dia</label>
                             <div id="produto-usa-cardapio-ajuda" className="form-text">Desmarcado: produto não passa pela cozinha. Pedidos só com produtos assim já ficam 'Pronto'.</div>
                         </div>
-                        <div className="d-flex gap-2 mt-3">
-                            <button type="submit" className="btn btn-primary" disabled={salvando}>
-                                {salvando ? 'Salvando...' : 'Salvar'}
-                            </button>
-                            <button type="button" className="btn btn-light" onClick={fecharForm}>
+                        <div className="d-flex justify-content-end gap-2 mt-3">
+                            <button type="button" className="btn btn-danger" onClick={fecharForm}>
                                 Cancelar
+                            </button>
+                            <button type="submit" className="btn btn-success" disabled={salvando}>
+                                {salvando ? 'Salvando...' : 'Salvar'}
                             </button>
                         </div>
                     </form>

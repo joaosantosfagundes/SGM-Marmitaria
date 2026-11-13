@@ -226,9 +226,9 @@ export default function EstoquePage() {
                             </div>}
                         </div>
                     </fieldset>
-                    <div className="d-flex flex-wrap gap-2 mt-3">
-                        <button type="submit" className="btn btn-primary" disabled={ocupado || erroSaldos}>{salvando ? 'Salvando...' : 'Salvar'}</button>
-                        <button type="button" className="btn btn-light" disabled={salvando} onClick={fecharForm}>Cancelar</button>
+                    <div className="d-flex flex-wrap justify-content-end gap-2 mt-3">
+                        <button type="button" className="btn btn-danger" disabled={salvando} onClick={fecharForm}>Cancelar</button>
+                        <button type="submit" className="btn btn-success" disabled={ocupado || erroSaldos}>{salvando ? 'Salvando...' : 'Salvar'}</button>
                     </div>
                 </form>
             </section>}

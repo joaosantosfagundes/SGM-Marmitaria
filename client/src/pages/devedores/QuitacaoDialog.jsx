@@ -91,9 +91,9 @@ export default function QuitacaoDialog({ alvo, onFechar, onSucesso }) {
                             {erro && <div className="alert alert-danger mb-0" role="alert">{erro}</div>}
                         </form>
                     </div>
-                    <div className="modal-footer border-0 gap-2 p-3 p-sm-4 pt-0">
-                        <button type="button" className="btn btn-light flex-grow-1" ref={cancelarRef} disabled={enviando} onClick={onFechar}>Cancelar</button>
-                        <button type="submit" form={formId} className="btn btn-primary flex-grow-1" disabled={enviando || !forma}>{enviando ? 'Registrando...' : 'Confirmar recebimento'}</button>
+                    <div className="modal-footer border-0 d-flex justify-content-end gap-2 p-3 p-sm-4 pt-0">
+                        <button type="button" className="btn btn-danger m-0" ref={cancelarRef} disabled={enviando} onClick={onFechar}>Cancelar</button>
+                        <button type="submit" form={formId} className="btn btn-success m-0" disabled={enviando || !forma}>{enviando ? 'Registrando...' : 'Confirmar recebimento'}</button>
                     </div>
                 </div>
             </div>
