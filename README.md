@@ -27,6 +27,17 @@ Bootstrap 5 + SCSS + ícones Tabler + ApexCharts, portados de um mockup de admin
 - `src/components/AppShell.jsx` — casca (Sidebar + Topbar + conteúdo), usada em toda página logada.
 - `src/components/Topbar.jsx` — já plugado no `AuthContext`: mostra nome/perfil reais e o botão Sair funciona de verdade.
 
+### Como adicionar ou editar um tour
+
+O botão **Ajuda** da barra superior inicia o tour sob demanda. Os passos ficam em
+[`client/src/lib/tours.js`](client/src/lib/tours.js), agrupados pela rota. Para acrescentar um passo,
+defina seu título e texto e adicione `data-tour="nome-do-alvo"` ao elemento da tela. O nome deve
+coincidir com o primeiro argumento de `passoTour`.
+
+Ao abrir a ajuda, a tela descarta passos cujos alvos ainda não existem ou estão ocultos, por exemplo
+durante o carregamento ou quando o perfil não tem acesso a um botão. Até 992 px, também descarta
+os alvos da barra lateral. Rotas sem passos próprios usam o tour geral.
+
 ## Rodando localmente
 
 ### Backend
@@ -131,11 +142,12 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 - [x] Confirmações em diálogo próprio com suporte a teclado, foco controlado e notificações no padrão visual do sistema
 - [x] Formulário de adicionais em card acima da lista, no padrão dos demais cadastros
 - [x] Dashboard com indicadores, gráfico, pedidos recentes e alertas de estoque baseados em dados reais
+- [x] Tour guiado sob demanda pelo botão Ajuda
 
 ### Entrega final até 30/11
 
 - [x] Limpeza de código e revisão de dependências com build e testes do servidor antes e depois
-- [ ] Deploy final
+- [x] Deploy final (Railway)
 
 ## Dashboard
 
