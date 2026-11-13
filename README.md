@@ -155,8 +155,8 @@ vendas com o relatório de vendas do mesmo dia e o saldo da gaveta com `GET /cai
 
 ## Relatórios (RF_S1–RF_S5)
 
-Abra `/relatorios` com o perfil ADMIN ou ATENDENTE. As abas compartilham o período, que começa no dia
-atual da operação (UTC−3). O botão **Imprimir** abre a impressão do navegador em A4 com o relatório
+Abra `/relatorios` com o perfil ADMIN ou ATENDENTE. As abas compartilham o período, que vai do primeiro dia
+do mês atual até hoje por padrão. O botão **Imprimir** abre a impressão do navegador em A4 com o relatório
 da aba ativa, o período consultado e as tabelas. A navegação e os controles ficam fora da folha.
 
 - **Vendas e pedidos** usa `pedido.data_hora` e apresenta quantidades e valores por dia, forma original

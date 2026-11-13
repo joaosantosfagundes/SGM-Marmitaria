@@ -7,7 +7,8 @@ import RelatorioEstoque from './RelatorioEstoque.jsx';
 import RelatorioFinanceiro from './RelatorioFinanceiro.jsx';
 import RelatorioProdutos from './RelatorioProdutos.jsx';
 import RelatorioDevedores from './RelatorioDevedores.jsx';
-import { formatarDia, periodoHoje } from './relatorioUtils.js';
+import { dataLocal } from '../../lib/dataLocal.js';
+import { formatarDia } from './relatorioUtils.js';
 import './relatorios.scss';
 
 const ABAS = [
@@ -28,7 +29,7 @@ function ResultadoRelatorio({ aba, periodo }) {
         <div className="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-3">
             <div>
                 <h2 className="h4 mb-1">{aba.titulo}</h2>
-                <p className="text-secondary mb-0">Período de {formatarDia(dataInicio)} a {formatarDia(dataFim)} (UTC−3).</p>
+                <p className="text-secondary mb-0">Período de {formatarDia(dataInicio)} a {formatarDia(dataFim)}.</p>
             </div>
             <button type="button" className="btn btn-outline-primary relatorio-controles" disabled={!dados || carregando}
                 onClick={() => window.print()}>
@@ -47,7 +48,10 @@ function ResultadoRelatorio({ aba, periodo }) {
 export default function RelatoriosPage() {
     const { usuario } = useAuth();
     const [abaAtiva, setAbaAtiva] = useState(ABAS[0].id);
-    const [consulta, setConsulta] = useState(() => ({ ...periodoHoje(), revisao: 0 }));
+    const [consulta, setConsulta] = useState(() => {
+        const hoje = dataLocal();
+        return { dataInicio: `${hoje.slice(0, 7)}-01`, dataFim: hoje, revisao: 0 };
+    });
     const botoes = useRef([]);
     const abas = ABAS.filter(aba => !aba.apenasAdmin || usuario?.perfil === 'ADMIN');
     const abaVisivel = abas.some(aba => aba.id === abaAtiva) ? abaAtiva : abas[0].id;

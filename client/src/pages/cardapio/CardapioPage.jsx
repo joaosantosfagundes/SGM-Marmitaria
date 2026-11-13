@@ -191,12 +191,12 @@ export default function CardapioPage() {
                             <button className="btn btn-outline-primary" onClick={() => setData(dataLocal())} disabled={salvando || copiando}>Hoje</button>
                         </div>
                     </div>
-                    <div className="col-md-4 col-xl-3">
+                    <div className="col-md-5 col-xl-4">
                         <label htmlFor="origem-cardapio" className="form-label small">Reutilizar cardápio de</label>
-                        <input id="origem-cardapio" type="date" className="form-control" value={dataOrigem} disabled={ocupado} onChange={event => setDataOrigem(event.target.value)} />
-                    </div>
-                    <div className="col-md-auto">
-                        <button className="btn btn-outline-primary" onClick={reutilizar} disabled={bloqueado}><i className="ti ti-copy me-1" />{copiando ? 'Aplicando...' : 'Reutilizar nesta data'}</button>
+                        <div className="input-group">
+                            <input id="origem-cardapio" type="date" className="form-control" value={dataOrigem} disabled={ocupado} onChange={event => setDataOrigem(event.target.value)} />
+                            <button className="btn btn-outline-primary" onClick={reutilizar} disabled={bloqueado}><i className="ti ti-copy me-1" />{copiando ? 'Aplicando...' : 'Reutilizar'}</button>
+                        </div>
                     </div>
                     <div className="col-12 col-xl small text-secondary text-xl-end pb-xl-2">{carregando ? 'Carregando cardápio...' : erroCarga ? 'Não foi possível carregar esta data.' : existe ? 'Cardápio salvo para esta data' : 'Ainda não há cardápio salvo para esta data'}</div>
                 </div>
@@ -235,7 +235,6 @@ export default function CardapioPage() {
                         </section>
                     </div>
                 </div>
-                <div className="d-flex justify-content-end"><button className="btn btn-success" onClick={salvar} disabled={bloqueado}>{salvando ? 'Salvando...' : 'Salvar cardápio'}</button></div>
             </>}
         </div>
     );
