@@ -7,7 +7,7 @@ import { formatarQuantidade } from '../pages/relatorios/relatorioUtils.js';
 
 function PedidosPorStatus({ contagem }) {
   return (
-    <section aria-labelledby="pedidos-por-status">
+    <section data-tour="dashboard-cartoes" aria-labelledby="pedidos-por-status">
       <h2 id="pedidos-por-status" className="h5 mb-3">Pedidos de hoje por status</h2>
       <div className="row row-cols-1 row-cols-sm-2 row-cols-xl-5 g-3">
         {Object.entries(STATUS_PEDIDO).map(([status, [rotulo, classe]]) => (
@@ -25,7 +25,7 @@ function ResumoOperacao({ dados }) {
 
   return (
     <>
-      <div className="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-3 mb-3">
+      <div data-tour="dashboard-cartoes" className="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-3 mb-3">
         <div className="col">
           <StatCard icon="ti-shopping-cart" title="Pedidos hoje" value={pedidosHoje} />
         </div>
@@ -44,7 +44,7 @@ function ResumoOperacao({ dados }) {
 
       <div className="row g-3 mb-3">
         <div className="col-lg-8">
-          <section className="page-card">
+          <section data-tour="dashboard-grafico" className="page-card">
             <div className="px-4 py-3 border-bottom">
               <h2 className="h5 mb-0">Vendas e despesas dos últimos 7 dias</h2>
             </div>
@@ -55,7 +55,7 @@ function ResumoOperacao({ dados }) {
         </div>
 
         <div className="col-lg-4">
-          <section className="page-card h-100">
+          <section data-tour="dashboard-pedidos" className="page-card h-100">
             <div className="px-4 py-3 border-bottom">
               <h2 className="h5 mb-0">Pedidos recentes</h2>
             </div>
@@ -78,7 +78,7 @@ function ResumoOperacao({ dados }) {
         </div>
       </div>
 
-      <section className="page-card">
+      <section data-tour="dashboard-estoque" className="page-card">
         <h2 className="h5 px-4 py-3 mb-0 border-bottom">Insumos abaixo do mínimo ({estoqueAbaixoDoMinimo.quantidade})</h2>
         {estoqueAbaixoDoMinimo.quantidade === 0 && <p className="text-secondary px-4 py-3 mb-0">Nenhum insumo abaixo do mínimo.</p>}
         {estoqueAbaixoDoMinimo.quantidade > 0 && <ul className="list-group list-group-flush">

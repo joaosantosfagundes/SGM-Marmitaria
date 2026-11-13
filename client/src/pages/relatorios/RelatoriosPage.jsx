@@ -31,7 +31,7 @@ function ResultadoRelatorio({ aba, periodo }) {
                 <h2 className="h4 mb-1">{aba.titulo}</h2>
                 <p className="text-secondary mb-0">Período de {formatarDia(dataInicio)} a {formatarDia(dataFim)}.</p>
             </div>
-            <button type="button" className="btn btn-outline-primary relatorio-controles" disabled={!dados || carregando}
+            <button data-tour="relatorios-imprimir" type="button" className="btn btn-outline-primary relatorio-controles" disabled={!dados || carregando}
                 onClick={() => window.print()}>
                 <i className="ti ti-printer me-1" aria-hidden="true" />Imprimir
             </button>
@@ -90,7 +90,7 @@ export default function RelatoriosPage() {
             <h1 className="fs-3 mb-1">Relatórios</h1>
             <p className="text-secondary mb-0">Consulte os relatórios da operação por período.</p>
         </header>
-        <div className="nav nav-tabs relatorio-controles mb-3" role="tablist" aria-label="Relatórios de operação">
+        <div data-tour="relatorios-abas" className="nav nav-tabs relatorio-controles mb-3" role="tablist" aria-label="Relatórios de operação">
             {abas.map((aba, indice) => <button key={aba.id} type="button" role="tab"
                 className={`nav-link ${abaVisivel === aba.id ? 'active' : ''}`} id={`aba-relatorio-${aba.id}`}
                 aria-selected={abaVisivel === aba.id} aria-controls={`painel-relatorio-${aba.id}`}
@@ -99,7 +99,7 @@ export default function RelatoriosPage() {
                 {aba.titulo}
             </button>)}
         </div>
-        <form className="page-card relatorio-controles p-3 mb-4" onSubmit={aplicarPeriodo}>
+        <form data-tour="relatorios-periodo" className="page-card relatorio-controles p-3 mb-4" onSubmit={aplicarPeriodo}>
             <div className="row g-3 align-items-end">
                 <div className="col-12 col-sm-5 col-lg-3">
                     <label className="form-label" htmlFor="relatorio-data-inicio">Data inicial</label>

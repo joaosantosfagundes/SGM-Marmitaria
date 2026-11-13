@@ -23,7 +23,7 @@ export default function PagamentosPage() {
             <div><h1 className="fs-3 mb-1">Pagamento</h1><p className="text-secondary mb-0">Consulta de pagamentos e quitações de devedores.</p></div>
             <button type="button" className="btn btn-outline-primary" disabled={consulta.carregando} onClick={consulta.recarregar}>Atualizar</button>
         </div>
-        <form className="page-card p-3 p-sm-4 mb-4" onSubmit={consultar}>
+        <form data-tour="pagamento-filtros" className="page-card p-3 p-sm-4 mb-4" onSubmit={consultar}>
             <div className="row g-3 align-items-end">
                 <div className="col-12 col-sm-6 col-xl-3"><label htmlFor="pagamento-data" className="form-label">Data</label><input id="pagamento-data" name="data" type="date" className="form-control" value={filtros.data} onChange={alterar} /></div>
                 <div className="col-12 col-sm-6 col-xl-3"><label htmlFor="pagamento-forma" className="form-label">Forma</label><select id="pagamento-forma" name="forma" className="form-select" value={filtros.forma} onChange={alterar}><option value="">Todas</option>{Object.entries(FORMAS_PAGAMENTO).map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}</select></div>
@@ -35,10 +35,10 @@ export default function PagamentosPage() {
         </form>
         {consulta.erro && <div className="alert alert-danger" role="alert"><p>{consulta.erro}</p><button type="button" className="btn btn-outline-danger" onClick={consulta.recarregar}>Tentar novamente</button></div>}
         <section className="page-card">
-            <div className="p-3 p-sm-4 border-bottom"><h2 className="h6 mb-1">Pagamentos</h2><p className="small text-secondary mb-0">{consulta.dados?.length ?? 0} pagamento(s) listado(s). Até 200 registros mais recentes. Esta tela é somente consulta.</p></div>
+            <div className="p-3 p-sm-4 border-bottom"><h2 data-tour="pagamento-lista" className="h6 mb-1">Pagamentos</h2><p className="small text-secondary mb-0">{consulta.dados?.length ?? 0} pagamento(s) listado(s). Até 200 registros mais recentes. Esta tela é somente consulta.</p></div>
             <div className="table-responsive">
                 <table className="table align-middle mb-0">
-                    <thead className="text-nowrap"><tr><th>Pagamento / pedido</th><th>Cliente</th><th>Lançamento</th><th>Valor</th><th>Forma original</th><th>Status</th><th>Caixa da venda</th><th>Quitação</th><th>Forma recebida</th><th>Caixa do recebimento</th><th>Quitado por</th></tr></thead>
+                    <thead className="text-nowrap"><tr><th>Pagamento / pedido</th><th>Cliente</th><th>Lançamento</th><th>Valor</th><th>Forma original</th><th>Status</th><th>Caixa da venda</th><th data-tour="pagamento-quitacao">Quitação</th><th>Forma recebida</th><th>Caixa do recebimento</th><th>Quitado por</th></tr></thead>
                     <tbody>{consulta.carregando ? <tr><td colSpan={11} className="text-secondary text-center p-4" role="status">Carregando pagamentos...</td></tr>
                         : consulta.erro ? <tr><td colSpan={11} className="text-secondary text-center p-4">Consulta indisponível.</td></tr>
                         : !consulta.dados?.length ? <tr><td colSpan={11} className="text-secondary text-center p-4">Nenhum pagamento encontrado.</td></tr>

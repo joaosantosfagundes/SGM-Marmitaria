@@ -34,20 +34,20 @@ export default function DevedoresPage() {
             <p className="mb-0">Recebido em {{ DINHEIRO: 'dinheiro', PIX: 'Pix', DEBITO: 'débito', CREDITO: 'crédito' }[recibo.forma]}.</p>
             {recibo.troco !== null && <p className="fs-4 text-success mb-0 mt-2">Troco: <strong>{formatarValor(recibo.troco)}</strong></p>}
         </section>}
-        <section className="page-card p-3 p-sm-4 mb-4">
+        <section data-tour="devedores-total" className="page-card p-3 p-sm-4 mb-4">
             <div className="small text-secondary">Total em aberto</div><strong className="fs-3 text-primary">{formatarValor(total)}</strong>
         </section>
         {consulta.erro && <div className="alert alert-danger" role="alert"><p>{consulta.erro}</p><button type="button" className="btn btn-outline-danger" onClick={consulta.recarregar}>Tentar novamente</button></div>}
         <section className="page-card">
-            <h2 className="h6 px-3 px-sm-4 py-3 border-bottom mb-0">Clientes devedores</h2>
+            <h2 data-tour="devedores-lista" className="h6 px-3 px-sm-4 py-3 border-bottom mb-0">Clientes devedores</h2>
             {consulta.carregando ? <p className="text-secondary p-4" role="status">Carregando devedores...</p>
                 : !consulta.erro && !consulta.dados?.length ? <p className="text-secondary p-4">Nenhum valor a receber de devedores.</p>
                 : !consulta.erro && consulta.dados?.map(cliente => <div key={cliente.idCliente} className="p-3 p-sm-4 border-bottom">
                     <div className="d-flex flex-wrap gap-3 align-items-center justify-content-between">
                         <div style={{ minWidth: 0 }}><h3 className="h6 mb-1">{cliente.nome}</h3><p className="small text-secondary mb-1">{cliente.telefone || 'Telefone não informado'} · {cliente.quantidade} pagamento(s)</p><strong>{formatarValor(cliente.totalEmAberto)}</strong></div>
                         <div className="d-flex flex-wrap gap-2">
-                            <button type="button" className="btn btn-outline-primary" aria-expanded={expandido === cliente.idCliente} aria-controls={`devedor-cliente-${cliente.idCliente}`} onClick={() => setExpandido(atual => atual === cliente.idCliente ? null : cliente.idCliente)}>{expandido === cliente.idCliente ? 'Ocultar pedidos' : 'Ver pedidos'}</button>
-                            <button type="button" className="btn btn-primary" disabled={bloqueado} onClick={() => setAlvo({ cliente })}>Quitar todos</button>
+                            <button type="button" data-tour="devedores-pedidos" className="btn btn-outline-primary" aria-expanded={expandido === cliente.idCliente} aria-controls={`devedor-cliente-${cliente.idCliente}`} onClick={() => setExpandido(atual => atual === cliente.idCliente ? null : cliente.idCliente)}>{expandido === cliente.idCliente ? 'Ocultar pedidos' : 'Ver pedidos'}</button>
+                            <button type="button" data-tour="devedores-quitar" className="btn btn-primary" disabled={bloqueado} onClick={() => setAlvo({ cliente })}>Quitar todos</button>
                         </div>
                     </div>
                     {expandido === cliente.idCliente && <div className="table-responsive mt-3" id={`devedor-cliente-${cliente.idCliente}`}>

@@ -119,7 +119,7 @@ export default function UsuariosPage() {
                     <p className="text-secondary mb-0">Contas de acesso ao sistema (ADMIN, ATENDENTE, COZINHA).</p>
                 </div>
                 {!mostrarForm && (
-                    <button className="btn btn-primary" onClick={abrirNovo}>
+                    <button data-tour="usuarios-novo" className="btn btn-primary" onClick={abrirNovo}>
                         <i className="ti ti-plus me-1" /> Novo Usuário
                     </button>
                 )}
@@ -200,7 +200,7 @@ export default function UsuariosPage() {
                 <p className="text-secondary text-center py-4">Nenhum usuário cadastrado.</p>
             )}
 
-            <div className="row g-3">
+            <div data-tour="usuarios-lista" className="row g-3">
                 {usuarios.map((usuario) => {
                     const corPerfil = usuario.perfil === 'ADMIN' ? 'bg-primary'
                         : usuario.perfil === 'ATENDENTE' ? 'bg-info' : 'bg-warning';
@@ -235,7 +235,7 @@ export default function UsuariosPage() {
                                         </p>
                                     ) : (
                                         <>
-                                            <button className="btn btn-sm btn-light flex-grow-1" onClick={() => abrirEdicao(usuario)}>
+                                            <button data-tour="usuarios-acoes" className="btn btn-sm btn-light flex-grow-1" onClick={() => abrirEdicao(usuario)}>
                                                 <i className="ti ti-edit me-1" /> Editar
                                             </button>
                                             {usuario.ativo ? (

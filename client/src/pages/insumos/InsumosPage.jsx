@@ -138,7 +138,7 @@ export default function InsumosPage() {
                     <p className="text-secondary mb-0">Matérias-primas usadas na produção.</p>
                 </div>
                 {!mostrarForm && (
-                    <button className="btn btn-primary" onClick={abrirNovo}>
+                    <button data-tour="insumos-novo" className="btn btn-primary" onClick={abrirNovo}>
                         <i className="ti ti-plus me-1" /> Novo Insumo
                     </button>
                 )}
@@ -215,7 +215,7 @@ export default function InsumosPage() {
             )}
 
             <section className="page-card">
-                <div className="table-responsive">
+                <div data-tour="insumos-lista" className="table-responsive">
                     <table className="table table-hover mb-0 align-middle">
                         <thead>
                             <tr>
@@ -247,7 +247,7 @@ export default function InsumosPage() {
                                             {insumo.ativo ? 'Ativo' : 'Inativo'}
                                         </span>
                                     </td>
-                                    <td className="text-end pe-4">
+                                    <td data-tour="insumos-acoes" className="text-end pe-4">
                                         <button className="btn btn-sm btn-light me-2" onClick={() => abrirEdicao(insumo)}>
                                             <i className="ti ti-edit" />
                                         </button>

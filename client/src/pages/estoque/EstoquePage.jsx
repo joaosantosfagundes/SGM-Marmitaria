@@ -183,7 +183,7 @@ export default function EstoquePage() {
                 </div>
                 <div className="d-flex flex-wrap gap-2">
                     <button className="btn btn-outline-primary" disabled={ocupado || carregandoHistorico} onClick={atualizar}><i className="ti ti-refresh me-1" />Atualizar</button>
-                    {podeRegistrar && !mostrarForm && <button className="btn btn-primary" disabled={ocupado || erroSaldos || !ativos.length} onClick={() => abrirNovo()}><i className="ti ti-plus me-1" />Registrar movimentação</button>}
+                    {podeRegistrar && !mostrarForm && <button data-tour="estoque-registrar" className="btn btn-primary" disabled={ocupado || erroSaldos || !ativos.length} onClick={() => abrirNovo()}><i className="ti ti-plus me-1" />Registrar movimentação</button>}
                 </div>
             </div>
 
@@ -221,7 +221,7 @@ export default function EstoquePage() {
                             </div>
                             {podeRegistrarValor && form.tipo === 'ENTRADA_COMPRA' && <div className="col-12 col-md-6">
                                 <label htmlFor="valor-pago-compra" className="form-label small">Valor pago (R$) — opcional</label>
-                                <input id="valor-pago-compra" type="text" inputMode="decimal" className="form-control" placeholder="0,00" value={form.valorPago} onChange={event => setForm({ ...form, valorPago: event.target.value })} />
+                                <input data-tour="estoque-valor" id="valor-pago-compra" type="text" inputMode="decimal" className="form-control" placeholder="0,00" value={form.valorPago} onChange={event => setForm({ ...form, valorPago: event.target.value })} />
                                 <div className="form-text">Valor total da compra. Ao preencher, uma saída financeira vinculada será registrada junto com o estoque.</div>
                             </div>}
                         </div>
@@ -235,7 +235,7 @@ export default function EstoquePage() {
 
             <section className="page-card mb-4">
                 <div className="p-4 border-bottom">
-                    <h2 className="h6 mb-3">Saldos dos insumos</h2>
+                    <h2 data-tour="estoque-saldos" className="h6 mb-3">Saldos dos insumos</h2>
                     <label htmlFor="busca-estoque" className="form-label small">Buscar por nome</label>
                     <input id="busca-estoque" className="form-control" value={busca} placeholder="Nome do insumo" onChange={event => setBusca(event.target.value)} />
                 </div>
@@ -259,7 +259,7 @@ export default function EstoquePage() {
 
             <section className="page-card">
                 <div className="p-4 border-bottom">
-                    <h2 className="h6 mb-1">Histórico de movimentações</h2>
+                    <h2 data-tour="estoque-historico" className="h6 mb-1">Histórico de movimentações</h2>
                     <p className="small text-secondary mb-3">Últimas 50 movimentações, das mais recentes para as mais antigas.</p>
                     <label htmlFor="filtro-historico-estoque" className="form-label small">Filtrar por insumo</label>
                     <select id="filtro-historico-estoque" className="form-select" value={filtroInsumo} disabled={salvando} onChange={event => setFiltroInsumo(event.target.value)}>

@@ -113,7 +113,7 @@ export default function ClientesPage() {
                     <p className="text-secondary mb-0">Cadastro de clientes (usado nos devedores).</p>
                 </div>
                 {!mostrarForm && (
-                    <button className="btn btn-primary" onClick={abrirNovo}>
+                    <button data-tour="clientes-novo" className="btn btn-primary" onClick={abrirNovo}>
                         <i className="ti ti-plus me-1" /> Novo Cliente
                     </button>
                 )}
@@ -162,7 +162,7 @@ export default function ClientesPage() {
                 <p className="text-secondary text-center py-4">Nenhum cliente cadastrado.</p>
             )}
 
-            <div className="row g-3">
+            <div data-tour="clientes-lista" className="row g-3">
                 {clientes.map((cliente) => (
                     <div key={cliente.id} className="col-md-6 col-lg-4">
                         <div className="page-card p-3 h-100 d-flex flex-column">
@@ -182,7 +182,7 @@ export default function ClientesPage() {
                                 </span>
                             </div>
 
-                            <div className="d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
+                            <div data-tour="clientes-acoes" className="d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
                                 <button className="btn btn-sm btn-light flex-grow-1" onClick={() => abrirEdicao(cliente)}>
                                     <i className="ti ti-edit me-1" /> Editar
                                 </button>

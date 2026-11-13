@@ -67,11 +67,11 @@ export default function FinanceiroPage() {
     return <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
         <div className="page-header d-flex flex-wrap gap-3 align-items-center justify-content-between mb-4">
             <div><h1 className="fs-3 mb-1">Financeiro</h1><p className="text-secondary mb-0">Recebimentos de caixas fechados, entradas avulsas e despesas.</p></div>
-            <div className="d-flex flex-wrap gap-2"><button type="button" className="btn btn-outline-primary" disabled={consulta.carregando || salvando} onClick={consulta.recarregar}>Atualizar</button>{podeEditar && !mostrarForm && <button type="button" className="btn btn-primary" disabled={salvando} onClick={abrirNovo}>Novo lançamento</button>}</div>
+            <div className="d-flex flex-wrap gap-2"><button type="button" className="btn btn-outline-primary" disabled={consulta.carregando || salvando} onClick={consulta.recarregar}>Atualizar</button>{podeEditar && !mostrarForm && <button type="button" data-tour="financeiro-novo" className="btn btn-primary" disabled={salvando} onClick={abrirNovo}>Novo lançamento</button>}</div>
         </div>
         <div className="alert alert-info">Ao fechar o caixa, o total de vendas pagas e recebimentos de devedores aparece em uma única entrada, na data do fechamento. Enquanto o caixa estiver aberto, acompanhe os recebimentos em Caixa e Pagamento.</div>
         {podeEditar && mostrarForm && <FormFinanceiro form={form} setForm={setForm} editandoId={editandoId} salvando={salvando} onSalvar={salvar} onCancelar={fecharForm} />}
-        <form className="page-card p-3 p-sm-4 mb-4" onSubmit={event => {
+        <form data-tour="financeiro-filtros" className="page-card p-3 p-sm-4 mb-4" onSubmit={event => {
             event.preventDefault();
             if (filtros.dataInicio && filtros.dataFim && filtros.dataInicio > filtros.dataFim) { toast.error('A data inicial não pode ser posterior à data final.'); return; }
             setBusca({ ...filtros, categoria: filtros.categoria.trim() }); consulta.recarregar();
@@ -84,12 +84,12 @@ export default function FinanceiroPage() {
             </div>
         </form>
         {consulta.erro && <div className="alert alert-danger" role="alert"><p>{consulta.erro}</p><button type="button" className="btn btn-outline-danger" onClick={consulta.recarregar}>Tentar novamente</button></div>}
-        <div className="row g-3 mb-4">{[['Entradas', 'entradas', 'success'], ['Saídas', 'saidas', 'danger'], ['Saldo do período', 'saldo', 'primary']].map(([rotulo, campo, cor]) => <div className="col-12 col-md-4" key={campo}><div className="page-card p-3 p-sm-4 h-100"><div className="small text-secondary">{rotulo}</div><strong className={`d-block mt-1 fs-4 text-${cor}`}>{consulta.carregando ? 'Carregando...' : consulta.erro ? '—' : formatarValor(consulta.dados?.totais[campo] ?? 0)}</strong>
+        <div data-tour="financeiro-totais" className="row g-3 mb-4">{[['Entradas', 'entradas', 'success'], ['Saídas', 'saidas', 'danger'], ['Saldo do período', 'saldo', 'primary']].map(([rotulo, campo, cor]) => <div className="col-12 col-md-4" key={campo}><div className="page-card p-3 p-sm-4 h-100"><div className="small text-secondary">{rotulo}</div><strong className={`d-block mt-1 fs-4 text-${cor}`}>{consulta.carregando ? 'Carregando...' : consulta.erro ? '—' : formatarValor(consulta.dados?.totais[campo] ?? 0)}</strong>
             {campo === 'entradas' && consulta.dados && <div className="small text-secondary mt-2">{[['Caixas fechados', 'recebimentosCaixas'], ['Entradas avulsas', 'entradasAvulsas']].map(([texto, chave]) => <div key={chave}>{texto}: {formatarValor(consulta.dados.totais[chave])}</div>)}</div>}
             {campo === 'saldo' && <p className="small text-secondary mt-2 mb-0">Entradas menos saídas. O dinheiro físico da gaveta é conferido na tela Caixa.</p>}
         </div></div>)}</div>
         <section className="page-card">
-            <div className="p-3 p-sm-4 border-bottom"><h2 className="h6 mb-1">Lançamentos do período</h2><p className="small text-secondary mb-0">Uma entrada por caixa fechado com recebimentos. Abertura, troco e falta/sobra da gaveta não são receita. Consulte cada pagamento na tela Pagamento. Recorrência é apenas informativa.</p></div>
+            <div className="p-3 p-sm-4 border-bottom"><h2 data-tour="financeiro-lista" className="h6 mb-1">Lançamentos do período</h2><p className="small text-secondary mb-0">Uma entrada por caixa fechado com recebimentos. Abertura, troco e falta/sobra da gaveta não são receita. Consulte cada pagamento na tela Pagamento. Recorrência é apenas informativa.</p></div>
             <div className="table-responsive"><table className="table table-hover align-middle mb-0">
                 <thead className="text-nowrap"><tr><th>Data e hora</th><th>Tipo</th><th>Categoria</th><th>Descrição</th><th>Valor</th><th>Recorrência</th><th>Origem</th><th>Responsável</th>{podeEditar && <th>Ações</th>}</tr></thead>
                 <tbody>{consulta.carregando ? <tr><td colSpan={podeEditar ? 9 : 8} className="text-secondary text-center p-4" role="status">Carregando lançamentos...</td></tr>

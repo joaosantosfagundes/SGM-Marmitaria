@@ -136,7 +136,7 @@ export default function AdicionaisPage() {
                     <h1 className="fs-3 mb-1">Adicionais</h1>
                     <p className="text-secondary mb-0">Cadastre os adicionais e seus preços para usar no cardápio do dia.</p>
                 </div>
-                {podeEditar && !mostrarForm && <button className="btn btn-primary" disabled={ocupado} onClick={abrirNovo}>
+                {podeEditar && !mostrarForm && <button data-tour="adicionais-novo" className="btn btn-primary" disabled={ocupado} onClick={abrirNovo}>
                     <i className="ti ti-plus me-1" />Novo adicional
                 </button>}
             </div>
@@ -172,7 +172,7 @@ export default function AdicionaisPage() {
                     <input id="busca-adicional" className="form-control" value={busca} onChange={event => setBusca(event.target.value)} placeholder="Ex.: ovo extra" />
                 </div>
                 {erroCarga && <div className="alert alert-danger m-3">Não foi possível carregar os adicionais. <button className="btn btn-sm btn-outline-danger" onClick={carregar}>Tentar novamente</button></div>}
-                <div className="table-responsive">
+                <div data-tour="adicionais-lista" className="table-responsive">
                     <table className="table table-hover mb-0 align-middle">
                         <thead><tr><th className="ps-4">Nome</th><th>Preço</th><th>Status</th>{podeEditar && <th className="text-end pe-4">Ações</th>}</tr></thead>
                         <tbody>
@@ -181,7 +181,7 @@ export default function AdicionaisPage() {
                             {!carregando && filtrados.map(item => <tr key={item.id}>
                                 <td className="ps-4">{item.nome}</td><td>{formatarPreco(item.preco)}</td>
                                 <td><span className={`badge ${item.ativo ? 'text-bg-success' : 'text-bg-secondary'}`}>{item.ativo ? 'Ativo' : 'Inativo'}</span></td>
-                                {podeEditar && <td className="text-end pe-4 text-nowrap">
+                                {podeEditar && <td data-tour="adicionais-acoes" className="text-end pe-4 text-nowrap">
                                     <button className="btn btn-sm btn-light me-2" disabled={ocupado} title="Editar" aria-label={`Editar ${item.nome}`} onClick={() => abrirEdicao(item)}><i className="ti ti-edit" /></button>
                                     <button className={`btn btn-sm btn-light me-2 ${item.ativo ? 'text-warning' : 'text-success'}`} disabled={ocupado} title={item.ativo ? 'Desativar' : 'Reativar'} aria-label={`${item.ativo ? 'Desativar' : 'Reativar'} ${item.nome}`} onClick={() => alterarStatus(item)}><i className={`ti ${item.ativo ? 'ti-ban' : 'ti-rotate-clockwise'}`} /></button>
                                     <button className="btn btn-sm btn-light text-danger" disabled={ocupado} title="Excluir definitivamente" aria-label={`Excluir definitivamente ${item.nome}`} onClick={() => excluir(item)}><i className="ti ti-trash" /></button>

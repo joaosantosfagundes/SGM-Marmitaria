@@ -140,7 +140,7 @@ export default function CardapioPage() {
     function renderizarPreparacoes(grupo, titulo, exemplo) {
         let itens = preparacoes.map((item, indice) => ({ ...item, indice })).filter(item => item.grupo === grupo);
         return (
-            <section className="page-card">
+            <section data-tour={grupo ? "cardapio-misturas" : "cardapio-fixos"} className="page-card">
                 <div className="d-flex justify-content-between align-items-center px-3 px-sm-4 py-3 border-bottom flex-wrap gap-2">
                     <div>
                         <h2 className="h6 mb-1">{titulo}</h2>
@@ -180,21 +180,21 @@ export default function CardapioPage() {
                     <h1 className="fs-3 mb-1">Cardápio do Dia</h1>
                     <p className="text-secondary mb-0">Monte os itens fixos, as opções de mistura e os adicionais para a data escolhida.</p>
                 </div>
-                <button className="btn btn-success" onClick={salvar} disabled={bloqueado}><i className="ti ti-device-floppy me-1" />{salvando ? 'Salvando...' : 'Salvar cardápio'}</button>
+                <button data-tour="cardapio-salvar" className="btn btn-success" onClick={salvar} disabled={bloqueado}><i className="ti ti-device-floppy me-1" />{salvando ? 'Salvando...' : 'Salvar cardápio'}</button>
             </div>
             <section className="page-card p-3 p-sm-4 mb-3">
                 <div className="row g-3 align-items-end">
                     <div className="col-md-4 col-xl-3">
                         <label htmlFor="data-cardapio" className="form-label small">Montar cardápio para</label>
                         <div className="input-group">
-                            <input id="data-cardapio" type="date" className="form-control" value={data} disabled={salvando || copiando} onChange={event => setData(event.target.value)} />
+                            <input data-tour="cardapio-data" id="data-cardapio" type="date" className="form-control" value={data} disabled={salvando || copiando} onChange={event => setData(event.target.value)} />
                             <button className="btn btn-outline-primary" onClick={() => setData(dataLocal())} disabled={salvando || copiando}>Hoje</button>
                         </div>
                     </div>
                     <div className="col-md-5 col-xl-4">
                         <label htmlFor="origem-cardapio" className="form-label small">Reutilizar cardápio de</label>
                         <div className="input-group">
-                            <input id="origem-cardapio" type="date" className="form-control" value={dataOrigem} disabled={ocupado} onChange={event => setDataOrigem(event.target.value)} />
+                            <input data-tour="cardapio-reutilizar" id="origem-cardapio" type="date" className="form-control" value={dataOrigem} disabled={ocupado} onChange={event => setDataOrigem(event.target.value)} />
                             <button className="btn btn-outline-primary" onClick={reutilizar} disabled={bloqueado}><i className="ti ti-copy me-1" />{copiando ? 'Aplicando...' : 'Reutilizar'}</button>
                         </div>
                     </div>
@@ -209,7 +209,7 @@ export default function CardapioPage() {
                         {renderizarPreparacoes('Mistura', 'Mistura (opções)', 'Cadastre as alternativas na ordem desejada. Ex.: carne, frango e ovo.')}
                     </div>
                     <div className="col-12 col-lg-5">
-                        <section className="page-card h-100">
+                        <section data-tour="cardapio-adicionais" className="page-card h-100">
                             <div className="px-3 px-sm-4 py-3 border-bottom">
                                 <h2 className="h6 mb-1">Adicionais do dia</h2>
                                 <p className="small text-secondary mb-0">Selecione os adicionais disponíveis nesta data. Os preços vêm do cadastro de adicionais.</p>

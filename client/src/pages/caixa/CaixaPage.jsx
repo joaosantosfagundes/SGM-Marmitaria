@@ -169,7 +169,7 @@ export default function CaixaPage() {
                             <dd className="fs-3 fw-bold mb-0">{formatarValor(caixaAtual.valorAbertura)}</dd>
                         </dl>
                     </div>
-                    {(erroResumo || resumo) && <div className="page-card caixa-resumo px-3 px-sm-4 pb-3 pb-sm-4">
+                    {(erroResumo || resumo) && <div data-tour="caixa-resumo" className="page-card caixa-resumo px-3 px-sm-4 pb-3 pb-sm-4">
                         {erroResumo && <div className="alert alert-danger mt-3" role="alert"><p>{erroResumo}</p><button type="button" className="btn btn-outline-danger" disabled={salvando} onClick={carregar}>Tentar novamente</button></div>}
                         {resumo && <ResumoFinanceiro resumo={resumo} />}
                     </div>}
@@ -177,13 +177,13 @@ export default function CaixaPage() {
                         <div className="row g-3 align-items-end">
                             <div className="col-12">
                                 <label htmlFor="valor-fechamento" className="form-label small">Valor contado na gaveta (R$)</label>
-                                <input id="valor-fechamento" type="text" inputMode="decimal" min="0" className="form-control"
+                                <input data-tour="caixa-conferencia" id="valor-fechamento" type="text" inputMode="decimal" min="0" className="form-control"
                                     required disabled={salvando} value={valorFechamento} placeholder="0,00" aria-describedby="ajuda-valor-fechamento"
                                     onChange={event => setValorFechamento(event.target.value)} />
                                 <div id="ajuda-valor-fechamento" className="form-text">Zero é permitido. Use vírgula ou ponto e até duas casas decimais.</div>
                             </div>
                             <div className="col-12 d-grid">
-                                <button type="submit" className="btn btn-primary" disabled={salvando || !resumo || Boolean(erroResumo)}>
+                                <button data-tour="caixa-fechar" type="submit" className="btn btn-primary" disabled={salvando || !resumo || Boolean(erroResumo)}>
                                     <i className="ti ti-lock me-1" />{salvando ? 'Conferindo fechamento...' : 'Fechar caixa'}
                                 </button>
                             </div>
@@ -196,7 +196,7 @@ export default function CaixaPage() {
                         <div className="row g-3 align-items-end">
                             <div className="col-md-5">
                                 <label htmlFor="valor-abertura" className="form-label small">Valor de abertura (R$)</label>
-                                <input id="valor-abertura" type="text" inputMode="decimal" min="0" className="form-control"
+                                <input data-tour="caixa-abrir" id="valor-abertura" type="text" inputMode="decimal" min="0" className="form-control"
                                     required disabled={salvando} value={valorAbertura} placeholder="0,00" aria-describedby="ajuda-valor-abertura"
                                     onChange={event => setValorAbertura(event.target.value)} />
                                 <div id="ajuda-valor-abertura" className="form-text">Zero é permitido. Use vírgula ou ponto e até duas casas decimais.</div>
@@ -213,7 +213,7 @@ export default function CaixaPage() {
 
             {caixaResumo && <ResumoCaixaHistorico key={`${caixaResumo.id}-${caixaResumo.status}`} caixa={caixaResumo} onFechar={() => setCaixaResumo(null)} />}
             <section className="page-card">
-                <h2 className="h6 px-4 py-3 mb-0 border-bottom">Últimos caixas</h2>
+                <h2 data-tour="caixa-historico" className="h6 px-4 py-3 mb-0 border-bottom">Últimos caixas</h2>
                 <div className="table-responsive">
                     <table className="table table-hover mb-0 align-middle">
                         <thead><tr><th className="ps-4">Abertura</th><th>Aberto por</th><th>Valor de abertura</th><th>Fechamento</th><th>Fechado por</th><th>Valor de fechamento</th><th>Status</th><th className="pe-4">Resumo</th></tr></thead>

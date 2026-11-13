@@ -129,7 +129,7 @@ export default function ProdutosPage() {
                     <p className="text-secondary mb-0">Itens vendáveis com preço fixo.</p>
                 </div>
                 {!mostrarForm && (
-                    <button className="btn btn-primary" onClick={abrirNovo}>
+                    <button data-tour="produtos-novo" className="btn btn-primary" onClick={abrirNovo}>
                         <i className="ti ti-plus me-1" /> Novo Produto
                     </button>
                 )}
@@ -171,7 +171,7 @@ export default function ProdutosPage() {
                             </div>
                         </div>
 
-                        <div className="form-check mt-3">
+                        <div data-tour="produtos-cardapio" className="form-check mt-3">
                             <input id="produto-usa-cardapio" type="checkbox" className="form-check-input" checked={form.usaCardapio} onChange={event => setForm({ ...form, usaCardapio: event.target.checked })} aria-describedby="produto-usa-cardapio-ajuda" />
                             <label htmlFor="produto-usa-cardapio" className="form-check-label">Escolhe mistura e adicionais do dia</label>
                             <div id="produto-usa-cardapio-ajuda" className="form-text">Desmarcado: produto não passa pela cozinha. Pedidos só com produtos assim já ficam 'Pronto'.</div>
@@ -189,7 +189,7 @@ export default function ProdutosPage() {
             )}
 
             <section className="page-card">
-                <div className="table-responsive">
+                <div data-tour="produtos-lista" className="table-responsive">
                     <table className="table table-hover mb-0 align-middle">
                         <thead>
                             <tr>
@@ -219,7 +219,7 @@ export default function ProdutosPage() {
                                             {produto.ativo ? 'Ativo' : 'Inativo'}
                                         </span>
                                     </td>
-                                    <td className="text-end pe-4">
+                                    <td data-tour="produtos-acoes" className="text-end pe-4">
                                         <button className="btn btn-sm btn-light me-2" onClick={() => abrirEdicao(produto)}>
                                             <i className="ti ti-edit" />
                                         </button>
