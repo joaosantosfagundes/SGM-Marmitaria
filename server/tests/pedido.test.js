@@ -39,7 +39,7 @@ function executar(sql, valores = [], banco, transacao) {
     if (q.startsWith('select * from produto where id_produto')) return banco.produtos.filter(row => row.id_produto === valores[0]);
     if (q.startsWith('select * from produto where nome')) return banco.produtos.filter(row => row.nome === valores[0]);
     if (q.startsWith('select * from cliente')) return banco.clientes.filter(row => row.id_cliente === valores[0]);
-    if (q.startsWith('select * from adicional')) return banco.adicionais.filter(row => row.id_adicional === valores[0]);
+    if (q.includes('from adicional where id_adicional = ?')) return banco.adicionais.filter(row => row.id_adicional === valores[0]);
     if (q.startsWith('select id_cardapio,')) return banco.cardapios.filter(row => row.data_cardapio === valores[0]);
     if (q.includes('from cardapio_preparacao')) return banco.preparacoes;
     if (q.includes('from cardapio_adicional')) return banco.adicionais.filter(row => banco.vinculos.includes(row.id_adicional)).map(row => ({ id_adicional: row.id_adicional, nome: row.nome, preco: row.preco }));

@@ -120,13 +120,9 @@ CREATE TABLE cardapio_preparacao (
 CREATE TABLE adicional (
     id_adicional INT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
-    id_insumo INT NULL,
-    quantidade_consumida DECIMAL(10,3) NULL,
     preco DECIMAL(10,2) NOT NULL,
     ativo BOOLEAN NOT NULL DEFAULT TRUE,
 
-    CONSTRAINT fk_adicional_insumo FOREIGN KEY (id_insumo) REFERENCES insumo(id_insumo),
-    CONSTRAINT chk_adicional_quantidade CHECK (quantidade_consumida > 0),
     CONSTRAINT chk_adicional_preco CHECK (preco > 0)
 );
 

@@ -40,7 +40,7 @@ tags:
   - name: Clientes
     description: Cadastro de clientes
   - name: Adicionais
-    description: Adicionais com preço fixo e vínculo opcional com insumo
+    description: Adicionais com preço fixo
   - name: Cardápio
     description: Itens fixos, alternativas de mistura e adicionais de cada data
   - name: Caixa
@@ -811,7 +811,7 @@ paths:
       tags: [Adicionais]
       operationId: criarAdicional
       summary: Cadastrar adicional
-      description: 'Perfil: ADMIN. Nasce ativo. Nome tem até 100 caracteres e não pode repetir outro adicional ativo. Preço deve ser maior que zero (mínimo 0,01), com até duas casas decimais e no máximo 99999999.99. O vínculo com insumo e a quantidade são opcionais e não baixam estoque.'
+      description: 'Perfil: ADMIN. Nasce ativo. Nome tem até 100 caracteres e não pode repetir outro adicional ativo. Preço deve ser maior que zero (mínimo 0,01), com até duas casas decimais e no máximo 99999999.99.'
       requestBody:
         $ref: '#/components/requestBodies/AdicionalCriacao'
       responses:
@@ -862,7 +862,7 @@ paths:
       tags: [Adicionais]
       operationId: atualizarAdicional
       summary: Atualizar adicional ou reativar cadastro
-      description: 'Perfil: ADMIN. Atualização parcial. Para reativar, envie ativo=true; a reativação também verifica nome duplicado entre ativos. Os campos opcionais id_insumo e quantidade_consumida aceitam null para remover seus valores.'
+      description: 'Perfil: ADMIN. Atualização parcial. Para reativar, envie ativo=true; a reativação também verifica nome duplicado entre ativos.'
       requestBody:
         $ref: '#/components/requestBodies/AdicionalAtualizacao'
       responses:
@@ -2440,8 +2440,6 @@ components:
           example:
             nome: Ovo extra
             preco: 2.5
-            id_insumo: null
-            quantidade_consumida: null
     AdicionalAtualizacao:
       required: true
       content:
@@ -2450,7 +2448,7 @@ components:
             $ref: '#/components/schemas/AdicionalEntrada'
           examples:
             editar:
-              value: {nome: Ovo extra, preco: 3, id_insumo: null, quantidade_consumida: null}
+              value: {nome: Ovo extra, preco: 3}
             reativar:
               value: {ativo: true}
     CardapioGravacao:
@@ -3433,7 +3431,7 @@ components:
           $ref: '#/components/schemas/CriadoEm'
     AdicionalEntrada:
       type: object
-      description: Na criação, ativo é ignorado e o adicional nasce ativo. Na edição todos os campos são opcionais; null remove os vínculos opcionais.
+      description: Na criação, ativo é ignorado e o adicional nasce ativo. Na edição todos os campos são opcionais.
       properties:
         nome:
           type: string
@@ -3447,21 +3445,9 @@ components:
           description: Preço numérico obrigatório na criação, maior que zero, com até duas casas decimais.
         ativo:
           type: boolean
-        id_insumo:
-          type: integer
-          minimum: 1
-          nullable: true
-          description: Deve existir, se preenchido. Vínculo informativo, sem baixa automática de estoque.
-        quantidade_consumida:
-          type: number
-          minimum: 0
-          exclusiveMinimum: true
-          maximum: 9999999.999
-          multipleOf: 0.001
-          nullable: true
     Adicional:
       type: object
-      required: [id, nome, preco, ativo, idInsumo, quantidadeConsumida]
+      required: [id, nome, preco, ativo]
       properties:
         id:
           type: integer
@@ -3477,14 +3463,6 @@ components:
           example: 2.5
         ativo:
           type: boolean
-        idInsumo:
-          type: integer
-          nullable: true
-          example: null
-        quantidadeConsumida:
-          type: number
-          nullable: true
-          example: null
     Preparacao:
       type: object
       required: [nome, grupo]

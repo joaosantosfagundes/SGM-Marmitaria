@@ -1,14 +1,11 @@
 import AdicionalEntity from "../entities/adicionalEntity.js";
 import AdicionalRepository from "../repositories/adicionalRepository.js";
-import InsumoRepository from "../repositories/insumoRepository.js";
 
 export default class AdicionalService {
     #repo;
-    #insumoRepo;
 
     constructor() {
         this.#repo = new AdicionalRepository();
-        this.#insumoRepo = new InsumoRepository();
     }
 
     async listar() {
@@ -21,8 +18,8 @@ export default class AdicionalService {
         return atual;
     }
 
-    async gravar({ nome, preco, id_insumo, quantidade_consumida } = {}) {
-        let entidade = new AdicionalEntity(0, nome, preco, true, id_insumo, quantidade_consumida);
+    async gravar({ nome, preco } = {}) {
+        let entidade = new AdicionalEntity(0, nome, preco, true);
         await this.#validar(entidade);
         await this.#repo.gravar(entidade);
         return entidade;
@@ -33,8 +30,6 @@ export default class AdicionalService {
         if (dados.nome !== undefined) atual.nome = dados.nome;
         if (dados.preco !== undefined) atual.preco = dados.preco;
         if (dados.ativo !== undefined) atual.ativo = dados.ativo;
-        if (dados.id_insumo !== undefined) atual.idInsumo = dados.id_insumo;
-        if (dados.quantidade_consumida !== undefined) atual.quantidadeConsumida = dados.quantidade_consumida;
         await this.#validar(atual);
         await this.#repo.atualizar(atual);
         return atual;
@@ -46,13 +41,10 @@ export default class AdicionalService {
         }
         if (typeof entidade.nome === "string") entidade.nome = entidade.nome.trim().replace(/\s+/g, " ");
         if (!entidade.validar()) {
-            throw { status: 400, msg: "Informe nome com até 100 caracteres, preço maior que zero (até duas casas decimais) e, se preenchidos, insumo e quantidade válidos (até três casas decimais)." };
+            throw { status: 400, msg: "Informe um nome com até 100 caracteres. Se informar a situação, use verdadeiro ou falso." };
         }
         if (entidade.ativo && await this.#repo.obterAtivoPorNome(entidade.nome, entidade.id)) {
             throw { status: 409, msg: "Já existe um adicional ativo com esse nome." };
-        }
-        if (entidade.idInsumo !== null && !(await this.#insumoRepo.obter(entidade.idInsumo))) {
-            throw { status: 400, msg: "O insumo informado não existe." };
         }
     }
 

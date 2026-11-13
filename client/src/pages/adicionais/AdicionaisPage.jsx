@@ -4,7 +4,7 @@ import ApiClient from '../../services/apiClient.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useConfirm } from '../../context/ConfirmContext.jsx';
 
-const FORM_VAZIO = { nome: '', preco: '', id_insumo: '', quantidade_consumida: '' };
+const FORM_VAZIO = { nome: '', preco: '' };
 
 function formatarPreco(valor) {
     return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -20,7 +20,6 @@ export default function AdicionaisPage() {
     const { usuario } = useAuth();
     const podeEditar = usuario?.perfil === 'ADMIN';
     const [adicionais, setAdicionais] = useState([]);
-    const [insumos, setInsumos] = useState([]);
     const [busca, setBusca] = useState('');
     const [carregando, setCarregando] = useState(true);
     const [erroCarga, setErroCarga] = useState(false);
@@ -46,29 +45,16 @@ export default function AdicionaisPage() {
 
     useEffect(() => { carregar(); }, []);
 
-    async function carregarInsumos() {
-        try {
-            setInsumos(await ApiClient.get('insumo'));
-        } catch (error) {
-            tratarErro(error);
-        }
-    }
-
     function abrirNovo() {
         setEditandoId(null);
         setForm(FORM_VAZIO);
         setMostrarForm(true);
-        carregarInsumos();
     }
 
     function abrirEdicao(adicional) {
         setEditandoId(adicional.id);
-        setForm({
-            nome: adicional.nome, preco: adicional.preco,
-            id_insumo: adicional.idInsumo ?? '', quantidade_consumida: adicional.quantidadeConsumida ?? '',
-        });
+        setForm({ nome: adicional.nome, preco: adicional.preco });
         setMostrarForm(true);
-        carregarInsumos();
     }
 
     function fecharForm() {
@@ -85,12 +71,7 @@ export default function AdicionaisPage() {
             return;
         }
         setSalvando(true);
-        let corpo = {
-            nome: form.nome,
-            preco,
-            id_insumo: form.id_insumo === '' ? null : Number(form.id_insumo),
-            quantidade_consumida: form.quantidade_consumida === '' ? null : Number(form.quantidade_consumida),
-        };
+        let corpo = { nome: form.nome, preco };
         try {
             if (editandoId) {
                 await ApiClient.put(`adicional/${editandoId}`, corpo);
@@ -177,20 +158,7 @@ export default function AdicionaisPage() {
                                         }
                                     }} />
                             </div>
-                            <div className="col-md-6">
-                                <label htmlFor="insumo-adicional" className="form-label small">Insumo (opcional)</label>
-                                <select id="insumo-adicional" className="form-select" value={form.id_insumo} onChange={event => setForm({ ...form, id_insumo: event.target.value })}>
-                                    <option value="">Sem vínculo com insumo</option>
-                                    {form.id_insumo !== '' && !insumos.some(item => item.id === Number(form.id_insumo)) && <option value={form.id_insumo}>Insumo #{form.id_insumo}</option>}
-                                    {insumos.map(item => <option key={item.id} value={item.id}>{item.nome}{!item.ativo ? ' (inativo)' : ''}</option>)}
-                                </select>
-                            </div>
-                            <div className="col-md-6">
-                                <label htmlFor="quantidade-adicional" className="form-label small">Quantidade consumida (opcional, na unidade do insumo)</label>
-                                <input id="quantidade-adicional" type="number" min="0.001" max="9999999.999" step="0.001" className="form-control" value={form.quantidade_consumida} onChange={event => setForm({ ...form, quantidade_consumida: event.target.value })} />
-                            </div>
                         </div>
-                        <p className="small text-secondary mt-2 mb-0">O vínculo é opcional. A movimentação de estoque continua manual.</p>
                     </fieldset>
                     <div className="d-flex flex-wrap justify-content-end gap-2 mt-3">
                         <button type="button" className="btn btn-danger" disabled={salvando} onClick={fecharForm}>Cancelar</button>

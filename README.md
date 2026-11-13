@@ -107,7 +107,7 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 ### Sprint 3 (14–26/09) — RF_B4 + RF_F1 + abertura RF_F9
 - [x] RF_B4 — Clientes
 - [x] RF_F1 — Cardápio do Dia (itens fixos em texto livre, opções de mistura ordenadas, adicionais e reutilização entre datas)
-- [x] Cadastro de adicionais (nome, preço, vínculo opcional com insumo, edição, inativação/reativação e exclusão)
+- [x] Cadastro de adicionais (nome, preço, edição, inativação/reativação e exclusão)
 - [x] RF_F9 — Caixa: abertura (troco inicial, responsável autenticado, caixa único aberto e últimas dez aberturas)
 
 ### Sprint 4 (28/09–17/10) — RF_F2–F4
@@ -406,17 +406,24 @@ O cardápio recebe `preparacoes: [{ nome, grupo }]` (`grupo` é `null` ou `"Mist
 foram inativados depois, preservando o vínculo no histórico. Salvar e reutilizar exigem
 que os adicionais selecionados estejam ativos; a tela permite remover os inativos.
 
-## Simplificação do cadastro de insumos
+## Simplificação dos cadastros de insumos e adicionais
 
 Cadastre itens de venda direta em Produtos. Informe o custo da compra em Estoque, no campo `valorPago`
 da movimentação `ENTRADA_COMPRA`.
 
-Em bancos existentes, faça o merge e aguarde o redeploy do Railway concluir antes de aplicar
-[`009-insumo-simplificado.sql`](server/db/migrations/009-insumo-simplificado.sql). No ambiente local,
-atualize o código antes de aplicar a migration. Ela remove as colunas antigas e seus valores.
+Adicionais têm nome, preço e situação. A movimentação de estoque continua manual.
+
+Em bancos existentes, faça o merge e aguarde o redeploy do Railway concluir antes de aplicar as migrations.
+No ambiente local, atualize o código antes de aplicá-las. Rode uma vez cada arquivo, na seguinte ordem:
+
+1. [`009-insumo-simplificado.sql`](server/db/migrations/009-insumo-simplificado.sql)
+2. [`010-adicional-sem-insumo.sql`](server/db/migrations/010-adicional-sem-insumo.sql)
+
+As migrations removem as colunas antigas e seus valores. Os registros de insumos e adicionais são preservados.
 
 No Swagger, como ADMIN, use `POST /insumo` com nome, categoria e unidade e `PUT /insumo/{id}`
 para mudar o estoque mínimo. Confira o resultado em `GET /insumo/{id}`.
+Use `POST /adicional` com nome e preço, ajuste o preço em `PUT /adicional/{id}` e confira em `GET /adicional/{id}`.
 
 ## Padrão pra criar uma nova entidade (ex: RF_B2 Produtos)
 
