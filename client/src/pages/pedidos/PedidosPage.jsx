@@ -56,7 +56,7 @@ export default function PedidosPage() {
         <div className="pedidos-page">
             <div className="page-header d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
                 <div><h1 className="fs-3 mb-1">Pedidos</h1><p className="text-secondary mb-0">Lançamento e consulta dos pedidos por dia.</p></div>
-                {podeCriar && !mostrarForm && <button type="button" className="btn btn-primary" disabled={bloqueado} onClick={() => { setMostrarForm(true); setPedidoLancado(null); }}><i className="ti ti-plus me-1" />Novo pedido</button>}
+                {podeCriar && !mostrarForm && <button type="button" className="btn btn-primary" data-tour="pedidos-novo" disabled={bloqueado} onClick={() => { setMostrarForm(true); setPedidoLancado(null); }}><i className="ti ti-plus me-1" />Novo pedido</button>}
             </div>
             {podeCriar && <>
                 {caixa.carregando && <div className="page-card p-3 mb-4 text-secondary" role="status">Consultando caixa...</div>}

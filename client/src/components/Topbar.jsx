@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
+import BotaoAjuda from "./BotaoAjuda.jsx";
 
 export default function Topbar() {
   const [profileOpen, setProfileOpen] = useState(false);
@@ -37,16 +38,19 @@ export default function Topbar() {
         className="btn btn-light btn-icon btn-sm"
         onClick={toggleSidebar}
         aria-label="Alternar menu"
+        data-tour="menu-alternar"
       >
         <i className="ti ti-layout-sidebar-left-expand" />
       </button>
 
-      <div className="ms-auto position-relative">
+      <div className="ms-auto d-flex align-items-center gap-2 position-relative">
+        <BotaoAjuda />
         <button
           type="button"
           className="btn topbar-perfil d-inline-flex align-items-center gap-2"
           onClick={() => setProfileOpen((value) => !value)}
           aria-label="Perfil"
+          data-tour="perfil"
           aria-expanded={profileOpen}
         >
           <span className="topbar-nome text-truncate">{nome}</span>

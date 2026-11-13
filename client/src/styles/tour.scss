@@ -1,0 +1,59 @@
+.tg-backdrop.sgm-tour-backdrop {
+  z-index: 1999;
+
+  // A sombra da biblioteca escurece a tela, mas não intercepta cliques.
+  &::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+  }
+}
+
+.tg-dialog.sgm-tour {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgb(45 22 27 / 20%);
+  font-family: inherit;
+  line-height: 1.5;
+
+  .tg-dialog-title { color: #641f2d; }
+  .tg-dialog-body { padding-block: 16px; }
+  .tg-step-progress { color: #641f2d; opacity: 1; }
+
+  .tg-dialog-header .tg-dialog-close-btn {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border-radius: 6px;
+  }
+
+  .tg-dialog-footer .tg-dialog-btn {
+    min-height: 36px;
+    border-radius: 6px;
+    border-color: #641f2d;
+    color: #641f2d;
+    background: #fff;
+
+    &:hover:not(:disabled) { background: #fbf0ed; }
+  }
+
+  #tg-dialog-next-btn {
+    background: #d85a30;
+    border-color: #d85a30;
+    color: #21110d;
+
+    &:hover { background: #e37653; }
+  }
+
+  .tg-dialog-footer .tg-dialog-btn:focus-visible,
+  .tg-dialog-close-btn:focus-visible {
+    outline: 2px solid #641f2d;
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tg-dialog.sgm-tour .tg-bar { transition: none; }
+}

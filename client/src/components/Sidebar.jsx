@@ -28,7 +28,7 @@ export default function Sidebar() {
   }
 
   return (
-    <aside id="sidebar" className={`sidebar ${open ? "mobile-show" : ""}`}>
+    <aside id="sidebar" data-tour="menu-lateral" className={`sidebar ${open ? "mobile-show" : ""}`}>
       <div className="logo-area">
         <Link to="/" className="d-inline-flex align-items-center" onClick={closeMobile}>
           <span className="sidebar-marca">M</span>
@@ -44,6 +44,7 @@ export default function Sidebar() {
               <Link
                 key={item.href}
                 to={item.href}
+                data-tour={`menu-${item.href.slice(1) || "dashboard"}`}
                 onClick={closeMobile}
                 aria-label={item.label}
                 aria-current={activePath === item.href ? "page" : undefined}

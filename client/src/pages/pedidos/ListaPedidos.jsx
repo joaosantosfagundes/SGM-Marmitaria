@@ -11,7 +11,7 @@ export default function ListaPedidos({ consulta, data, onData, onHoje, status, o
                 </div>
                 <button type="button" className="btn btn-outline-primary" disabled={carregando || !data} onClick={recarregar}><i className="ti ti-refresh me-1" />Atualizar</button>
             </div>
-            <div className="px-3 px-sm-4 py-3 border-bottom">
+            <div className="px-3 px-sm-4 py-3 border-bottom" data-tour="pedidos-filtros">
                 <div className="row g-3 align-items-end">
                     <div className="col-12 col-md-6 col-xl-4">
                         <label htmlFor="data-pedidos" className="form-label small">Consultar pedidos de</label>
@@ -46,14 +46,14 @@ export default function ListaPedidos({ consulta, data, onData, onHoje, status, o
                             : erro ? <tr><td colSpan={9} className="text-center text-secondary p-4">Consulta indisponível.</td></tr>
                                 : !dados?.length ? <tr><td colSpan={9} className="text-center text-secondary p-4">Nenhum pedido encontrado para os filtros selecionados.</td></tr>
                                     : dados.map(pedido => <tr key={pedido.id} className="pedido-linha" onClick={() => onDetalhar(pedido.id)}>
-                                        <td className="ps-3 ps-sm-4"><button type="button" className="btn btn-sm btn-outline-primary text-nowrap" aria-label={`Ver detalhes do pedido ${pedido.id}`} onClick={event => { event.stopPropagation(); onDetalhar(pedido.id); }}>#{pedido.id}</button></td>
+                                        <td className="ps-3 ps-sm-4"><button type="button" className="btn btn-sm btn-outline-primary text-nowrap" data-tour="pedidos-detalhe" aria-label={`Ver detalhes do pedido ${pedido.id}`} onClick={event => { event.stopPropagation(); onDetalhar(pedido.id); }}>#{pedido.id}</button></td>
                                         <td className="text-nowrap">{formatarDataHora(pedido.dataHora)}</td>
                                         <td>{TIPOS_ATENDIMENTO[pedido.tipoAtendimento] || pedido.tipoAtendimento}</td>
                                         <td>{pedido.nomeCliente || '—'}</td>
                                         <td className="text-nowrap">{formatarValor(pedido.valorTotal)}</td>
                                         <td>{FORMAS_PAGAMENTO[pedido.formaPagamento] || '—'}</td>
                                         <td><StatusPagamento status={pedido.statusPagamento} forma={pedido.formaPagamento} /></td>
-                                        <td><StatusPedido status={pedido.status} /></td>
+                                        <td data-tour="pedidos-status"><StatusPedido status={pedido.status} /></td>
                                         <td className="pe-4">{pedido.nomeUsuario}</td>
                                     </tr>)}
                     </tbody>
