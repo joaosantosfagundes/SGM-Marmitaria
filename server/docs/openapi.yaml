@@ -2390,14 +2390,11 @@ components:
           schema:
             allOf:
               - $ref: '#/components/schemas/InsumoEntrada'
-              - required: [nome, id_categoria, id_unidade, classificacao, preco_custo]
+              - required: [nome, id_categoria, id_unidade]
           example:
             nome: Arroz cru
             id_categoria: 1
             id_unidade: 1
-            classificacao: INSUMO
-            preco_custo: 5.5
-            preco_venda: 0
             estoque_minimo: 10
     InsumoAtualizacao:
       required: true
@@ -2407,7 +2404,7 @@ components:
             $ref: '#/components/schemas/InsumoEntrada'
           examples:
             editar:
-              value: {preco_custo: 6, estoque_minimo: 12}
+              value: {estoque_minimo: 12}
             reativar:
               value: {ativo: true}
     ClienteCriacao:
@@ -3363,16 +3360,6 @@ components:
         id_unidade:
           type: integer
           minimum: 1
-        classificacao:
-          type: string
-          enum: [INSUMO, VENDA_DIRETA]
-        preco_custo:
-          type: number
-          minimum: 0
-          exclusiveMinimum: true
-        preco_venda:
-          type: number
-          description: Obrigatoriamente positivo quando classificacao é VENDA_DIRETA.
         estoque_minimo:
           type: number
           minimum: 0
@@ -3393,15 +3380,10 @@ components:
         idUnidade:
           type: integer
           example: 1
-        classificacao:
-          type: string
-          enum: [INSUMO, VENDA_DIRETA]
-        precoCusto:
-          $ref: '#/components/schemas/DecimalSaida'
-        precoVenda:
-          $ref: '#/components/schemas/DecimalSaida'
         estoqueMinimo:
-          $ref: '#/components/schemas/DecimalSaida'
+          type: number
+          minimum: 0
+          example: 12.5
         ativo:
           $ref: '#/components/schemas/Ativo'
         criadoEm:

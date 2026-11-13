@@ -1,16 +1,11 @@
 import Entity from "./entity.js";
 
-const CLASSIFICACOES_VALIDAS = ["INSUMO", "VENDA_DIRETA"];
-
 export default class InsumoEntity extends Entity {
 
     #id;
     #nome;
     #idCategoria;
     #idUnidade;
-    #classificacao;
-    #precoCusto;
-    #precoVenda;
     #estoqueMinimo;
     #ativo;
     #criadoEm;
@@ -27,15 +22,6 @@ export default class InsumoEntity extends Entity {
     get idUnidade() { return this.#idUnidade; }
     set idUnidade(value) { this.#idUnidade = value; }
 
-    get classificacao() { return this.#classificacao; }
-    set classificacao(value) { this.#classificacao = value; }
-
-    get precoCusto() { return this.#precoCusto; }
-    set precoCusto(value) { this.#precoCusto = value; }
-
-    get precoVenda() { return this.#precoVenda; }
-    set precoVenda(value) { this.#precoVenda = value; }
-
     get estoqueMinimo() { return this.#estoqueMinimo; }
     set estoqueMinimo(value) { this.#estoqueMinimo = value; }
 
@@ -45,15 +31,12 @@ export default class InsumoEntity extends Entity {
     get criadoEm() { return this.#criadoEm; }
     set criadoEm(value) { this.#criadoEm = value; }
 
-    constructor(id, nome, idCategoria, idUnidade, classificacao, precoCusto, precoVenda, estoqueMinimo, ativo, criadoEm) {
+    constructor(id, nome, idCategoria, idUnidade, estoqueMinimo, ativo, criadoEm) {
         super();
         this.#id = id;
         this.#nome = nome;
         this.#idCategoria = idCategoria;
         this.#idUnidade = idUnidade;
-        this.#classificacao = classificacao ?? "INSUMO";
-        this.#precoCusto = precoCusto ?? 0;
-        this.#precoVenda = precoVenda ?? 0;
         this.#estoqueMinimo = estoqueMinimo ?? 0;
         this.#ativo = ativo;
         this.#criadoEm = criadoEm;
@@ -65,10 +48,7 @@ export default class InsumoEntity extends Entity {
             row["nome"],
             row["id_categoria"],
             row["id_unidade"],
-            row["classificacao"],
-            row["preco_custo"],
-            row["preco_venda"],
-            row["estoque_minimo"],
+            Number(row["estoque_minimo"]),
             row["ativo"],
             row["criado_em"]
         );
@@ -78,11 +58,6 @@ export default class InsumoEntity extends Entity {
         if (!this.#nome || this.#nome.trim().length < 2) return false;
         if (!this.#idCategoria) return false;
         if (!this.#idUnidade) return false;
-        if (!CLASSIFICACOES_VALIDAS.includes(this.#classificacao)) return false;
-        if (!this.#precoCusto || this.#precoCusto <= 0) return false;
-        if (this.#classificacao === "VENDA_DIRETA" && (!this.#precoVenda || this.#precoVenda <= 0)) {
-            return false;
-        }
         if (this.#estoqueMinimo < 0) return false;
 
         return true;

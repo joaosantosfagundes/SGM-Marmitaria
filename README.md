@@ -102,7 +102,7 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 ### Sprint 2 (24/08–12/09) — RF_B1–B3
 - [x] RF_B1 — Usuários (feito: entity, repository, service, controller, route, login/JWT)
 - [x] RF_B2 — Produtos (copiar o padrão de `usuario*`)
-- [x] RF_B3 — Insumos (copiar o padrão de `usuario*`)
+- [x] RF_B3 — Insumos (nome, categoria, unidade, estoque mínimo e situação)
 
 ### Sprint 3 (14–26/09) — RF_B4 + RF_F1 + abertura RF_F9
 - [x] RF_B4 — Clientes
@@ -405,6 +405,18 @@ O cardápio recebe `preparacoes: [{ nome, grupo }]` (`grupo` é `null` ou `"Mist
 `adicionais: [id]`. A consulta devolve nome e preço atual dos adicionais, inclusive os que
 foram inativados depois, preservando o vínculo no histórico. Salvar e reutilizar exigem
 que os adicionais selecionados estejam ativos; a tela permite remover os inativos.
+
+## Simplificação do cadastro de insumos
+
+Cadastre itens de venda direta em Produtos. Informe o custo da compra em Estoque, no campo `valorPago`
+da movimentação `ENTRADA_COMPRA`.
+
+Em bancos existentes, faça o merge e aguarde o redeploy do Railway concluir antes de aplicar
+[`009-insumo-simplificado.sql`](server/db/migrations/009-insumo-simplificado.sql). No ambiente local,
+atualize o código antes de aplicar a migration. Ela remove as colunas antigas e seus valores.
+
+No Swagger, como ADMIN, use `POST /insumo` com nome, categoria e unidade e `PUT /insumo/{id}`
+para mudar o estoque mínimo. Confira o resultado em `GET /insumo/{id}`.
 
 ## Padrão pra criar uma nova entidade (ex: RF_B2 Produtos)
 

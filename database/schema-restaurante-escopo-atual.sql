@@ -68,15 +68,6 @@ CREATE TABLE insumo (
     id_categoria INT NOT NULL,
     id_unidade INT NOT NULL,
 
-    -- Distingue se é matéria-prima (usada em receitas, no futuro) ou algo vendido direto (ex: refrigerante)
-    -- Sem 'PREPARADO' por enquanto (só entra quando o lote de produção for implementado)
-    classificacao ENUM(
-        'INSUMO',
-        'VENDA_DIRETA'
-    ) NOT NULL DEFAULT 'INSUMO',
-
-    preco_custo DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    preco_venda DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     estoque_minimo DECIMAL(10,3) NOT NULL DEFAULT 0.000,
 
     ativo BOOLEAN NOT NULL DEFAULT TRUE,
@@ -350,9 +341,6 @@ VALUES (
 -- ============================================================
 -- Só rodar isso quando (e se) for implementar ficha técnica + lote de produção.
 -- Não exige mexer em nenhuma tabela além das listadas abaixo.
---
--- ALTER TABLE insumo
---     MODIFY classificacao ENUM('INSUMO','PREPARADO','VENDA_DIRETA') NOT NULL DEFAULT 'INSUMO';
 --
 -- CREATE TABLE ficha_tecnica (
 --     id_ficha_tecnica INT AUTO_INCREMENT PRIMARY KEY,

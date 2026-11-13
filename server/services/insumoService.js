@@ -21,7 +21,7 @@ export default class InsumoService {
         return await this.#repo.obter(id);
     }
 
-    async gravar({ nome, id_categoria, id_unidade, classificacao, preco_custo, preco_venda, estoque_minimo }) {
+    async gravar({ nome, id_categoria, id_unidade, estoque_minimo }) {
         let existente = await this.#repo.obterPorNome(nome);
         if (existente) {
             throw { status: 409, msg: "Já existe um insumo com esse nome" };
@@ -38,20 +38,17 @@ export default class InsumoService {
         }
 
         // ativo sempre nasce true — não tem como cadastrar já inativo
-        let entidade = new InsumoEntity(
-            0, nome, id_categoria, id_unidade, classificacao,
-            preco_custo, preco_venda, estoque_minimo, true
-        );
+        let entidade = new InsumoEntity(0, nome, id_categoria, id_unidade, estoque_minimo, true);
 
         if (!entidade.validar()) {
-            throw { status: 400, msg: "Dados inválidos. Confira nome, categoria, unidade e classificação." };
+            throw { status: 400, msg: "Dados inválidos. Confira nome, categoria, unidade e estoque mínimo." };
         }
 
         await this.#repo.gravar(entidade);
         return entidade;
     }
 
-    async atualizar(id, { nome, id_categoria, id_unidade, classificacao, preco_custo, preco_venda, estoque_minimo, ativo }) {
+    async atualizar(id, { nome, id_categoria, id_unidade, estoque_minimo, ativo }) {
         let atual = await this.#repo.obter(id);
         if (!atual) {
             throw { status: 404, msg: "Insumo não encontrado" };
@@ -81,14 +78,11 @@ export default class InsumoService {
         atual.nome = nome ?? atual.nome;
         atual.idCategoria = id_categoria ?? atual.idCategoria;
         atual.idUnidade = id_unidade ?? atual.idUnidade;
-        atual.classificacao = classificacao ?? atual.classificacao;
-        atual.precoCusto = preco_custo ?? atual.precoCusto;
-        atual.precoVenda = preco_venda ?? atual.precoVenda;
         atual.estoqueMinimo = estoque_minimo ?? atual.estoqueMinimo;
         atual.ativo = ativo ?? atual.ativo;
 
         if (!atual.validar()) {
-            throw { status: 400, msg: "Dados inválidos. Confira nome, categoria, unidade e classificação." };
+            throw { status: 400, msg: "Dados inválidos. Confira nome, categoria, unidade e estoque mínimo." };
         }
 
         await this.#repo.atualizar(atual);

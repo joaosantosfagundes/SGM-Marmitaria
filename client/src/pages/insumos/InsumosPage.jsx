@@ -7,15 +7,10 @@ const FORM_VAZIO = {
     nome: '',
     id_categoria: '',
     id_unidade: '',
-    classificacao: 'INSUMO',
-    preco_custo: '',
-    preco_venda: '0',
     estoque_minimo: '0',
 };
 
-function formatarPreco(valor) {
-    return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
+const formatoQuantidade = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 3 });
 
 export default function InsumosPage() {
     const confirmar = useConfirm();
@@ -59,9 +54,6 @@ export default function InsumosPage() {
             nome: insumo.nome,
             id_categoria: insumo.idCategoria,
             id_unidade: insumo.idUnidade,
-            classificacao: insumo.classificacao,
-            preco_custo: insumo.precoCusto,
-            preco_venda: insumo.precoVenda,
             estoque_minimo: insumo.estoqueMinimo,
         });
         setMostrarForm(true);
@@ -81,9 +73,6 @@ export default function InsumosPage() {
             nome: form.nome,
             id_categoria: Number(form.id_categoria),
             id_unidade: Number(form.id_unidade),
-            classificacao: form.classificacao,
-            preco_custo: Number(form.preco_custo),
-            preco_venda: Number(form.preco_venda),
             estoque_minimo: Number(form.estoque_minimo),
         };
 
@@ -201,44 +190,6 @@ export default function InsumosPage() {
                             </div>
 
                             <div className="col-md-3">
-                                <label className="form-label small">Classificação</label>
-                                <select
-                                    className="form-select"
-                                    value={form.classificacao}
-                                    onChange={(e) => setForm({ ...form, classificacao: e.target.value })}
-                                >
-                                    <option value="INSUMO">Insumo (matéria-prima)</option>
-                                    <option value="VENDA_DIRETA">Venda direta</option>
-                                </select>
-                            </div>
-
-                            <div className="col-md-3">
-                                <label className="form-label small">Preço de custo (R$)</label>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    className="form-control"
-                                    value={form.preco_custo}
-                                    onChange={(e) => setForm({ ...form, preco_custo: e.target.value })}
-                                    required
-                                />
-                            </div>
-
-                            <div className="col-md-3">
-                                <label className="form-label small">Preço de venda (R$)</label>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    className="form-control"
-                                    value={form.preco_venda}
-                                    onChange={(e) => setForm({ ...form, preco_venda: e.target.value })}
-                                />
-                                <div className="form-text">Só se aplica pra "Venda direta" (ex: refrigerante).</div>
-                            </div>
-
-                            <div className="col-md-3">
                                 <label className="form-label small">Estoque mínimo</label>
                                 <input
                                     type="number"
@@ -271,19 +222,18 @@ export default function InsumosPage() {
                                 <th className="ps-4">Nome</th>
                                 <th>Categoria</th>
                                 <th>Unidade</th>
-                                <th>Classificação</th>
-                                <th>Custo</th>
+                                <th>Estoque mínimo</th>
                                 <th>Status</th>
                                 <th className="text-end pe-4">Ações</th>
                             </tr>
                         </thead>
                         <tbody>
                             {carregando && (
-                                <tr><td colSpan={7} className="text-center text-secondary py-4">Carregando...</td></tr>
+                                <tr><td colSpan={6} className="text-center text-secondary py-4">Carregando...</td></tr>
                             )}
 
                             {!carregando && insumos.length === 0 && (
-                                <tr><td colSpan={7} className="text-center text-secondary py-4">Nenhum insumo cadastrado.</td></tr>
+                                <tr><td colSpan={6} className="text-center text-secondary py-4">Nenhum insumo cadastrado.</td></tr>
                             )}
 
                             {insumos.map((insumo) => (
@@ -291,12 +241,7 @@ export default function InsumosPage() {
                                     <td className="ps-4">{insumo.nome}</td>
                                     <td className="text-secondary">{insumo.nomeCategoria}</td>
                                     <td className="text-secondary">{insumo.siglaUnidade}</td>
-                                    <td>
-                                        <span className="badge text-bg-light border">
-                                            {insumo.classificacao === 'INSUMO' ? 'Matéria-prima' : 'Venda direta'}
-                                        </span>
-                                    </td>
-                                    <td>{formatarPreco(insumo.precoCusto)}</td>
+                                    <td>{formatoQuantidade.format(insumo.estoqueMinimo)}</td>
                                     <td>
                                         <span className={`badge ${insumo.ativo ? 'text-bg-success' : 'text-bg-secondary'}`}>
                                             {insumo.ativo ? 'Ativo' : 'Inativo'}

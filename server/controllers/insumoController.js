@@ -14,8 +14,7 @@ export default class InsumoController {
             let insumos = await this.#service.listarComDetalhes();
             return res.status(200).json(insumos);
         } catch (error) {
-            console.error(error);
-            return res.status(500).json({ msg: "Erro ao processar requisição" });
+            return this.#tratarErro(res, error);
         }
     }
 
@@ -28,8 +27,7 @@ export default class InsumoController {
 
             return res.status(200).json(insumo);
         } catch (error) {
-            console.error(error);
-            return res.status(500).json({ msg: "Erro ao processar requisição" });
+            return this.#tratarErro(res, error);
         }
     }
 

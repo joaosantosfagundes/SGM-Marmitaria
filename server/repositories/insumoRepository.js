@@ -8,7 +8,7 @@ export default class InsumoRepository extends Repository {
     }
 
     async listar() {
-        let sql = "select * from insumo order by nome";
+        let sql = "select id_insumo, nome, id_categoria, id_unidade, estoque_minimo, ativo, criado_em from insumo order by nome";
         let rows = await this.banco.ExecutaComando(sql);
 
         return rows.map(row => InsumoEntity.toMap(row));
@@ -16,7 +16,8 @@ export default class InsumoRepository extends Repository {
 
     async listarComDetalhes() {
         let sql = `
-            select i.*, c.nome as nome_categoria, u.nome as nome_unidade, u.sigla as sigla_unidade
+            select i.id_insumo, i.nome, i.id_categoria, i.id_unidade, i.estoque_minimo, i.ativo, i.criado_em,
+                   c.nome as nome_categoria, u.nome as nome_unidade, u.sigla as sigla_unidade
             from insumo i
             inner join categoria c on c.id_categoria = i.id_categoria
             inner join unidade u on u.id_unidade = i.id_unidade
@@ -37,15 +38,12 @@ export default class InsumoRepository extends Repository {
         await this.banco.AbreTransacao();
         try {
             let sql = `insert into insumo
-                        (nome, id_categoria, id_unidade, classificacao, preco_custo, preco_venda, estoque_minimo, ativo)
-                        values (?, ?, ?, ?, ?, ?, ?, ?)`;
+                        (nome, id_categoria, id_unidade, estoque_minimo, ativo)
+                        values (?, ?, ?, ?, ?)`;
             let valores = [
                 entidade.nome,
                 entidade.idCategoria,
                 entidade.idUnidade,
-                entidade.classificacao,
-                entidade.precoCusto,
-                entidade.precoVenda,
                 entidade.estoqueMinimo,
                 entidade.ativo,
             ];
@@ -68,16 +66,12 @@ export default class InsumoRepository extends Repository {
 
     async atualizar(entidade) {
         let sql = `update insumo set
-                    nome = ?, id_categoria = ?, id_unidade = ?, classificacao = ?,
-                    preco_custo = ?, preco_venda = ?, estoque_minimo = ?, ativo = ?
+                    nome = ?, id_categoria = ?, id_unidade = ?, estoque_minimo = ?, ativo = ?
                     where id_insumo = ?`;
         let valores = [
             entidade.nome,
             entidade.idCategoria,
             entidade.idUnidade,
-            entidade.classificacao,
-            entidade.precoCusto,
-            entidade.precoVenda,
             entidade.estoqueMinimo,
             entidade.ativo,
             entidade.id,
@@ -87,7 +81,7 @@ export default class InsumoRepository extends Repository {
     }
 
     async obter(id) {
-        let sql = "select * from insumo where id_insumo = ?";
+        let sql = "select id_insumo, nome, id_categoria, id_unidade, estoque_minimo, ativo, criado_em from insumo where id_insumo = ?";
         let rows = await this.banco.ExecutaComando(sql, [id]);
 
         if (rows.length > 0) return InsumoEntity.toMap(rows[0]);
@@ -95,7 +89,7 @@ export default class InsumoRepository extends Repository {
     }
 
     async obterPorNome(nome) {
-        let sql = "select * from insumo where nome = ?";
+        let sql = "select id_insumo, nome, id_categoria, id_unidade, estoque_minimo, ativo, criado_em from insumo where nome = ?";
         let rows = await this.banco.ExecutaComando(sql, [nome]);
 
         if (rows.length > 0) return InsumoEntity.toMap(rows[0]);
