@@ -84,7 +84,7 @@ export default function BotaoAjuda() {
             dialogZ: 2000,
             dialogClass: 'sgm-tour',
             backdropClass: 'sgm-tour-backdrop',
-            backdropColor: 'rgba(100, 31, 45, 0.56)',
+            backdropColor: 'rgba(0, 0, 0, 0.20)',
             progressBar: '#D85A30',
             activeStepInteraction: false,
             allowDialogOverlap: true,
