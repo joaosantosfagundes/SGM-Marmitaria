@@ -90,6 +90,9 @@ export default function FinanceiroPage() {
         </div></div>)}</div>
         <section className="page-card">
             <div className="p-3 p-sm-4 border-bottom"><h2 data-tour="financeiro-lista" className="h6 mb-1">Lançamentos do período</h2><p className="small text-secondary mb-0">Uma entrada por caixa fechado com recebimentos. Abertura, troco e falta/sobra da gaveta não são receita. Consulte cada pagamento na tela Pagamento. Recorrência é apenas informativa.</p></div>
+            {consulta.dados?.movimentacoes.length === 500 && <p className="small text-secondary px-3 px-sm-4 mt-3">
+                Exibindo até 500 lançamentos recentes. Use os filtros para consultar registros anteriores. Os totais incluem todos os resultados dos filtros.
+            </p>}
             <div className="table-responsive"><table className="table table-hover align-middle mb-0">
                 <thead className="text-nowrap"><tr><th>Data e hora</th><th>Tipo</th><th>Categoria</th><th>Descrição</th><th>Valor</th><th>Recorrência</th><th>Origem</th><th>Responsável</th>{podeEditar && <th>Ações</th>}</tr></thead>
                 <tbody>{consulta.carregando ? <tr><td colSpan={podeEditar ? 9 : 8} className="text-secondary text-center p-4" role="status">Carregando lançamentos...</td></tr>

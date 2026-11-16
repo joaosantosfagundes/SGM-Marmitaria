@@ -43,9 +43,19 @@ export default class FinanceiroRepository extends Repository {
 
     async listar(filtros) {
         let { sql, valores } = this.#consultaMovimentacoes(filtros);
-        sql += ' order by f.data_hora desc, f.id_caixa desc, f.id_movimentacao_financeira desc';
-        let rows = await this.banco.ExecutaComando(sql, valores);
-        return rows.map(row => MovimentacaoFinanceiraEntity.toMap(row));
+        let rows = await this.banco.ExecutaComando(`with filtradas as (${sql})
+            select f.*,
+                sum(case when f.tipo = 'ENTRADA' then round(f.valor * 100) else 0 end) over () as entradas_centavos,
+                sum(case when f.tipo = 'SAIDA' then round(f.valor * 100) else 0 end) over () as saidas_centavos,
+                sum(case when f.id_caixa is not null then round(f.valor * 100) else 0 end) over () as caixas_centavos
+            from filtradas f order by f.data_hora desc, f.id_caixa desc, f.id_movimentacao_financeira desc limit 500`, valores);
+        let totais = rows[0];
+        return {
+            movimentacoes: rows.map(row => MovimentacaoFinanceiraEntity.toMap(row)),
+            entradas: Number(totais?.entradas_centavos ?? 0),
+            saidas: Number(totais?.saidas_centavos ?? 0),
+            recebimentosCaixas: Number(totais?.caixas_centavos ?? 0)
+        };
     }
 
     async despesasPorDia(limites) {

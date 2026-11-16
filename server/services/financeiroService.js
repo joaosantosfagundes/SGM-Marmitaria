@@ -1,7 +1,7 @@
 import FinanceiroRepository from '../repositories/financeiroRepository.js';
 import MovimentacaoFinanceiraEntity from '../entities/movimentacaoFinanceiraEntity.js';
 import { validarData } from './cardapioService.js';
-import { centavos, lerInteiro } from '../utils/pedidoUtils.js';
+import { lerInteiro } from '../utils/pedidoUtils.js';
 
 export function calcularTotaisFinanceiro(entradas, saidas, recebimentosCaixas) {
     let saldo = entradas - saidas;
@@ -22,15 +22,8 @@ export default class FinanceiroService {
         if (dataInicio && dataFim && dataInicio > dataFim) throw { status: 400, msg: 'A data inicial não pode ser posterior à data final.' };
         if (tipo !== undefined && !['ENTRADA', 'SAIDA'].includes(tipo)) throw { status: 400, msg: 'Informe o tipo ENTRADA ou SAIDA.' };
         if (categoria !== undefined && (typeof categoria !== 'string' || !categoria.trim() || categoria.length > 100)) throw { status: 400, msg: 'Informe uma categoria com até 100 caracteres.' };
-        let movimentacoes = await this.#repo.listar({ dataInicio, dataFim, tipo, categoria: categoria?.trim() });
-        let entradas = 0, saidas = 0, recebimentosCaixas = 0;
-        for (let movimentacao of movimentacoes) {
-            let valor = centavos(movimentacao.valor);
-            if (movimentacao.tipo === 'ENTRADA') {
-                entradas += valor;
-                if (movimentacao.origem === 'CAIXA') recebimentosCaixas += valor;
-            } else saidas += valor;
-        }
+        let { movimentacoes, entradas, saidas, recebimentosCaixas } =
+            await this.#repo.listar({ dataInicio, dataFim, tipo, categoria: categoria?.trim() });
         return { movimentacoes, totais: calcularTotaisFinanceiro(entradas, saidas, recebimentosCaixas) };
     }
 

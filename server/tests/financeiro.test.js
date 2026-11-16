@@ -16,7 +16,7 @@ function executar(sql, valores = [], banco, tx) {
     if (falharEm && q.startsWith(falharEm)) throw new Error('Falha simulada na transação');
     if (q.startsWith('select * from usuario')) return banco.usuarios.filter(u => u.id_usuario === valores[0]);
     if (q.startsWith('select * from movimentacao_financeira')) return banco.financeiro.filter(m => m.id_movimentacao_financeira === valores[0]);
-    if (q.startsWith('select f.*, u.nome')) {
+    if (q.startsWith('with filtradas as (select f.*, u.nome')) {
         assert.equal((q.match(/union all/g) ?? []).length, 2);
         assert.equal((q.match(/pg.status = 'pago' and p.status <> 'cancelado'/g) ?? []).length, 2);
         assert.match(q, /from movimentacao_financeira m where m.id_pedido is null/);
@@ -50,7 +50,12 @@ function executar(sql, valores = [], banco, tx) {
         if (q.includes('and f.data_hora < date_add')) { let data = valores[indice++]; rows = rows.filter(m => m.data_hora.slice(0, 10) <= data); }
         if (q.includes('and f.tipo = ?')) { let tipo = valores[indice++]; rows = rows.filter(m => m.tipo === tipo); }
         if (q.includes('and f.categoria = ?')) { let categoria = valores[indice++]; rows = rows.filter(m => m.categoria === categoria); }
-        return rows.sort((a, b) => b.data_hora.localeCompare(a.data_hora) || b.id_caixa - a.id_caixa || b.id_movimentacao_financeira - a.id_movimentacao_financeira);
+        assert.match(q, /over \(\).*limit 500$/);
+        let somar = filtro => rows.filter(filtro).reduce((total, row) => total + Math.round(Number(row.valor) * 100), 0);
+        let totais = { entradas_centavos: somar(row => row.tipo === 'ENTRADA'),
+            saidas_centavos: somar(row => row.tipo === 'SAIDA'), caixas_centavos: somar(row => row.id_caixa !== null) };
+        return rows.sort((a, b) => b.data_hora.localeCompare(a.data_hora) || b.id_caixa - a.id_caixa || b.id_movimentacao_financeira - a.id_movimentacao_financeira)
+            .slice(0, 500).map(row => ({ ...row, ...totais }));
     }
     if (q.startsWith('select m.*, u.nome')) return banco.financeiro.filter(m => m.id_movimentacao_financeira === valores[0])
         .map(m => ({ ...m, nome_usuario: banco.usuarios.find(u => u.id_usuario === m.id_usuario)?.nome }));
@@ -199,6 +204,18 @@ test('Período inclusivo, tipo e categoria combinados; ignora cópias legadas de
     assert.deepEqual(r.body.totais, { entradas: 0.3, saidas: 0, saldo: 0.3, recebimentosCaixas: 0, entradasAvulsas: 0.3 });
     assert.deepEqual(consultas.at(-1).valores, ['2026-11-01', '2026-11-02', 'ENTRADA', 'Avulsa']);
     assert.doesNotMatch(consultas.at(-1).q, /date\(f.data_hora\)/);
+});
+
+test('Financeiro lista só os 500 mais recentes e mantém os totais de todos os lançamentos filtrados', async () => {
+    estado.financeiro = Array.from({ length: 501 }, (_, indice) => ({
+        id_movimentacao_financeira: indice + 1, id_usuario: 1, id_pedido: null, id_movimentacao_estoque: null,
+        tipo: 'SAIDA', categoria: 'Aluguel', valor: '0.15', data_hora: '2026-11-02 12:00:00'
+    }));
+    let r = await chamar({ metodo: 'get' });
+    assert.equal(r.status, 200);
+    assert.equal(r.body.movimentacoes.length, 500);
+    assert.equal(r.body.movimentacoes.at(-1).id, 2);
+    assert.equal(r.body.totais.saidas, 75.15);
 });
 for (let query of [{ dataInicio: '2026-02-30' }, { dataInicio: '2026-11-03', dataFim: '2026-11-02' }, { tipo: 'VENDA' }, { categoria: '' }, { categoria: ['a', 'b'] }]) test(`Filtro inválido ${JSON.stringify(query)}: 400`, async () => {
     assert.equal((await chamar({ metodo: 'get', query })).status, 400);

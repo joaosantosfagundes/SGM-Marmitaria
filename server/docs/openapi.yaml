@@ -1950,6 +1950,7 @@ paths:
         Exclui pedidos CANCELADO, pagamentos pendentes/cancelados e cópias legadas em movimentacao_financeira com id_pedido preenchido.
         Não usa valor_abertura, valor_fechamento, valor_recebido/troco nem diferença da gaveta como receita. Caixas sem recebimentos ou sem data de fechamento não geram entrada.
         Usa agregação SQL sem join com itens, sem gravar outra receita e sem alterar o fechamento. O saldo é entradas menos saídas do período, não o dinheiro físico da gaveta.
+        A lista devolve até 500 lançamentos mais recentes. Os totais incluem todos os lançamentos que atendem aos filtros.
       parameters:
         - name: dataInicio
           in: query

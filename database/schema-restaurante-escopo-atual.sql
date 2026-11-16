@@ -191,6 +191,8 @@ CREATE TABLE pedido (
     observacao VARCHAR(255),
     valor_total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
 
+    INDEX idx_pedido_data (data_hora),
+    INDEX idx_pedido_caixa_status (id_caixa, status),
     CONSTRAINT fk_pedido_usuario FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario),
     CONSTRAINT fk_pedido_caixa FOREIGN KEY (id_caixa) REFERENCES caixa(id_caixa),
     CONSTRAINT fk_pedido_cliente FOREIGN KEY (id_cliente) REFERENCES cliente(id_cliente),
@@ -243,6 +245,7 @@ CREATE TABLE movimentacao_estoque (
     data_hora DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_mov_estoque_insumo FOREIGN KEY (id_insumo) REFERENCES insumo(id_insumo),
+    INDEX idx_mov_estoque_data (data_hora),
     CONSTRAINT fk_mov_estoque_usuario FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario),
     CONSTRAINT chk_mov_estoque_quantidade CHECK (quantidade > 0)
 );
@@ -266,6 +269,8 @@ CREATE TABLE pagamento (
     forma_quitacao ENUM('DINHEIRO','PIX','DEBITO','CREDITO') NULL,
     id_caixa_quitacao INT NULL,
 
+    INDEX idx_pagamento_status (status),
+    INDEX idx_pagamento_quitacao_data (data_quitacao, data_hora),
     CONSTRAINT fk_pagamento_pedido FOREIGN KEY (id_pedido) REFERENCES pedido(id_pedido),
     CONSTRAINT fk_pagamento_usuario_quitacao FOREIGN KEY (id_usuario_quitacao) REFERENCES usuario(id_usuario),
     CONSTRAINT fk_pagamento_caixa_quitacao FOREIGN KEY (id_caixa_quitacao) REFERENCES caixa(id_caixa),
@@ -294,6 +299,7 @@ CREATE TABLE movimentacao_financeira (
     data_hora DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_financeiro_usuario FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario),
+    INDEX idx_mov_financeira_data (data_hora),
     CONSTRAINT fk_financeiro_pedido FOREIGN KEY (id_pedido) REFERENCES pedido(id_pedido),
     CONSTRAINT fk_financeiro_movimentacao_estoque FOREIGN KEY (id_movimentacao_estoque) REFERENCES movimentacao_estoque(id_movimentacao),
     CONSTRAINT uq_financeiro_movimentacao_estoque UNIQUE (id_movimentacao_estoque),

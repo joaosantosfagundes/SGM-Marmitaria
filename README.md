@@ -306,7 +306,7 @@ O relatório RF_S3 reutiliza essa consulta e detalha os totais por categoria e f
 - `GET /financeiro?dataInicio=2026-11-01&dataFim=2026-11-30&tipo=SAIDA&categoria=Aluguel`
   retorna `{ movimentacoes, totais: { entradas, saidas, saldo, recebimentosCaixas, entradasAvulsas } }`. Todos os filtros são opcionais.
   O período inclui as duas datas, a categoria é exata conforme a collation do banco e os totais usam todos
-  os registros filtrados, sem truncar a listagem. Registros legados com `id_pedido` preenchido são excluídos
+  os registros filtrados. A listagem mostra até os 500 lançamentos mais recentes. Registros legados com `id_pedido` preenchido são excluídos
   da consulta e dos totais para não duplicar os recebimentos lidos de `pagamento`; a coluna e os dados antigos são preservados.
 - Vendas diretas consideram apenas pagamentos PAGO em DINHEIRO, PIX, DEBITO ou CREDITO, pelo caixa do
   pedido e valor efetivo da venda (`valor`, sem somar `valor_recebido`). Pagamentos de devedores entram quando `PAGO`,
