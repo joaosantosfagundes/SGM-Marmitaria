@@ -8,6 +8,7 @@
     "dev": "node --watch server.js",
     "start": "node server.js",
     "test": "node --test",
+    "backup:testar": "node scripts/testarBackup.js",
     "seed:admin": "node scripts/seedAdmin.js"
   },
   "dependencies": {

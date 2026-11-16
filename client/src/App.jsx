@@ -22,6 +22,7 @@ import DevedoresPage from './pages/devedores/DevedoresPage.jsx';
 import PagamentosPage from './pages/pagamento/PagamentosPage.jsx';
 import FinanceiroPage from './pages/financeiro/FinanceiroPage.jsx';
 import RelatoriosPage from './pages/relatorios/RelatoriosPage.jsx';
+import BackupPage from './pages/backup/BackupPage.jsx';
 
 import { pages } from './lib/menu.js';
 
@@ -41,6 +42,7 @@ const TELAS_PRONTAS = {
     '/pagamento': PagamentosPage,
     '/financeiro': FinanceiroPage,
     '/relatorios': RelatoriosPage,
+    '/backup': BackupPage,
 
 };
 

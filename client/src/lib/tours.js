@@ -93,6 +93,11 @@ const tours = {
         passoTour('usuarios-lista', 'Usuários cadastrados', 'Os cartões mostram o e-mail, o perfil e a situação de cada pessoa.'),
         passoTour('usuarios-acoes', 'Ações do usuário', 'Nos outros cadastros, você pode editar, desativar, reativar ou excluir quando permitido. A própria conta tem restrições.'),
     ],
+    '/backup': [
+        passoTour('backup-frequencia', 'Quando fazer backup', 'Baixe uma cópia pelo menos uma vez por semana e antes de mudanças grandes.'),
+        passoTour('backup-privacidade', 'Guarde em local privado', 'O arquivo contém dados do sistema, incluindo dados de acesso. Guarde a cópia em um lugar seguro fora do Railway.'),
+        passoTour('backup-baixar', 'Baixar backup agora', 'Clique e aguarde a geração do arquivo SQL. Seu navegador baixa a cópia assim que estiver pronta.'),
+    ],
 };
 
 export function obterTour(caminho) {

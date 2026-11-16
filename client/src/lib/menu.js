@@ -40,6 +40,7 @@ export const menu = [
     label: "Administração",
     items: [
       { href: "/usuarios", label: "Usuários", icon: "ti-user-cog" }, // RF_B1
+      { href: "/backup", label: "Backup", icon: "ti-database-export" },
     ],
   },
 ];
@@ -58,6 +59,7 @@ export const pages = {
   "/pagamento": { title: "Pagamento", description: "Registro de pagamentos dos pedidos." },
   "/relatorios": { title: "Relatórios", description: "Relatórios de operação.", perfis: ["ADMIN", "ATENDENTE"] },
   "/usuarios": { title: "Usuários", description: "Cadastro e gerenciamento de usuários do sistema." },
+  "/backup": { title: "Backup", description: "Download de uma cópia do banco de dados.", perfis: ["ADMIN"] },
 };
 
 export function getPageByPath(path) {

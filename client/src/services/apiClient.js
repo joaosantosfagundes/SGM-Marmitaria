@@ -12,6 +12,12 @@ export default class ApiClient {
         return await this.checarResposta(response, options);
     }
 
+    static async baixar(endpoint) {
+        let response = await fetch(`${BASE_URL}${endpoint}`, { credentials: 'include' });
+        if (!response.ok) await this.checarResposta(response);
+        return response;
+    }
+
     static async post(endpoint, body, options = {}) {
         let response = await fetch(`${BASE_URL}${endpoint}`, {
             method: "POST",

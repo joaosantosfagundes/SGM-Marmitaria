@@ -55,7 +55,34 @@ tags:
     description: Vendas, estoque, ranking e devedores para ADMIN e ATENDENTE. Financeiro exclusivo de ADMIN.
   - name: Dashboard
     description: Indicadores da operação e contagens de pedidos para a cozinha.
+  - name: Backup
+    description: Download administrativo de cópias do banco de dados.
 paths:
+  /backup:
+    get:
+      tags: [Backup]
+      operationId: baixarBackup
+      summary: Baixar backup do banco
+      description: 'Somente ADMIN. Transmite o esquema e os dados das tabelas em um arquivo SQL. O arquivo contém dados sensíveis e deve ser guardado em local privado.'
+      responses:
+        '200':
+          description: Backup em SQL.
+          headers:
+            Content-Disposition:
+              schema: {type: string}
+              example: 'attachment; filename="backup-sgm-2026-11-16-1430.sql"'
+            Cache-Control:
+              schema: {type: string}
+              example: no-store
+          content:
+            application/sql:
+              schema: {type: string, format: binary}
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/SemPermissao'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
   /login:
     post:
       tags: [Login]
