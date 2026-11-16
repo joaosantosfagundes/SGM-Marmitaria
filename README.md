@@ -148,6 +148,17 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 
 - [x] Limpeza de código e revisão de dependências com build e testes do servidor antes e depois
 - [x] Deploy final (Railway)
+- [x] Backup administrativo e verificação de restauração
+
+## Backup e índices operacionais
+
+Como ADMIN, abra **Administração → Backup** e baixe uma cópia SQL pelo menos semanalmente e antes
+de cada migration. Guarde o arquivo em local privado fora do Railway. Em um MySQL local de teste,
+rode `npm run backup:testar` no diretório `server`. Veja o [guia de backup e recuperação](docs/backup.md).
+
+Em bancos existentes, aplique [`011-indices-operacionais.sql`](server/db/migrations/011-indices-operacionais.sql)
+uma vez, depois das migrations anteriores e de gerar um backup. Essa migration pode ser aplicada
+antes ou depois da publicação do código, tanto no banco local quanto no Railway.
 
 ## Dashboard
 
