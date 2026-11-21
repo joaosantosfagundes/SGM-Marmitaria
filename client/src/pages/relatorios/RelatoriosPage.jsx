@@ -9,6 +9,7 @@ import RelatorioProdutos from './RelatorioProdutos.jsx';
 import RelatorioDevedores from './RelatorioDevedores.jsx';
 import { dataLocal } from '../../lib/dataLocal.js';
 import { formatarDia } from './relatorioUtils.js';
+import CabecalhoImpressao from '../../components/CabecalhoImpressao.jsx';
 import './relatorios.scss';
 
 const ABAS = [
@@ -26,7 +27,10 @@ function ResultadoRelatorio({ aba, periodo }) {
     const Conteudo = aba.componente;
 
     return <>
-        <div className="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-3">
+        <CabecalhoImpressao titulo={`Relatório: ${aba.titulo}`}
+            periodo={`Período: ${formatarDia(dataInicio)} a ${formatarDia(dataFim)}`}
+            nomeArquivo={`Relatório de ${aba.titulo.toLocaleLowerCase('pt-BR')} - ${dataInicio} a ${dataFim} - SGM`} />
+        <div className="relatorio-controles d-flex flex-wrap align-items-start justify-content-between gap-2 mb-3">
             <div>
                 <h2 className="h4 mb-1">{aba.titulo}</h2>
                 <p className="text-secondary mb-0">Período de {formatarDia(dataInicio)} a {formatarDia(dataFim)}.</p>

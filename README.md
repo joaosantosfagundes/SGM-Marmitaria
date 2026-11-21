@@ -71,6 +71,10 @@ npm install
 npm run dev             # http://localhost:5173
 ```
 
+O nome nos documentos impressos usa `VITE_NOME_ESTABELECIMENTO`, com padrão `SGM Marmitaria`.
+Configure essa variável no `client/.env` ou nas Variables do serviço do frontend no Railway **antes**
+do build/deploy do client. Alterar o nome exige gerar e publicar outro build.
+
 ### Documentação da API (Swagger)
 
 A documentação das rotas existentes fica em **http://localhost:5000/api-docs/** e usa
@@ -143,6 +147,7 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 - [x] Formulário de adicionais em card acima da lista, no padrão dos demais cadastros
 - [x] Dashboard com indicadores, gráfico, pedidos recentes e alertas de estoque baseados em dados reais
 - [x] Tour guiado sob demanda pelo botão Ajuda
+- [x] Cabeçalho do estabelecimento e identificação de emissão nos relatórios impressos
 
 ### Entrega final até 30/11
 
@@ -181,6 +186,9 @@ vendas com o relatório de vendas do mesmo dia e o saldo da gaveta com `GET /cai
 Abra `/relatorios` com o perfil ADMIN ou ATENDENTE. As abas compartilham o período, que vai do primeiro dia
 do mês atual até hoje por padrão. O botão **Imprimir** abre a impressão do navegador em A4 com o relatório
 da aba ativa, o período consultado e as tabelas. A navegação e os controles ficam fora da folha.
+O cabeçalho identifica o estabelecimento, a aba, o período, a pessoa e o horário da impressão,
+inclusive ao usar Ctrl+P. No Chrome com suporte a margens de página, o rodapé mostra o nome do
+estabelecimento e a numeração. O título sugerido ao salvar como PDF inclui a aba e o período.
 
 - **Vendas e pedidos** usa `pedido.data_hora` e apresenta quantidades e valores por dia, forma original
   de pagamento, tipo de atendimento e status. Cancelados têm contagem e valor separados. O ticket médio

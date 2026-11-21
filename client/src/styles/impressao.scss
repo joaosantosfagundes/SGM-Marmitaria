@@ -1,0 +1,33 @@
+.cabecalho-impressao { display: none; }
+
+@media print {
+  .cabecalho-impressao {
+    display: block;
+    padding-bottom: 5mm;
+    margin-bottom: 5mm;
+    border-bottom: 1px solid black;
+    break-inside: avoid;
+    color: black;
+    font: 10pt/1.4 Arial, sans-serif;
+    overflow-wrap: anywhere;
+
+    &::after { content: ''; display: block; clear: both; }
+    p { margin: 2mm 0 0; }
+  }
+
+  .cabecalho-impressao-identidade {
+    float: left;
+    width: 40%;
+    padding-right: 5mm;
+
+    strong { font-size: 15pt; }
+    p { font-size: 9pt; }
+  }
+
+  .cabecalho-impressao-documento {
+    margin-left: 40%;
+
+    h1 { font-size: 13pt; line-height: 1.4; margin: 0; }
+    p { font-size: 9pt; }
+  }
+}
