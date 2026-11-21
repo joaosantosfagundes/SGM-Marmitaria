@@ -148,6 +148,7 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 - [x] Dashboard com indicadores, gráfico, pedidos recentes e alertas de estoque baseados em dados reais
 - [x] Tour guiado sob demanda pelo botão Ajuda
 - [x] Cabeçalho do estabelecimento e identificação de emissão nos relatórios impressos
+- [x] Comanda com nome do estabelecimento e responsável pelo lançamento
 
 ### Entrega final até 30/11
 
@@ -419,6 +420,7 @@ os horários de pronto e saída já existem. Nenhuma migration é aplicada autom
   oculta, modal aberto ou data histórica; o botão Atualizar continua disponível.
 - Imprimir comanda no detalhe ou no resumo do lançamento abre a impressão do navegador. O portal de impressão
   mostra somente o cupom de 80 mm, com itens, observações, pagamento, total e faixa CANCELADO quando aplicável.
+  O topo mostra o nome do estabelecimento e, quando disponível no pedido, quem fez o lançamento.
   Configure a impressora para papel de 80 mm; a impressão não é automática.
 
 Testes: `node --test server/tests/pedido.test.js server/tests/caixa.test.js` cobre criação existente,

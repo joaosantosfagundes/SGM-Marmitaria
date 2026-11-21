@@ -2,6 +2,7 @@ import { useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import { FORMAS_PAGAMENTO, formatarDataHora, formatarValor, TIPOS_ATENDIMENTO } from './pedidoUtils.js';
+import { NOME_ESTABELECIMENTO } from '../../lib/estabelecimento.js';
 
 export default function ComandaPedido({ pedido, disabled = false }) {
     const [imprimindo, setImprimindo] = useState(false);
@@ -25,7 +26,9 @@ export default function ComandaPedido({ pedido, disabled = false }) {
             <i className="ti ti-printer me-1" />Imprimir comanda
         </button>
         {imprimindo && createPortal(<section className="pedido-comanda" aria-label={`Comanda do pedido ${pedido.id}`}>
+            <p className="comanda-estabelecimento">{NOME_ESTABELECIMENTO}</p>
             <h1>Pedido #{pedido.id}</h1>
+            {pedido.nomeUsuario && <p>Lançado por {pedido.nomeUsuario}</p>}
             {pedido.status === 'CANCELADO' && <p className="comanda-cancelado">CANCELADO</p>}
             <p>{formatarDataHora(pedido.dataHora)}<br /><strong>{TIPOS_ATENDIMENTO[pedido.tipoAtendimento] || pedido.tipoAtendimento}</strong></p>
             <p>Cliente: {pedido.nomeCliente || 'Não vinculado'}</p>
