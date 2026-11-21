@@ -10,6 +10,10 @@
     size: A4;
     margin: 12mm 12mm 17mm;
 
+    @top-left { content: ""; }
+    @top-center { content: ""; }
+    @top-right { content: ""; }
+
     @bottom-right {
       content: "Página " counter(page) " de " counter(pages);
       color: #333;
