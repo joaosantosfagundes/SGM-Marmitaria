@@ -147,6 +147,7 @@ ao validador externo. Para mudar contratos documentados, edite apenas `server/do
 - [x] Formulário de adicionais em card acima da lista, no padrão dos demais cadastros
 - [x] Dashboard com indicadores, gráfico, pedidos recentes e alertas de estoque baseados em dados reais
 - [x] Tour guiado sob demanda pelo botão Ajuda
+- [x] Menu de perfil fecha ao clicar fora ou pressionar Esc
 - [x] Cabeçalho do estabelecimento e identificação de emissão nos relatórios impressos
 - [x] Comanda com nome do estabelecimento e responsável pelo lançamento
 
